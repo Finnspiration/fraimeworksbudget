@@ -27,9 +27,12 @@ export function useBudgetState() {
   useEffect(() => { localStorage.setItem('vs_bskat', JSON.stringify(bskat)); }, [bskat]);
   useEffect(() => { localStorage.setItem('vs_andengeld', JSON.stringify(andenGeld)); }, [andenGeld]);
   useEffect(() => { localStorage.setItem('vs_skatpct', JSON.stringify(skatPct)); }, [skatPct]);
+  useEffect(() => { localStorage.setItem('vs_budgetmode', JSON.stringify(budgetMode)); }, [budgetMode]);
 
   const realized = useMemo(() => computeRealized(txns), [txns]);
-  const pl = useMemo(() => computePL(realized, budget), [realized, budget]);
+  const dynamicBudget = useMemo(() => computeDynamicBudget(realized, nReal), [realized, nReal]);
+  const activeBudget = budgetMode === 'dynamic' ? dynamicBudget : budget;
+  const pl = useMemo(() => computePL(realized, activeBudget), [realized, activeBudget]);
 
   const resetAll = useCallback(() => {
     setTxns(INIT_TXN);
