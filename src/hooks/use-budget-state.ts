@@ -53,6 +53,7 @@ export function useBudgetState() {
     bskat, setBskat,
     andenGeld, setAndenGeld,
     skatPct, setSkatPct,
+    budgetMode, setBudgetMode,
     pl, realized,
     resetAll,
   };
