@@ -168,6 +168,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b text-xs text-muted-foreground">
+                    <th className="px-3 py-2 text-left">Type</th>
                     <th className="px-3 py-2 text-left">Dato</th>
                     <th className="px-3 py-2 text-left">Bilag</th>
                     <th className="px-3 py-2 text-left">Tekst</th>
@@ -179,6 +180,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
                 <tbody>
                   {txns.map(t => (
                     <tr key={t.id} className="border-b border-border/30 hover:bg-secondary/30">
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground">{t.type}</td>
                       <td className="px-3 py-1.5 text-xs tabular-nums">{t.dato}</td>
                       <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
                       <td className="px-3 py-1.5 text-xs truncate max-w-[250px]">{t.tekst}</td>
