@@ -64,7 +64,8 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   );
 }
 
-export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget }: Props) {
+export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode }: Props) {
+  const isDynamic = budgetMode === 'dynamic';
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
   const toggleSec = (lbl: string) => setCollapsedSecs(p => ({ ...p, [lbl]: !p[lbl] }));
