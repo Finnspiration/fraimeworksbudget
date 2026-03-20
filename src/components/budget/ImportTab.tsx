@@ -34,6 +34,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const [editingMoms, setEditingMoms] = useState<number | null>(null);
   const kontoPlanRef = useRef<HTMLInputElement>(null);
   const [kontoPlanPreview, setKontoPlanPreview] = useState<PLRow[] | null>(null);
+  const [kontoPlanMeta, setKontoPlanMeta] = useState<{ origType: number; moms: string; sumfra: string }[]>([]);
   const [kontoPlanStatus, setKontoPlanStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const parseDanishNumber = (val: unknown): number => {
