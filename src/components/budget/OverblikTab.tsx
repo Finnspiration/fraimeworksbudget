@@ -24,7 +24,7 @@ function KpiCard({ label, value, sub, positive, icon }: { label: string; value: 
   );
 }
 
-export default function OverblikTab({ pl, nReal, activePL }: Props) {
+export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
   const resRow = pl['res'] as PLValues | undefined;
   const omsRow = pl['oms'] as PLValues | undefined;
 
