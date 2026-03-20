@@ -181,10 +181,20 @@ export interface BskatRate {
   betaltDato: string;
 }
 
-export const INIT_BSKAT: BskatRate[] = Array(10).fill(null).map((_, i) => ({
-  id: i + 1,
-  belob: 0,
-  forfald: ['20-01','20-03','20-05','20-07','20-09','20-11','20-01','20-03','20-05','20-07'][i] + `-${YEAR}`,
-  betalt: 0,
-  betaltDato: '',
-}));
+export const INIT_BSKAT: BskatRate[] = [
+  { id: 1, belob: 0, forfald: `20-01-${YEAR}`, betalt: 0, betaltDato: '' },
+  { id: 2, belob: 0, forfald: `20-03-${YEAR}`, betalt: 0, betaltDato: '' },
+  { id: 3, belob: 0, forfald: `20-05-${YEAR}`, betalt: 0, betaltDato: '' },
+  { id: 4, belob: 0, forfald: `20-07-${YEAR}`, betalt: 0, betaltDato: '' },
+  { id: 5, belob: 0, forfald: `20-09-${YEAR}`, betalt: 0, betaltDato: '' },
+  { id: 6, belob: 0, forfald: `20-11-${YEAR}`, betalt: 0, betaltDato: '' },
+  { id: 7, belob: 0, forfald: `20-01-${YEAR + 1}`, betalt: 0, betaltDato: '' },
+  { id: 8, belob: 0, forfald: `20-03-${YEAR + 1}`, betalt: 0, betaltDato: '' },
+  { id: 9, belob: 0, forfald: `20-05-${YEAR + 1}`, betalt: 0, betaltDato: '' },
+  { id: 10, belob: 0, forfald: `20-07-${YEAR + 1}`, betalt: 0, betaltDato: '' },
+];
+
+export const INIT_BSKAT_SELSKAB: BskatRate[] = [
+  { id: 1, belob: 0, forfald: `20-03-${YEAR}`, betalt: 0, betaltDato: '' },
+  { id: 2, belob: 0, forfald: `20-11-${YEAR}`, betalt: 0, betaltDato: '' },
+];

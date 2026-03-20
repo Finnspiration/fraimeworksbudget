@@ -51,6 +51,12 @@ export function useBudgetState() {
     setSkatPct(22);
   }, []);
 
+  const handleVirksomhedstypeChange = useCallback((type: 'personlig' | 'selskab') => {
+    setVirksomhedstype(type);
+    setBskat(type === 'selskab' ? INIT_BSKAT_SELSKAB : INIT_BSKAT);
+    if (type === 'selskab') setSkatPct(22);
+  }, []);
+
   return {
     txns, setTxns,
     budget, setBudget,
@@ -61,6 +67,7 @@ export function useBudgetState() {
     skatPct, setSkatPct,
     budgetMode, setBudgetMode,
     customPL, setCustomPL, activePL,
+    virksomhedstype, setVirksomhedstype: handleVirksomhedstypeChange,
     pl, realized,
     resetAll,
   };
