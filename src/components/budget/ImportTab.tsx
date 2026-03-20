@@ -25,8 +25,11 @@ export default function ImportTab({ txns, setTxns }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterMoms, setFilterMoms] = useState('all');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [editingKonto, setEditingKonto] = useState<number | null>(null);
   const [editKontoVal, setEditKontoVal] = useState('');
+  const [editingMoms, setEditingMoms] = useState<number | null>(null);
 
   const parseDanishNumber = (val: unknown): number => {
     if (val == null) return 0;
