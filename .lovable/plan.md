@@ -1,22 +1,29 @@
 
 
-# Rettelser: Decimaler, Faktura/Modkonto i import, og menu-label
+# Fix: Faktura og Modkonto vises ikke ved import
 
-## Ændringer
+## Problem
+Kolonne-matching i parseren har bugs der forhindrer korrekt identifikation af "Faktura" og "Modkonto" headers.
 
-### 1. Vis beløb med to decimaler (`budget-utils.ts`)
-- Tilføj ny `fmtDec` funktion med `minimumFractionDigits: 2, maximumFractionDigits: 2` til brug i kassekladden
-- Behold eksisterende `fmt` (uden decimaler) til P&L og overblik
+## Root cause
+- `col('konto')` bruger `includes('konto')` som potentielt kan matche "modkonto" afhængigt af kolonne-rækkefølge
+- `cFaktura` bruger `h === 'fak'` (exact match) i stedet for `h.includes('fak')` — fanger ikke variationer
+- `cModkonto` redundant check, men kan fejle ved variationer i header-navne
 
-### 2. Brug `fmtDec` i ImportTab (`ImportTab.tsx`)
-- Erstat `fmt(t.belob)` med `fmtDec(t.belob)` i både forhåndsvisning og kassekladde-tabel
-- Sikrer at beløb som `18,73` og `1.989,00` vises korrekt med decimaler
+## Ændringer (`ImportTab.tsx`)
 
-### 3. Verificér Faktura og Modkonto parsing (`ImportTab.tsx`)
-- Kolonnerne er allerede i koden (linje 69-70, 81-82) og vises i tabellerne
-- Problemet kan være at Excel-headeren ikke matches korrekt — tilføj mere fleksibel header-matching for "faktura" (match også "fak") og "modkonto" (match også "mod")
+### 1. Fix kolonne-matching for Konto
+- Ændr `col('konto')` til eksakt match: `h === 'konto'` for at undgå at "modkonto" matcher
+- Alternativt: match "konto" men IKKE "modkonto" via `h === 'konto' || (h.includes('konto') && !h.includes('mod'))`
 
-### 4. Omdøb menu-tab fra "Import" til "Kassekladde" (`Index.tsx`)
-- Ændr TabsTrigger-teksten fra "Import" til "Kassekladde"
-- Skift ikon fra `Upload` til `FileSpreadsheet` for bedre semantik
+### 2. Fix kolonne-matching for Faktura
+- Ændr fra `h === 'fak'` til `h.includes('fak')` så variationer som "fak.", "fak.nr" osv. også matcher
+
+### 3. Fix kolonne-matching for Modkonto
+- Udvid til også at matche "mod", "mod.konto", "modkto" variationer
+
+### 4. Tilføj console.log til debugging (midlertidigt)
+- Log detekterede kolonne-indekser ved import, så problemer er lettere at spotte
+
+Alle ændringer sker i `src/components/budget/ImportTab.tsx`, kun i parsing-sektionen (linje 66-71).
 
