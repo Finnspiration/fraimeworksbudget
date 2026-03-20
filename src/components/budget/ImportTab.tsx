@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { fmt } from '@/lib/budget-utils';
+import { fmtDec } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,8 +66,9 @@ export default function ImportTab({ txns, setTxns }: Props) {
       const col = (name: string) => headers.findIndex(h => h.includes(name));
       const cDato = col('dato'), cBelob = col('beløb') !== -1 ? col('beløb') : col('belob');
       const cKonto = col('konto'), cMoms = col('moms'), cBilag = col('bilag'), cTekst = col('tekst');
-      const cType = col('type'), cFaktura = col('faktura');
-      const cModkonto = headers.findIndex(h => h.includes('modkonto') || h === 'mod konto');
+      const cType = col('type');
+      const cFaktura = headers.findIndex(h => h.includes('faktura') || h === 'fak');
+      const cModkonto = headers.findIndex(h => h.includes('modkonto') || h === 'modkonto');
       const parsed: Transaction[] = [];
       for (let i = headerIdx + 1; i < rows.length; i++) {
         const r = rows[i];
@@ -242,7 +243,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
                           <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
                           <td className="px-3 py-1.5 text-xs">{t.faktura || '–'}</td>
                           <td className="px-3 py-1.5 text-xs truncate max-w-[200px]">{t.tekst}</td>
-                          <td className={`px-3 py-1.5 text-right tabular-nums text-xs ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmt(t.belob)}</td>
+                          <td className={`px-3 py-1.5 text-right tabular-nums text-xs ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmtDec(t.belob)}</td>
                           <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.konto}</td>
                           <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">{t.moms || '–'}</td>
                           <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.modkonto || '–'}</td>
@@ -333,7 +334,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
                         <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
                         <td className="px-3 py-1.5 text-xs">{t.faktura || '–'}</td>
                         <td className="px-3 py-1.5 text-xs truncate max-w-[250px]">{t.tekst}</td>
-                        <td className={`px-3 py-1.5 text-right text-xs tabular-nums ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmt(t.belob)}</td>
+                        <td className={`px-3 py-1.5 text-right text-xs tabular-nums ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmtDec(t.belob)}</td>
                         <td className="px-3 py-1.5 text-right text-xs tabular-nums">
                           {editingKonto === t.id ? (
                             <input

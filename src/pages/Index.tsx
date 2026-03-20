@@ -6,7 +6,7 @@ import OverblikTab from '@/components/budget/OverblikTab';
 import ResultatTab from '@/components/budget/ResultatTab';
 import SkatTab from '@/components/budget/SkatTab';
 import ImportTab from '@/components/budget/ImportTab';
-import { BarChart3, Table, Receipt, Upload } from 'lucide-react';
+import { BarChart3, Table, Receipt, FileSpreadsheet } from 'lucide-react';
 
 export default function Index() {
   const state = useBudgetState();
@@ -34,7 +34,7 @@ export default function Index() {
             <TabsTrigger value="overblik" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" />Overblik</TabsTrigger>
             <TabsTrigger value="resultat" className="gap-1.5"><Table className="h-3.5 w-3.5" />Resultatopgørelse</TabsTrigger>
             <TabsTrigger value="skat" className="gap-1.5"><Receipt className="h-3.5 w-3.5" />Skat & Moms</TabsTrigger>
-            <TabsTrigger value="import" className="gap-1.5"><Upload className="h-3.5 w-3.5" />Import</TabsTrigger>
+            <TabsTrigger value="import" className="gap-1.5"><FileSpreadsheet className="h-3.5 w-3.5" />Kassekladde</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overblik">

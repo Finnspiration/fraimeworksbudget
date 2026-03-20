@@ -71,6 +71,11 @@ export function fmt(n: number | null | undefined): string {
   return new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
+export function fmtDec(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return '–';
+  return new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+}
+
 export function sumArr(arr: number[], from = 0, to = 11): number {
   return arr.slice(from, to + 1).reduce((a, b) => a + b, 0);
 }
