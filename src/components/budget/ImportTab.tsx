@@ -65,10 +65,12 @@ export default function ImportTab({ txns, setTxns }: Props) {
       const headers = rows[headerIdx].map(h => String(h || '').toLowerCase().trim());
       const col = (name: string) => headers.findIndex(h => h.includes(name));
       const cDato = col('dato'), cBelob = col('beløb') !== -1 ? col('beløb') : col('belob');
-      const cKonto = col('konto'), cMoms = col('moms'), cBilag = col('bilag'), cTekst = col('tekst');
+      const cKonto = headers.findIndex(h => h === 'konto' || (h.includes('konto') && !h.includes('mod')));
+      const cMoms = col('moms'), cBilag = col('bilag'), cTekst = col('tekst');
       const cType = col('type');
-      const cFaktura = headers.findIndex(h => h.includes('faktura') || h === 'fak');
-      const cModkonto = headers.findIndex(h => h.includes('modkonto') || h === 'modkonto');
+      const cFaktura = headers.findIndex(h => h.includes('faktura') || h.includes('fak'));
+      const cModkonto = headers.findIndex(h => h.includes('modkonto') || h.includes('mod.konto') || h === 'modkto');
+      console.log('[Import] Header-kolonner:', { headers, cDato, cBelob, cKonto, cMoms, cBilag, cTekst, cType, cFaktura, cModkonto });
       const parsed: Transaction[] = [];
       for (let i = headerIdx + 1; i < rows.length; i++) {
         const r = rows[i];
