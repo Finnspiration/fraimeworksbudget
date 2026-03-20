@@ -51,7 +51,7 @@ export default function Index() {
               skatPct={state.skatPct} setSkatPct={state.setSkatPct} />
           </TabsContent>
           <TabsContent value="import">
-            <ImportTab txns={state.txns} setTxns={state.setTxns} />
+            <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL} />
           </TabsContent>
         </Tabs>
       </main>

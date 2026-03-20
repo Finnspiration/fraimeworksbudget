@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { MONTHS, MONTHS_FULL, PL } from '@/data/budget-constants';
+import { MONTHS, MONTHS_FULL, type PLRow } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
