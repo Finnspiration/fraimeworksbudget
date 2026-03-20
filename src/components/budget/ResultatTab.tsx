@@ -12,6 +12,7 @@ interface Props {
   setBudget: React.Dispatch<React.SetStateAction<Record<number, number[]>>>;
   budgetMode: 'fixed' | 'dynamic';
   setBudgetMode: (m: 'fixed' | 'dynamic') => void;
+  activePL: PLRow[];
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
