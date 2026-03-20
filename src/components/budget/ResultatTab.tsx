@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { MONTHS, MONTHS_FULL, PL } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 interface Props {
   pl: Record<string | number, PLValues>;
@@ -8,6 +10,8 @@ interface Props {
   setNReal: (n: number) => void;
   budget: Record<number, number[]>;
   setBudget: React.Dispatch<React.SetStateAction<Record<number, number[]>>>;
+  budgetMode: 'fixed' | 'dynamic';
+  setBudgetMode: (m: 'fixed' | 'dynamic') => void;
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
