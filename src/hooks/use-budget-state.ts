@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { INIT_TXN, INIT_BUDGET, INIT_BSKAT, PL, type Transaction, type BskatRate, type PLRow } from '@/data/budget-constants';
+import { INIT_TXN, INIT_BUDGET, INIT_BSKAT, INIT_BSKAT_SELSKAB, PL, type Transaction, type BskatRate, type PLRow } from '@/data/budget-constants';
 import { computeRealized, computePL, computeDynamicBudget } from '@/lib/budget-utils';
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -21,6 +21,7 @@ export function useBudgetState() {
   const [skatPct, setSkatPct] = useState<number>(() => loadJSON('vs_skatpct', 22));
   const [budgetMode, setBudgetMode] = useState<'fixed' | 'dynamic'>(() => loadJSON('vs_budgetmode', 'fixed'));
   const [customPL, setCustomPL] = useState<PLRow[] | null>(() => loadJSON('vs_custompl', null));
+  const [virksomhedstype, setVirksomhedstype] = useState<'personlig' | 'selskab'>(() => loadJSON('vs_vtype', 'personlig'));
 
   useEffect(() => { localStorage.setItem('vs_txns', JSON.stringify(txns)); }, [txns]);
   useEffect(() => { localStorage.setItem('vs_budget', JSON.stringify(budget)); }, [budget]);
@@ -31,6 +32,7 @@ export function useBudgetState() {
   useEffect(() => { localStorage.setItem('vs_skatpct', JSON.stringify(skatPct)); }, [skatPct]);
   useEffect(() => { localStorage.setItem('vs_budgetmode', JSON.stringify(budgetMode)); }, [budgetMode]);
   useEffect(() => { localStorage.setItem('vs_custompl', JSON.stringify(customPL)); }, [customPL]);
+  useEffect(() => { localStorage.setItem('vs_vtype', JSON.stringify(virksomhedstype)); }, [virksomhedstype]);
 
   const activePL = customPL ?? PL;
 
@@ -49,6 +51,12 @@ export function useBudgetState() {
     setSkatPct(22);
   }, []);
 
+  const handleVirksomhedstypeChange = useCallback((type: 'personlig' | 'selskab') => {
+    setVirksomhedstype(type);
+    setBskat(type === 'selskab' ? INIT_BSKAT_SELSKAB : INIT_BSKAT);
+    if (type === 'selskab') setSkatPct(22);
+  }, []);
+
   return {
     txns, setTxns,
     budget, setBudget,
@@ -59,6 +67,7 @@ export function useBudgetState() {
     skatPct, setSkatPct,
     budgetMode, setBudgetMode,
     customPL, setCustomPL, activePL,
+    virksomhedstype, setVirksomhedstype: handleVirksomhedstypeChange,
     pl, realized,
     resetAll,
   };

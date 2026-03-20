@@ -1,6 +1,7 @@
 import { YEAR } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { Transaction, BskatRate } from '@/data/budget-constants';
 
 interface Props {
@@ -15,6 +16,8 @@ interface Props {
   setAndenGeld: (v: number) => void;
   skatPct: number;
   setSkatPct: (v: number) => void;
+  virksomhedstype: 'personlig' | 'selskab';
+  setVirksomhedstype: (v: 'personlig' | 'selskab') => void;
 }
 
 const quarters = [
@@ -24,7 +27,7 @@ const quarters = [
   { id: 4, label: 'Q4 Okt-Dec', months: [9, 10, 11], forfald: '01-04-2027' },
 ];
 
-export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct }: Props) {
+export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype }: Props) {
   const updateBskat = (i: number, field: keyof BskatRate, val: string | number) =>
     setBskat(prev => prev.map((r, j) => j === i ? { ...r, [field]: val } : r));
 
@@ -51,8 +54,22 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
   const estimSkat = Math.max(0, projRes * (skatPct / 100));
   const restskat = estimSkat - totalBskatBetalt;
 
+  const skatLabel = virksomhedstype === 'selskab' ? 'Aconto skat' : 'B-skat';
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">🏢 Virksomhedstype</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ToggleGroup type="single" value={virksomhedstype} onValueChange={(v) => v && setVirksomhedstype(v as 'personlig' | 'selskab')}>
+            <ToggleGroupItem value="personlig" className="text-xs">Personlig virksomhed</ToggleGroupItem>
+            <ToggleGroupItem value="selskab" className="text-xs">Selskab (ApS/AS)</ToggleGroupItem>
+          </ToggleGroup>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">📋 Momsafregning {YEAR}</CardTitle>
@@ -113,7 +130,7 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">💳 B-skat / Aconto skat {YEAR}</CardTitle>
+          <CardTitle className="text-sm font-semibold">💳 {skatLabel} {YEAR}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-auto">
@@ -205,7 +222,7 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
               );
             })}
             <p className="flex justify-between text-sm">
-              <span>B-skat udestående:</span>
+              <span>{skatLabel} udestående:</span>
               <span className="font-medium tabular-nums">{fmt(totalBskatSkyldigt - totalBskatBetalt)}</span>
             </p>
             <p className="flex justify-between text-sm items-center">
