@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import type { Transaction, PLRow } from '@/data/budget-constants';
-import { Upload, Trash2, FileSpreadsheet, Check, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Search, BookOpen, RotateCcw } from 'lucide-react';
+import { PL } from '@/data/budget-constants';
+import { Upload, Trash2, FileSpreadsheet, Check, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Search, BookOpen, RotateCcw, ChevronsUpDown } from 'lucide-react';
 
 interface Props {
   txns: Transaction[];
@@ -29,13 +32,16 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const [filterMoms, setFilterMoms] = useState('all');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-  const [editingKonto, setEditingKonto] = useState<number | null>(null);
-  const [editKontoVal, setEditKontoVal] = useState('');
   const [editingMoms, setEditingMoms] = useState<number | null>(null);
   const kontoPlanRef = useRef<HTMLInputElement>(null);
   const [kontoPlanPreview, setKontoPlanPreview] = useState<PLRow[] | null>(null);
   const [kontoPlanMeta, setKontoPlanMeta] = useState<{ origType: number; moms: string; sumfra: string }[]>([]);
   const [kontoPlanStatus, setKontoPlanStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  const activePL = customPL ?? PL;
+  const acctList = useMemo(() => activePL.filter(r => r.t === 'acct' && r.nr), [activePL]);
+  const acctMap = useMemo(() => new Map(acctList.map(r => [r.nr!, r.lbl || ''])), [acctList]);
+  const [kontoPopoverOpen, setKontoPopoverOpen] = useState<number | null>(null);
 
   const parseDanishNumber = (val: unknown): number => {
     if (val == null) return 0;
@@ -176,18 +182,6 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
     return sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
   };
 
-  const startEditKonto = (txnId: number, currentKonto: number) => {
-    setEditingKonto(txnId);
-    setEditKontoVal(String(currentKonto));
-  };
-
-  const commitKontoEdit = (txnId: number) => {
-    const newKonto = Number(editKontoVal);
-    if (newKonto > 0) {
-      setTxns(prev => prev.map(t => t.id === txnId ? { ...t, konto: newKonto } : t));
-    }
-    setEditingKonto(null);
-  };
 
   const parseKontoPlan = useCallback((file: File) => {
     const reader = new FileReader();
@@ -529,23 +523,49 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                         <td className="px-3 py-1.5 text-xs truncate max-w-[250px]">{t.tekst}</td>
                         <td className={`px-3 py-1.5 text-right text-xs tabular-nums ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmtDec(t.belob)}</td>
                         <td className="px-3 py-1.5 text-right text-xs tabular-nums">
-                          {editingKonto === t.id ? (
-                            <input
-                              type="number"
-                              value={editKontoVal}
-                              onChange={e => setEditKontoVal(e.target.value)}
-                              onBlur={() => commitKontoEdit(t.id)}
-                              onKeyDown={e => { if (e.key === 'Enter') commitKontoEdit(t.id); if (e.key === 'Escape') setEditingKonto(null); }}
-                              className="w-16 text-right border border-primary/30 rounded px-1 py-0.5 text-xs bg-secondary"
-                              autoFocus
-                            />
+                          {kontoPopoverOpen === t.id ? (
+                            <Popover open onOpenChange={(open) => { if (!open) setKontoPopoverOpen(null); }}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-6 w-auto min-w-[60px] text-xs px-2 font-mono">
+                                  {t.konto} <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[300px] p-0" align="end">
+                                <Command>
+                                  <CommandInput placeholder="Søg konto..." className="h-8 text-xs" />
+                                  <CommandList>
+                                    <CommandEmpty>Ingen konto fundet</CommandEmpty>
+                                    <CommandGroup>
+                                      {acctList.map(a => (
+                                        <CommandItem
+                                          key={a.nr}
+                                          value={`${a.nr} ${a.lbl}`}
+                                          onSelect={() => {
+                                            setTxns(prev => prev.map(tx => tx.id === t.id ? { ...tx, konto: a.nr! } : tx));
+                                            setKontoPopoverOpen(null);
+                                          }}
+                                          className="text-xs"
+                                        >
+                                          <Check className={`mr-2 h-3 w-3 ${t.konto === a.nr ? 'opacity-100' : 'opacity-0'}`} />
+                                          <span className="font-mono mr-2">{a.nr}</span>
+                                          <span className="truncate">{a.lbl}</span>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           ) : (
                             <span
-                              className="cursor-pointer hover:text-primary hover:underline"
-                              onClick={() => startEditKonto(t.id, t.konto)}
-                              title="Klik for at ændre konto"
+                              className={`cursor-pointer hover:text-primary hover:underline ${!acctMap.has(t.konto) ? 'text-destructive' : ''}`}
+                              onClick={() => setKontoPopoverOpen(t.id)}
+                              title={acctMap.get(t.konto) || 'Ukendt konto — klik for at ændre'}
                             >
                               {t.konto}
+                              {acctMap.has(t.konto) && (
+                                <span className="ml-1 text-muted-foreground font-normal hidden lg:inline">{acctMap.get(t.konto)}</span>
+                              )}
                             </span>
                           )}
                         </td>
