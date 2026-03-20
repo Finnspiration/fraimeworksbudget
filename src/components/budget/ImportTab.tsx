@@ -146,7 +146,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
-  }, [txns, searchTerm, filterType, filterMoms, sortKey, sortDir]);
+  }, [txns, searchTerm, filterType, filterMoms, filterDateFrom, filterDateTo, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
