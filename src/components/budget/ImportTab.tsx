@@ -182,18 +182,6 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
     return sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
   };
 
-  const startEditKonto = (txnId: number, currentKonto: number) => {
-    setEditingKonto(txnId);
-    setEditKontoVal(String(currentKonto));
-  };
-
-  const commitKontoEdit = (txnId: number) => {
-    const newKonto = Number(editKontoVal);
-    if (newKonto > 0) {
-      setTxns(prev => prev.map(t => t.id === txnId ? { ...t, konto: newKonto } : t));
-    }
-    setEditingKonto(null);
-  };
 
   const parseKontoPlan = useCallback((file: File) => {
     const reader = new FileReader();
