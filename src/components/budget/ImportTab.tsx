@@ -42,8 +42,8 @@ export default function ImportTab({ txns, setTxns }: Props) {
         let dato = '';
         if (cDato >= 0 && r[cDato]) {
           const dv = r[cDato];
-          if (dv && typeof dv === 'object' && 'toISOString' in dv) dato = (dv as Date).toISOString().slice(0, 10);
-          else dato = String(dv);
+          if (dv != null && typeof dv === 'object' && 'toISOString' in (dv as object)) dato = (dv as Date).toISOString().slice(0, 10);
+          else if (dv != null) dato = String(dv);
         }
         parsed.push({
           id: 0, dato, type: 'Import', bilag: cBilag >= 0 ? String(r[cBilag] || '') : '',
