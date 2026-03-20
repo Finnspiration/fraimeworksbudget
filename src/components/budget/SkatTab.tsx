@@ -187,6 +187,53 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">📅 Estimeret skat pr. måned</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="text-left px-3 py-2">Måned</th>
+                  <th className="text-right px-3 py-2">Resultat</th>
+                  <th className="text-right px-3 py-2">Estimeret skat</th>
+                  <th className="text-right px-3 py-2">Akkumuleret</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const avgRes = nReal > 0 && resRow ? sumArr(resRow.r, 0, nReal - 1) / nReal : 0;
+                  let acc = 0;
+                  return MONTHS.map((m, i) => {
+                    const isReal = i < nReal;
+                    const monthRes = isReal && resRow ? resRow.r[i] : avgRes;
+                    const monthTax = Math.max(0, monthRes * (skatPct / 100));
+                    acc += monthTax;
+                    return (
+                      <tr key={m} className={`border-b border-border/30 ${!isReal ? 'text-muted-foreground italic' : ''}`}>
+                        <td className={`px-3 py-2 ${isReal ? 'font-medium' : ''}`}>{m}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(monthRes)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(monthTax)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(acc)}</td>
+                      </tr>
+                    );
+                  });
+                })()}
+                <tr className="font-semibold bg-secondary/50">
+                  <td className="px-3 py-2">Årsestimat</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(projRes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(estimSkat)}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {nReal === 0 && <p className="text-xs text-muted-foreground mt-2">Ingen realiserede data endnu — alle måneder er estimater.</p>}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-2">

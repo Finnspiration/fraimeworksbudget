@@ -34,13 +34,26 @@ export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
   const projYear = nReal > 0 && resRow ? (sumArr(resRow.r, 0, nReal - 1) / nReal) * 12 : 0;
   const yearBud = resRow ? sumArr(resRow.b) : 0;
 
+  const expensesByMonth = useMemo(() => {
+    return MONTHS.map((_, i) => {
+      let total = 0;
+      for (const row of activePL) {
+        if (row.t === 'acct' && row.nr && row.nr > 1999) {
+          const vals = pl[row.nr] as PLValues | undefined;
+          if (vals) total += Math.abs(vals.r[i]);
+        }
+      }
+      return total;
+    });
+  }, [pl, activePL]);
+
   const chartData = useMemo(() => MONTHS.map((m, i) => ({
     name: m,
     Omsætning: omsRow ? Math.max(0, omsRow.r[i]) : 0,
-    Udgifter: Math.abs(Math.min(0, resRow ? resRow.r[i] - (omsRow ? omsRow.r[i] : 0) : 0)),
+    Udgifter: expensesByMonth[i],
     'Budget resultat': resRow ? resRow.b[i] : 0,
     Realiseret: i < nReal ? (resRow ? resRow.r[i] : 0) : null,
-  })), [omsRow, resRow, nReal]);
+  })), [omsRow, resRow, nReal, expensesByMonth]);
 
   const runData = useMemo(() => {
     let cumReal = 0, cumBud = 0;
