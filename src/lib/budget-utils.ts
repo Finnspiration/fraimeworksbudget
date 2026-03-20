@@ -1,4 +1,4 @@
-import { PL, type Transaction, YEAR } from '@/data/budget-constants';
+import { PL, type PLRow, YEAR } from '@/data/budget-constants';
 
 export interface PLValues {
   r: number[];
@@ -9,7 +9,7 @@ function netBelob(belob: number, moms: string | null): number {
   return moms === 'I25' || moms === 'U25' ? belob / 1.25 : Number(belob);
 }
 
-export function computeRealized(txns: Transaction[], year: number = YEAR): Record<string, number> {
+export function computeRealized(txns: { dato: string; konto: number; belob: number; moms: string | null }[], year: number = YEAR): Record<string, number> {
   const r: Record<string, number> = {};
   txns.forEach(tx => {
     if (!tx.dato) return;
@@ -23,22 +23,22 @@ export function computeRealized(txns: Transaction[], year: number = YEAR): Recor
   return r;
 }
 
-export function computePL(realized: Record<string, number>, budget: Record<number, number[]>): Record<string | number, PLValues> {
+export function computePL(realized: Record<string, number>, budget: Record<number, number[]>, plRows: PLRow[] = PL): Record<string | number, PLValues> {
   const vals: Record<string | number, PLValues> = {};
-  PL.filter(x => x.t === 'acct').forEach(x => {
+  plRows.filter(x => x.t === 'acct').forEach(x => {
     vals[x.nr!] = {
       r: Array.from({ length: 12 }, (_, i) => realized[`${x.nr}-${i + 1}`] || 0),
       b: Array.from({ length: 12 }, (_, i) => (budget[x.nr!] ? budget[x.nr!][i] : 0) || 0),
     };
   });
-  PL.filter(x => ['total', 'res', 'final'].includes(x.t)).forEach(x => {
+  plRows.filter(x => ['total', 'res', 'final'].includes(x.t)).forEach(x => {
     const r = new Array(12).fill(0);
     const b = new Array(12).fill(0);
     x.sum!.split('+').forEach(p => {
       p = p.trim();
       if (p.startsWith('grp:')) {
         const g = p.slice(4);
-        PL.filter(a => a.t === 'acct' && a.grp === g).forEach(a => {
+        plRows.filter(a => a.t === 'acct' && a.grp === g).forEach(a => {
           vals[a.nr!]?.r.forEach((v, i) => r[i] += v);
           vals[a.nr!]?.b.forEach((v, i) => b[i] += v);
         });
@@ -55,9 +55,9 @@ export function computePL(realized: Record<string, number>, budget: Record<numbe
   return vals;
 }
 
-export function computeDynamicBudget(realized: Record<string, number>, nReal: number): Record<number, number[]> {
+export function computeDynamicBudget(realized: Record<string, number>, nReal: number, plRows: PLRow[] = PL): Record<number, number[]> {
   const dynBudget: Record<number, number[]> = {};
-  PL.filter(x => x.t === 'acct').forEach(x => {
+  plRows.filter(x => x.t === 'acct').forEach(x => {
     const nr = x.nr!;
     const rArr = Array.from({ length: 12 }, (_, i) => realized[`${nr}-${i + 1}`] || 0);
     const avg = nReal > 0 ? rArr.slice(0, nReal).reduce((a, b) => a + b, 0) / nReal : 0;

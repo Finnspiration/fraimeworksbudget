@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
-import { MONTHS, PL } from '@/data/budget-constants';
+import { MONTHS, type PLRow, PL } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3 } from 'lucide-react';
@@ -9,6 +9,7 @@ interface Props {
   pl: Record<string | number, PLValues>;
   nReal: number;
   txns: { konto: number }[];
+  activePL: PLRow[];
 }
 
 function KpiCard({ label, value, sub, positive, icon }: { label: string; value: string; sub?: string; positive?: boolean; icon: React.ReactNode }) {
@@ -23,7 +24,7 @@ function KpiCard({ label, value, sub, positive, icon }: { label: string; value: 
   );
 }
 
-export default function OverblikTab({ pl, nReal }: Props) {
+export default function OverblikTab({ pl, nReal, activePL }: Props) {
   const resRow = pl['res'] as PLValues | undefined;
   const omsRow = pl['oms'] as PLValues | undefined;
 
@@ -51,11 +52,11 @@ export default function OverblikTab({ pl, nReal }: Props) {
   }, [resRow, nReal]);
 
   const expenseAccts = useMemo(() =>
-    PL.filter(x => x.t === 'acct' && x.nr! > 1999).map(x => ({
+    activePL.filter(x => x.t === 'acct' && x.nr! > 1999).map(x => ({
       label: x.lbl!, nr: x.nr!,
       ytd: pl[x.nr!] ? Math.abs(sumArr(pl[x.nr!].r, 0, nReal - 1)) : 0,
     })).filter(x => x.ytd > 0).sort((a, b) => b.ytd - a.ytd).slice(0, 6)
-  , [pl, nReal]);
+  , [pl, nReal, activePL]);
 
   const maxExp = expenseAccts[0]?.ytd || 1;
 

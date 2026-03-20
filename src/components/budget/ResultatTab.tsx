@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { MONTHS, MONTHS_FULL, PL } from '@/data/budget-constants';
+import { MONTHS, MONTHS_FULL, type PLRow } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ interface Props {
   setBudget: React.Dispatch<React.SetStateAction<Record<number, number[]>>>;
   budgetMode: 'fixed' | 'dynamic';
   setBudgetMode: (m: 'fixed' | 'dynamic') => void;
+  activePL: PLRow[];
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
@@ -64,7 +65,7 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   );
 }
 
-export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode }: Props) {
+export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL }: Props) {
   const isDynamic = budgetMode === 'dynamic';
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
@@ -86,7 +87,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
 
   const rows = useMemo(() => {
     let curSec: string | null = null;
-    return PL.map((row, idx) => {
+    return activePL.map((row, idx) => {
       if (row.t === 'sp') return <tr key={`sp-${idx}`} className="h-3" />;
       if (row.t === 'sec') {
         curSec = row.lbl!;
@@ -166,7 +167,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       }
       return null;
     });
-  }, [pl, nReal, showZero, collapsedSecs, budget]);
+  }, [pl, nReal, showZero, collapsedSecs, budget, activePL]);
 
   return (
     <div className="space-y-4">

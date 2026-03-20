@@ -38,10 +38,10 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="overblik">
-            <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} />
+            <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} activePL={state.activePL} />
           </TabsContent>
           <TabsContent value="resultat">
-            <ResultatTab pl={state.pl} nReal={state.nReal} setNReal={state.setNReal} budget={state.budget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} />
+            <ResultatTab pl={state.pl} nReal={state.nReal} setNReal={state.setNReal} budget={state.budget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL} />
           </TabsContent>
           <TabsContent value="skat">
             <SkatTab pl={state.pl} txns={state.txns} nReal={state.nReal}
@@ -51,7 +51,7 @@ export default function Index() {
               skatPct={state.skatPct} setSkatPct={state.setSkatPct} />
           </TabsContent>
           <TabsContent value="import">
-            <ImportTab txns={state.txns} setTxns={state.setTxns} />
+            <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL} />
           </TabsContent>
         </Tabs>
       </main>
