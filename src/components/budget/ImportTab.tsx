@@ -99,14 +99,23 @@ export default function ImportTab({ txns, setTxns }: Props) {
 
   const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) parseFile(f); }, [parseFile]);
 
+  const txnKey = (t: Transaction) => `${t.bilag}_${t.dato}_${t.konto}_${t.belob}`;
+
+  const existingKeys = useMemo(() => new Set(txns.map(txnKey)), [txns]);
+
+  const { newRows, dupRows } = useMemo(() => {
+    if (!preview) return { newRows: [] as Transaction[], dupRows: [] as Transaction[] };
+    const n: Transaction[] = [], d: Transaction[] = [];
+    preview.forEach(t => (existingKeys.has(txnKey(t)) ? d : n).push(t));
+    return { newRows: n, dupRows: d };
+  }, [preview, existingKeys]);
+
   const doImport = () => {
-    if (!preview) return;
-    const existing = new Set(txns.map(t => String(t.bilag) + '-' + t.dato));
-    const newTxns = preview.filter(t => !existing.has(String(t.bilag) + '-' + t.dato));
+    if (!newRows.length) return;
     const maxId = Math.max(0, ...txns.map(t => t.id || 0));
-    const withIds = newTxns.map((t, i) => ({ ...t, id: maxId + i + 1 }));
+    const withIds = newRows.map((t, i) => ({ ...t, id: maxId + i + 1 }));
     setTxns(prev => [...prev, ...withIds]);
-    setStatus({ type: 'success', msg: `✓ Importerede ${withIds.length} nye posteringer (${preview.length - withIds.length} duplikater sprunget over)` });
+    setStatus({ type: 'success', msg: `✓ Importerede ${withIds.length} nye posteringer${dupRows.length ? ` (${dupRows.length} duplikater sprunget over)` : ''}` });
     setPreview(null);
   };
 
@@ -197,10 +206,15 @@ export default function ImportTab({ txns, setTxns }: Props) {
           {preview && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">Forhåndsvisning ({preview.length} rækker)</p>
+                <div>
+                  <p className="text-sm font-semibold">Forhåndsvisning ({preview.length} rækker)</p>
+                  <p className="text-xs text-muted-foreground">
+                    {newRows.length} nye posteringer{dupRows.length > 0 && <span className="text-destructive/70"> · {dupRows.length} duplikater</span>}
+                  </p>
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => { setPreview(null); setStatus(null); }}>Annuller</Button>
-                  <Button size="sm" onClick={doImport}>Importér {preview.length} posteringer</Button>
+                  <Button size="sm" onClick={doImport} disabled={newRows.length === 0}>Importér {newRows.length} nye posteringer</Button>
                 </div>
               </div>
               <div className="overflow-auto max-h-80 rounded-lg border">
@@ -219,19 +233,22 @@ export default function ImportTab({ txns, setTxns }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {preview.slice(0, 50).map((t, i) => (
-                      <tr key={i} className="border-b border-border/30">
-                        <td className="px-3 py-1.5 text-xs text-muted-foreground">{t.type}</td>
-                        <td className="px-3 py-1.5 text-xs">{t.dato}</td>
-                        <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
-                        <td className="px-3 py-1.5 text-xs">{t.faktura || '–'}</td>
-                        <td className="px-3 py-1.5 text-xs truncate max-w-[200px]">{t.tekst}</td>
-                        <td className={`px-3 py-1.5 text-right tabular-nums text-xs ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmt(t.belob)}</td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.konto}</td>
-                        <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">{t.moms || '–'}</td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.modkonto || '–'}</td>
-                      </tr>
-                    ))}
+                    {preview.slice(0, 50).map((t, i) => {
+                      const isDup = existingKeys.has(txnKey(t));
+                      return (
+                        <tr key={i} className={`border-b border-border/30 ${isDup ? 'opacity-40 line-through' : ''}`}>
+                          <td className="px-3 py-1.5 text-xs text-muted-foreground">{t.type}</td>
+                          <td className="px-3 py-1.5 text-xs">{t.dato}</td>
+                          <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
+                          <td className="px-3 py-1.5 text-xs">{t.faktura || '–'}</td>
+                          <td className="px-3 py-1.5 text-xs truncate max-w-[200px]">{t.tekst}</td>
+                          <td className={`px-3 py-1.5 text-right tabular-nums text-xs ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmt(t.belob)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.konto}</td>
+                          <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">{t.moms || '–'}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.modkonto || '–'}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
