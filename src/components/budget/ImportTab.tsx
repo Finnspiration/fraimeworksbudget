@@ -243,7 +243,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
                           <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
                           <td className="px-3 py-1.5 text-xs">{t.faktura || '–'}</td>
                           <td className="px-3 py-1.5 text-xs truncate max-w-[200px]">{t.tekst}</td>
-                          <td className={`px-3 py-1.5 text-right tabular-nums text-xs ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmt(t.belob)}</td>
+                          <td className={`px-3 py-1.5 text-right tabular-nums text-xs ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmtDec(t.belob)}</td>
                           <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.konto}</td>
                           <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">{t.moms || '–'}</td>
                           <td className="px-3 py-1.5 text-right tabular-nums text-xs">{t.modkonto || '–'}</td>
