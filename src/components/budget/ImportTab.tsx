@@ -272,9 +272,15 @@ export default function ImportTab({ txns, setTxns }: Props) {
                   <SelectContent>
                     <SelectItem value="all">Alle moms</SelectItem>
                     <SelectItem value="I25">I25</SelectItem>
+                    <SelectItem value="U25">U25</SelectItem>
                     <SelectItem value="none">Ingen moms</SelectItem>
                   </SelectContent>
                 </Select>
+                <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="w-[150px] h-9 text-sm" placeholder="Fra dato" />
+                <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="w-[150px] h-9 text-sm" placeholder="Til dato" />
+                {(filterDateFrom || filterDateTo) && (
+                  <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); }}>Nulstil dato</Button>
+                )}
               </div>
 
               <div className="overflow-auto max-h-[500px] rounded-lg border">
