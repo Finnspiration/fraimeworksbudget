@@ -56,7 +56,7 @@ export default function OverblikTab({ pl, nReal, activePL }: Props) {
       label: x.lbl!, nr: x.nr!,
       ytd: pl[x.nr!] ? Math.abs(sumArr(pl[x.nr!].r, 0, nReal - 1)) : 0,
     })).filter(x => x.ytd > 0).sort((a, b) => b.ytd - a.ytd).slice(0, 6)
-  , [pl, nReal]);
+  , [pl, nReal, activePL]);
 
   const maxExp = expenseAccts[0]?.ytd || 1;
 
