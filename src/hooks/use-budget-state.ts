@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { INIT_TXN, INIT_BUDGET, INIT_BSKAT, type Transaction, type BskatRate } from '@/data/budget-constants';
+import { INIT_TXN, INIT_BUDGET, INIT_BSKAT, PL, type Transaction, type BskatRate, type PLRow } from '@/data/budget-constants';
 import { computeRealized, computePL, computeDynamicBudget } from '@/lib/budget-utils';
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -20,6 +20,7 @@ export function useBudgetState() {
   const [andenGeld, setAndenGeld] = useState<number>(() => loadJSON('vs_andengeld', 0));
   const [skatPct, setSkatPct] = useState<number>(() => loadJSON('vs_skatpct', 22));
   const [budgetMode, setBudgetMode] = useState<'fixed' | 'dynamic'>(() => loadJSON('vs_budgetmode', 'fixed'));
+  const [customPL, setCustomPL] = useState<PLRow[] | null>(() => loadJSON('vs_custompl', null));
 
   useEffect(() => { localStorage.setItem('vs_txns', JSON.stringify(txns)); }, [txns]);
   useEffect(() => { localStorage.setItem('vs_budget', JSON.stringify(budget)); }, [budget]);
@@ -29,11 +30,14 @@ export function useBudgetState() {
   useEffect(() => { localStorage.setItem('vs_andengeld', JSON.stringify(andenGeld)); }, [andenGeld]);
   useEffect(() => { localStorage.setItem('vs_skatpct', JSON.stringify(skatPct)); }, [skatPct]);
   useEffect(() => { localStorage.setItem('vs_budgetmode', JSON.stringify(budgetMode)); }, [budgetMode]);
+  useEffect(() => { localStorage.setItem('vs_custompl', JSON.stringify(customPL)); }, [customPL]);
+
+  const activePL = customPL ?? PL;
 
   const realized = useMemo(() => computeRealized(txns), [txns]);
-  const dynamicBudget = useMemo(() => computeDynamicBudget(realized, nReal), [realized, nReal]);
+  const dynamicBudget = useMemo(() => computeDynamicBudget(realized, nReal, activePL), [realized, nReal, activePL]);
   const activeBudget = budgetMode === 'dynamic' ? dynamicBudget : budget;
-  const pl = useMemo(() => computePL(realized, activeBudget), [realized, activeBudget]);
+  const pl = useMemo(() => computePL(realized, activeBudget, activePL), [realized, activeBudget, activePL]);
 
   const resetAll = useCallback(() => {
     setTxns(INIT_TXN);
@@ -54,6 +58,7 @@ export function useBudgetState() {
     andenGeld, setAndenGeld,
     skatPct, setSkatPct,
     budgetMode, setBudgetMode,
+    customPL, setCustomPL, activePL,
     pl, realized,
     resetAll,
   };

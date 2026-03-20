@@ -167,7 +167,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       }
       return null;
     });
-  }, [pl, nReal, showZero, collapsedSecs, budget]);
+  }, [pl, nReal, showZero, collapsedSecs, budget, activePL]);
 
   return (
     <div className="space-y-4">
