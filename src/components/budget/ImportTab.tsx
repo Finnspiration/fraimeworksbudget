@@ -277,6 +277,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
       }
 
       setKontoPlanPreview(plRows);
+      setKontoPlanMeta(previewMeta);
       setKontoPlanStatus(null);
     };
     reader.readAsArrayBuffer(file);
