@@ -343,25 +343,31 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card">
                     <tr className="border-b text-xs text-muted-foreground">
-                      <th className="px-3 py-2 text-left">Type</th>
-                      <th className="px-3 py-2 text-right">Nr</th>
+                      <th className="px-3 py-2 text-right">Nr.</th>
                       <th className="px-3 py-2 text-left">Navn</th>
-                      <th className="px-3 py-2 text-left">Gruppe</th>
+                      <th className="px-3 py-2 text-center">Type</th>
+                      <th className="px-3 py-2 text-left">Moms</th>
+                      <th className="px-3 py-2 text-left">Sumfra</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {kontoPlanPreview.map((row, i) => (
-                      <tr key={i} className={`border-b border-border/30 ${row.t === 'sec' ? 'bg-secondary/50 font-semibold' : row.t === 'total' || row.t === 'res' || row.t === 'final' ? 'bg-primary/5 font-medium' : row.t === 'sp' ? 'h-2' : ''}`}>
-                        {row.t === 'sp' ? <td colSpan={4} /> : (
-                          <>
-                            <td className="px-3 py-1 text-xs text-muted-foreground">{row.t}</td>
-                            <td className="px-3 py-1 text-xs tabular-nums text-right">{row.nr || ''}</td>
-                            <td className="px-3 py-1 text-xs">{row.lbl || ''}</td>
-                            <td className="px-3 py-1 text-xs text-muted-foreground">{row.grp || row.sum || ''}</td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
+                    {kontoPlanPreview.map((row, i) => {
+                      const meta = kontoPlanMeta[i];
+                      const typeLabels: Record<number, string> = { 1: 'Drift', 3: 'SumFra', 4: 'Overskrift', 5: 'Overskr. Start', 6: 'SumInterval' };
+                      return (
+                        <tr key={i} className={`border-b border-border/30 ${row.t === 'sec' ? 'bg-secondary/50 font-semibold' : row.t === 'total' || row.t === 'res' || row.t === 'final' ? 'bg-primary/5 font-medium' : row.t === 'sp' ? 'h-2' : ''}`}>
+                          {row.t === 'sp' ? <td colSpan={5} /> : (
+                            <>
+                              <td className="px-3 py-1 text-xs tabular-nums text-right">{row.nr || ''}</td>
+                              <td className="px-3 py-1 text-xs">{row.lbl || ''}</td>
+                              <td className="px-3 py-1 text-xs text-center text-muted-foreground">{meta ? `${meta.origType} (${typeLabels[meta.origType] || ''})` : ''}</td>
+                              <td className="px-3 py-1 text-xs text-muted-foreground">{meta?.moms || ''}</td>
+                              <td className="px-3 py-1 text-xs text-muted-foreground">{meta?.sumfra || ''}</td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
