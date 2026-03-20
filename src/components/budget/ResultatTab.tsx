@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { MONTHS, MONTHS_FULL, PL } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 
@@ -6,6 +6,8 @@ interface Props {
   pl: Record<string | number, PLValues>;
   nReal: number;
   setNReal: (n: number) => void;
+  budget: Record<number, number[]>;
+  setBudget: React.Dispatch<React.SetStateAction<Record<number, number[]>>>;
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
@@ -16,10 +18,60 @@ function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?:
   return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${color}`}>{fmt(v)}</td>;
 }
 
-export default function ResultatTab({ pl, nReal, setNReal }: Props) {
+function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?: boolean; onSave: (v: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <td className="px-0.5 py-0.5">
+        <input
+          ref={inputRef}
+          type="number"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={() => { onSave(Number(draft) || 0); setEditing(false); }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { onSave(Number(draft) || 0); setEditing(false); }
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          className="w-full text-right text-xs tabular-nums border border-primary rounded px-1 py-0.5 bg-primary/5 text-primary outline-none"
+        />
+      </td>
+    );
+  }
+
+  const display = value === 0 || isNaN(value) ? '–' : fmt(value);
+  const color = value < 0 ? 'text-muted-foreground' : value > 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-muted-foreground';
+
+  return (
+    <td
+      className={`px-2 py-1 text-right text-xs tabular-nums cursor-pointer hover:bg-primary/10 rounded transition-colors ${dimmed ? 'opacity-30' : ''} ${color}`}
+      onClick={() => { setDraft(String(value || '')); setEditing(true); }}
+      title="Klik for at redigere budget"
+    >
+      {display}
+    </td>
+  );
+}
+
+export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget }: Props) {
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
   const toggleSec = (lbl: string) => setCollapsedSecs(p => ({ ...p, [lbl]: !p[lbl] }));
+
+  const updateBudget = (nr: number, monthIdx: number, value: number) => {
+    setBudget(prev => {
+      const arr = prev[nr] ? [...prev[nr]] : new Array(12).fill(0);
+      arr[monthIdx] = value;
+      return { ...prev, [nr]: arr };
+    });
+  };
 
   const hasAnyData = (nr: number) => {
     const v = pl[nr];
@@ -56,7 +108,12 @@ export default function ResultatTab({ pl, nReal, setNReal }: Props) {
             <td className="px-2 py-1 text-xs truncate max-w-[180px]">{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => [
               <Cell key={`r-${i}`} v={v?.r[i] || 0} realized dimmed={i >= nReal} />,
-              <Cell key={`b-${i}`} v={v?.b[i] || 0} dimmed={i >= nReal} />,
+              <EditableBudgetCell
+                key={`b-${i}`}
+                value={v?.b[i] || 0}
+                dimmed={i >= nReal}
+                onSave={(val) => updateBudget(row.nr!, i, val)}
+              />,
             ])}
             <Cell v={ytdR} realized />
             <Cell v={ytdB} />
@@ -100,7 +157,7 @@ export default function ResultatTab({ pl, nReal, setNReal }: Props) {
       }
       return null;
     });
-  }, [pl, nReal, showZero, collapsedSecs]);
+  }, [pl, nReal, showZero, collapsedSecs, budget]);
 
   return (
     <div className="space-y-4">
@@ -117,7 +174,7 @@ export default function ResultatTab({ pl, nReal, setNReal }: Props) {
         </label>
         <div className="flex items-center gap-3 text-xs">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />Realiseret</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/30 inline-block" />Budget</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/30 inline-block" />Budget (klik for redigering)</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-destructive inline-block" />Afvigelse</span>
         </div>
       </div>
