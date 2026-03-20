@@ -54,9 +54,21 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
   const estimSkat = Math.max(0, projRes * (skatPct / 100));
   const restskat = estimSkat - totalBskatBetalt;
 
+  const skatLabel = virksomhedstype === 'selskab' ? 'Aconto skat' : 'B-skat';
+
   return (
     <div className="space-y-6">
       <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">🏢 Virksomhedstype</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ToggleGroup type="single" value={virksomhedstype} onValueChange={(v) => v && setVirksomhedstype(v as 'personlig' | 'selskab')}>
+            <ToggleGroupItem value="personlig" className="text-xs">Personlig virksomhed</ToggleGroupItem>
+            <ToggleGroupItem value="selskab" className="text-xs">Selskab (ApS/AS)</ToggleGroupItem>
+          </ToggleGroup>
+        </CardContent>
+      </Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">📋 Momsafregning {YEAR}</CardTitle>
         </CardHeader>
