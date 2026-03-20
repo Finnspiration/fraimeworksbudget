@@ -26,7 +26,17 @@ function KpiCard({ label, value, sub, positive, icon }: { label: string; value: 
 
 export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
   const resRow = pl['res'] as PLValues | undefined;
-  const omsRow = pl['oms'] as PLValues | undefined;
+
+  // Dynamically find revenue total from PL structure (supports custom kontoplaner)
+  const firstTotal = activePL.find(r => r.t === 'total');
+  const omsId = firstTotal?.id;
+  const omsRow = omsId ? (pl[omsId] as PLValues | undefined) : undefined;
+
+  // Identify revenue group(s)
+  const omsGroups = useMemo(() => {
+    if (!firstTotal?.sum) return [] as string[];
+    return firstTotal.sum.split('+').map(s => s.trim()).filter(s => s.startsWith('grp:')).map(s => s.slice(4));
+  }, [firstTotal]);
 
   const ytdReal = resRow ? sumArr(resRow.r, 0, nReal - 1) : 0;
   const ytdBud = resRow ? sumArr(resRow.b, 0, nReal - 1) : 0;
@@ -34,18 +44,21 @@ export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
   const projYear = nReal > 0 && resRow ? (sumArr(resRow.r, 0, nReal - 1) / nReal) * 12 : 0;
   const yearBud = resRow ? sumArr(resRow.b) : 0;
 
+  // Expense accounts = all acct rows NOT in the revenue group
+  const expenseAcctRows = useMemo(() =>
+    activePL.filter(r => r.t === 'acct' && !omsGroups.includes(r.grp!))
+  , [activePL, omsGroups]);
+
   const expensesByMonth = useMemo(() => {
     return MONTHS.map((_, i) => {
       let total = 0;
-      for (const row of activePL) {
-        if (row.t === 'acct' && row.nr && row.nr > 1999) {
-          const vals = pl[row.nr] as PLValues | undefined;
-          if (vals) total += Math.abs(vals.r[i]);
-        }
+      for (const row of expenseAcctRows) {
+        const vals = pl[row.nr!] as PLValues | undefined;
+        if (vals) total += Math.abs(vals.r[i]);
       }
       return total;
     });
-  }, [pl, activePL]);
+  }, [pl, expenseAcctRows]);
 
   const chartData = useMemo(() => MONTHS.map((m, i) => ({
     name: m,
@@ -65,11 +78,11 @@ export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
   }, [resRow, nReal]);
 
   const expenseAccts = useMemo(() =>
-    activePL.filter(x => x.t === 'acct' && x.nr! > 1999).map(x => ({
+    expenseAcctRows.map(x => ({
       label: x.lbl!, nr: x.nr!,
       ytd: pl[x.nr!] ? Math.abs(sumArr(pl[x.nr!].r, 0, nReal - 1)) : 0,
     })).filter(x => x.ytd > 0).sort((a, b) => b.ytd - a.ytd).slice(0, 6)
-  , [pl, nReal, activePL]);
+  , [pl, nReal, expenseAcctRows]);
 
   const maxExp = expenseAccts[0]?.ytd || 1;
 
