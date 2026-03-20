@@ -188,8 +188,173 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
     setEditingKonto(null);
   };
 
+  const parseKontoPlan = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = new Uint8Array(e.target!.result as ArrayBuffer);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: (string | number | null)[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(rows.length, 20); i++) {
+        const r = rows[i].map(c => String(c || '').toLowerCase().trim());
+        if (r.some(c => c.includes('nr')) && r.some(c => c.includes('navn') || c.includes('name'))) { headerIdx = i; break; }
+      }
+      if (headerIdx === -1) { setKontoPlanStatus({ type: 'error', msg: 'Kunne ikke finde header-række (skal indeholde Nr og Navn)' }); return; }
+
+      const headers = rows[headerIdx].map(h => String(h || '').toLowerCase().trim());
+      const cNr = headers.findIndex(h => h === 'nr' || h === 'nr.');
+      const cNavn = headers.findIndex(h => h.includes('navn') || h.includes('name'));
+      const cType = headers.findIndex(h => h === 'type');
+      const cSumfra = headers.findIndex(h => h.includes('sumfra') || h.includes('sum fra'));
+
+      console.log('[KontoPlan] Headers:', { headers, cNr, cNavn, cType, cSumfra });
+
+      if (cNr === -1 || cNavn === -1) { setKontoPlanStatus({ type: 'error', msg: 'Mangler kolonnerne Nr og/eller Navn' }); return; }
+
+      const plRows: PLRow[] = [];
+      let currentGrp = 'default';
+      let grpCounter = 0;
+      const totalIds: string[] = [];
+
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || r.every(c => c == null || String(c).trim() === '')) continue;
+
+        const nr = Number(r[cNr]) || 0;
+        const navn = String(r[cNavn] || '').trim();
+        const type = cType >= 0 ? Number(r[cType]) || 0 : 1;
+
+        if (!navn && !nr) continue;
+        if (type === 2) continue;
+
+        if (type === 4) {
+          currentGrp = `grp${++grpCounter}`;
+          plRows.push({ t: 'sec', lbl: navn });
+        } else if (type === 5) {
+          currentGrp = `grp${++grpCounter}`;
+          plRows.push({ t: 'sp' });
+          plRows.push({ t: 'sec', lbl: navn });
+        } else if (type === 1) {
+          plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp });
+        } else if (type === 3) {
+          const id = `t${nr}`;
+          totalIds.push(id);
+          plRows.push({ t: 'total', nr, lbl: navn, id, sum: `grp:${currentGrp}` });
+        } else if (type === 6) {
+          const id = `r${nr}`;
+          plRows.push({ t: 'res', lbl: navn, id, sum: totalIds.map(tid => `id:${tid}`).join('+') });
+        }
+      }
+
+      if (plRows.length > 0 && !plRows.some(r => r.t === 'final')) {
+        const allResIds = plRows.filter(r => r.t === 'res').map(r => `id:${r.id}`);
+        const allTotalIds = plRows.filter(r => r.t === 'total').map(r => `id:${r.id}`);
+        const sumParts = allResIds.length > 0 ? allResIds : allTotalIds;
+        if (sumParts.length > 0) {
+          plRows.push({ t: 'final', lbl: 'PERIODENS RESULTAT', id: 'res', sum: sumParts.join('+') });
+        }
+      }
+
+      if (plRows.filter(r => r.t === 'acct').length === 0) {
+        setKontoPlanStatus({ type: 'error', msg: 'Ingen driftskonti (type 1) fundet i filen' });
+        return;
+      }
+
+      setKontoPlanPreview(plRows);
+      setKontoPlanStatus(null);
+    };
+    reader.readAsArrayBuffer(file);
+  }, []);
+
+  const handleKontoPlanDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) parseKontoPlan(f); }, [parseKontoPlan]);
+
+  const doImportKontoPlan = () => {
+    if (!kontoPlanPreview) return;
+    setCustomPL(kontoPlanPreview);
+    setKontoPlanStatus({ type: 'success', msg: `✓ Kontoplan importeret med ${kontoPlanPreview.filter(r => r.t === 'acct').length} konti` });
+    setKontoPlanPreview(null);
+  };
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2"><BookOpen className="h-4 w-4" />Kontoplan</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">Importér kontoplan fra Excel. Format: Nr, Navn, Type (1=Drift, 3=SumFra, 4=Overskrift, 5=Overskrift Start, 6=SumInterval), Sumfra.</p>
+
+          {customPL && (
+            <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--budget-positive))]/30 bg-[hsl(var(--budget-positive))]/5 p-3">
+              <div className="text-sm">
+                <span className="font-medium">Brugerdefineret kontoplan aktiv</span>
+                <span className="text-muted-foreground ml-2">({customPL.filter(r => r.t === 'acct').length} konti)</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { if (window.confirm('Nulstil til standard-kontoplanen?')) setCustomPL(null); }}>
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />Nulstil
+              </Button>
+            </div>
+          )}
+
+          <div onDrop={handleKontoPlanDrop} onDragOver={e => e.preventDefault()} onClick={() => kontoPlanRef.current?.click()}
+            className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center cursor-pointer hover:bg-secondary transition-colors bg-secondary/30">
+            <BookOpen className="h-8 w-8 mx-auto text-primary/50 mb-2" />
+            <p className="font-medium text-sm">Træk kontoplan-fil hertil eller klik for at vælge</p>
+            <p className="text-xs text-muted-foreground mt-1">.xlsx eller .xls</p>
+            <input ref={kontoPlanRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => e.target.files?.[0] && parseKontoPlan(e.target.files[0])} />
+          </div>
+
+          {kontoPlanStatus && (
+            <div className={`flex items-center gap-2 rounded-lg p-3 text-sm ${kontoPlanStatus.type === 'success' ? 'bg-[hsl(var(--budget-positive))]/10 text-[hsl(var(--budget-positive))]' : 'bg-destructive/10 text-destructive'}`}>
+              {kontoPlanStatus.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+              {kontoPlanStatus.msg}
+            </div>
+          )}
+
+          {kontoPlanPreview && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">
+                  Forhåndsvisning ({kontoPlanPreview.filter(r => r.t === 'acct').length} konti, {kontoPlanPreview.filter(r => r.t === 'total' || r.t === 'res').length} summer)
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { setKontoPlanPreview(null); setKontoPlanStatus(null); }}>Annuller</Button>
+                  <Button size="sm" onClick={doImportKontoPlan}>Importér kontoplan</Button>
+                </div>
+              </div>
+              <div className="overflow-auto max-h-60 rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-card">
+                    <tr className="border-b text-xs text-muted-foreground">
+                      <th className="px-3 py-2 text-left">Type</th>
+                      <th className="px-3 py-2 text-right">Nr</th>
+                      <th className="px-3 py-2 text-left">Navn</th>
+                      <th className="px-3 py-2 text-left">Gruppe</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kontoPlanPreview.map((row, i) => (
+                      <tr key={i} className={`border-b border-border/30 ${row.t === 'sec' ? 'bg-secondary/50 font-semibold' : row.t === 'total' || row.t === 'res' || row.t === 'final' ? 'bg-primary/5 font-medium' : row.t === 'sp' ? 'h-2' : ''}`}>
+                        {row.t === 'sp' ? <td colSpan={4} /> : (
+                          <>
+                            <td className="px-3 py-1 text-xs text-muted-foreground">{row.t}</td>
+                            <td className="px-3 py-1 text-xs tabular-nums text-right">{row.nr || ''}</td>
+                            <td className="px-3 py-1 text-xs">{row.lbl || ''}</td>
+                            <td className="px-3 py-1 text-xs text-muted-foreground">{row.grp || row.sum || ''}</td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2"><Upload className="h-4 w-4" />Importér kassekladde</CardTitle>
