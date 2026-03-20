@@ -181,9 +181,16 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
           <input type="checkbox" checked={showZero} onChange={e => setShowZero(e.target.checked)} className="rounded" />
           Vis konti med nul
         </label>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{isDynamic ? 'Dynamisk' : 'Fast'} budget</span>
+            <Switch checked={isDynamic} onCheckedChange={c => setBudgetMode(c ? 'dynamic' : 'fixed')} />
+          </div>
+          {isDynamic && <Badge variant="secondary" className="text-xs">Rolling forecast</Badge>}
+        </div>
         <div className="flex items-center gap-3 text-xs">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />Realiseret</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/30 inline-block" />Budget (klik for redigering)</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/30 inline-block" />{isDynamic ? 'Dynamisk budget' : 'Budget (klik for redigering)'}</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-destructive inline-block" />Afvigelse</span>
         </div>
       </div>
