@@ -48,7 +48,8 @@ export default function Index() {
               momsBetalt={state.momsBetalt} setMomsBetalt={state.setMomsBetalt}
               bskat={state.bskat} setBskat={state.setBskat}
               andenGeld={state.andenGeld} setAndenGeld={state.setAndenGeld}
-              skatPct={state.skatPct} setSkatPct={state.setSkatPct} />
+              skatPct={state.skatPct} setSkatPct={state.setSkatPct}
+              virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype} />
           </TabsContent>
           <TabsContent value="import">
             <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL} />
