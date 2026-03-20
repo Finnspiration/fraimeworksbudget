@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { INIT_TXN, INIT_BUDGET, INIT_BSKAT, PL, type Transaction, type BskatRate, type PLRow } from '@/data/budget-constants';
+import { INIT_TXN, INIT_BUDGET, INIT_BSKAT, INIT_BSKAT_SELSKAB, PL, type Transaction, type BskatRate, type PLRow } from '@/data/budget-constants';
 import { computeRealized, computePL, computeDynamicBudget } from '@/lib/budget-utils';
 
 function loadJSON<T>(key: string, fallback: T): T {
