@@ -87,7 +87,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
 
   const rows = useMemo(() => {
     let curSec: string | null = null;
-    return PL.map((row, idx) => {
+    return activePL.map((row, idx) => {
       if (row.t === 'sp') return <tr key={`sp-${idx}`} className="h-3" />;
       if (row.t === 'sec') {
         curSec = row.lbl!;
