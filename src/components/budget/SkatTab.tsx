@@ -128,7 +128,7 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">💳 B-skat / Aconto skat {YEAR}</CardTitle>
+          <CardTitle className="text-sm font-semibold">💳 {skatLabel} {YEAR}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-auto">
