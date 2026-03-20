@@ -66,8 +66,9 @@ export default function ImportTab({ txns, setTxns }: Props) {
       const col = (name: string) => headers.findIndex(h => h.includes(name));
       const cDato = col('dato'), cBelob = col('beløb') !== -1 ? col('beløb') : col('belob');
       const cKonto = col('konto'), cMoms = col('moms'), cBilag = col('bilag'), cTekst = col('tekst');
-      const cType = col('type'), cFaktura = col('faktura');
-      const cModkonto = headers.findIndex(h => h.includes('modkonto') || h === 'mod konto');
+      const cType = col('type');
+      const cFaktura = headers.findIndex(h => h.includes('faktura') || h.includes('fak'));
+      const cModkonto = headers.findIndex(h => h.includes('modkonto') || h.includes('mod'));
       const parsed: Transaction[] = [];
       for (let i = headerIdx + 1; i < rows.length; i++) {
         const r = rows[i];
