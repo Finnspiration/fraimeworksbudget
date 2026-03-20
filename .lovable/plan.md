@@ -1,26 +1,35 @@
 
 
-# Virksomhedstype: Personlig vs. Selskab
+# Månedlig skatteestimering + Fix dashboard omsætning
 
-## Koncept
-Tilføj en `virksomhedstype`-indstilling (`'personlig' | 'selskab'`) som styrer:
-- **Overskrift**: "B-skat" (personlig) vs. "Aconto skat" (selskab)
-- **Antal rater**: 10 rater (personlig) vs. 2 rater (selskab, marts + november)
-- **Standard skattesats**: 22% for selskab, uændret for personlig
+## To opgaver
 
-## Ændringer
+### 1. Månedlig skatteestimering i SkatTab
 
-### 1. State i `use-budget-state.ts`
-- Ny state: `virksomhedstype` med type `'personlig' | 'selskab'`, default `'personlig'`, persisteret i localStorage
+Tilføj nyt Card "Estimeret skat pr. måned" mellem "Beregnet årets skat" og "Samlet skyldig oversigt".
 
-### 2. Selskabs-rater i `budget-constants.ts`
-- Tilføj `INIT_BSKAT_SELSKAB` med 2 rater (20. marts og 20. november)
+**Tabel-kolonner:** Måned | Resultat | Estimeret skat | Akkumuleret skat
 
-### 3. Vælger i `SkatTab.tsx`
-- Tilføj en RadioGroup/ToggleGroup øverst: "Personlig virksomhed" / "Selskab (ApS/AS)"
-- Overskriften på B-skat Card ændres dynamisk: "B-skat {YEAR}" vs. "Aconto skat {YEAR}"
-- Når typen skiftes, nulstilles bskat-raterne til den relevante standard (10 eller 2 rater)
+**Logik:**
+- Realiserede måneder (0..nReal-1): brug `resRow.r[i]`
+- Fremtidige måneder: brug gennemsnit af realiserede måneder
+- `monthTax = max(0, monthRes × skatPct / 100)`
+- Akkumuleret = løbende sum
+- Realiserede måneder vises med fed, fremtidige med kursiv/lysere tekst
+- Totalrække nederst
 
-### 4. Props
-- Pass `virksomhedstype` og `setVirksomhedstype` fra Index → SkatTab
+**Fil:** `SkatTab.tsx` — nyt Card i grid-sektionen (linje 189-246)
+
+### 2. Fix dashboard: YTD Omsætning og bar chart
+
+**Problem:** Omsætning viser "– kr" fordi `fmt(0)` returnerer '–'. Bar chart viser 0 for alle måneder.
+
+**Root cause:** Der er ingen salgstransaktioner (konto 1xxx) i kassekladden — kun udgifter. Systemet beregner korrekt, men data mangler. Dog er der et sekundært problem: bar chart viser "Udgifter" som `resRow.r[i] - omsRow.r[i]`, men når omsætning er 0, viser den resultatet (som kan være positivt pga. fortegnskonventionen) som udgift.
+
+**Fix i `OverblikTab.tsx`:**
+- Bar chart "Udgifter"-beregning: brug sum af udgiftskonti direkte i stedet for `res - oms`, som giver forkerte tal når omsætning er 0
+- Beregn udgifter som sum af alle `acct`-rækker med `nr > 1999` pr. måned (allerede tilgængelig via `pl`)
+- Gør omsætning-hint mere synligt når der mangler salgsdata
+
+**Fil:** `OverblikTab.tsx` — ændr `chartData` beregning (linje 37-43)
 
