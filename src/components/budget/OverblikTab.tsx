@@ -52,7 +52,7 @@ export default function OverblikTab({ pl, nReal, activePL }: Props) {
   }, [resRow, nReal]);
 
   const expenseAccts = useMemo(() =>
-    PL.filter(x => x.t === 'acct' && x.nr! > 1999).map(x => ({
+    activePL.filter(x => x.t === 'acct' && x.nr! > 1999).map(x => ({
       label: x.lbl!, nr: x.nr!,
       ytd: pl[x.nr!] ? Math.abs(sumArr(pl[x.nr!].r, 0, nReal - 1)) : 0,
     })).filter(x => x.ytd > 0).sort((a, b) => b.ytd - a.ytd).slice(0, 6)
