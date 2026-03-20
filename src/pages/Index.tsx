@@ -6,7 +6,7 @@ import OverblikTab from '@/components/budget/OverblikTab';
 import ResultatTab from '@/components/budget/ResultatTab';
 import SkatTab from '@/components/budget/SkatTab';
 import ImportTab from '@/components/budget/ImportTab';
-import { BarChart3, Table, Receipt, Upload } from 'lucide-react';
+import { BarChart3, Table, Receipt, FileSpreadsheet } from 'lucide-react';
 
 export default function Index() {
   const state = useBudgetState();
