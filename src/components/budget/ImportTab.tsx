@@ -132,6 +132,8 @@ export default function ImportTab({ txns, setTxns }: Props) {
     }
     if (filterType !== 'all') result = result.filter(t => t.type === filterType);
     if (filterMoms !== 'all') result = result.filter(t => filterMoms === 'none' ? !t.moms : t.moms === filterMoms);
+    if (filterDateFrom) result = result.filter(t => t.dato >= filterDateFrom);
+    if (filterDateTo) result = result.filter(t => t.dato <= filterDateTo);
     result.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
