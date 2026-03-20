@@ -40,6 +40,11 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const [kontoPlanMeta, setKontoPlanMeta] = useState<{ origType: number; moms: string; sumfra: string }[]>([]);
   const [kontoPlanStatus, setKontoPlanStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  const activePL = customPL ?? PL;
+  const acctList = useMemo(() => activePL.filter(r => r.t === 'acct' && r.nr), [activePL]);
+  const acctMap = useMemo(() => new Map(acctList.map(r => [r.nr!, r.lbl || ''])), [acctList]);
+  const [kontoPopoverOpen, setKontoPopoverOpen] = useState<number | null>(null);
+
   const parseDanishNumber = (val: unknown): number => {
     if (val == null) return 0;
     if (typeof val === 'number') return val;
