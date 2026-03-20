@@ -220,7 +220,7 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
               );
             })}
             <p className="flex justify-between text-sm">
-              <span>B-skat udestående:</span>
+              <span>{skatLabel} udestående:</span>
               <span className="font-medium tabular-nums">{fmt(totalBskatSkyldigt - totalBskatBetalt)}</span>
             </p>
             <p className="flex justify-between text-sm items-center">
