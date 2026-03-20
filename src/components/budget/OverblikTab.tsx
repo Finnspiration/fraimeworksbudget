@@ -9,6 +9,7 @@ interface Props {
   pl: Record<string | number, PLValues>;
   nReal: number;
   txns: { konto: number }[];
+  activePL: PLRow[];
 }
 
 function KpiCard({ label, value, sub, positive, icon }: { label: string; value: string; sub?: string; positive?: boolean; icon: React.ReactNode }) {
