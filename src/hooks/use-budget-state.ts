@@ -32,6 +32,7 @@ export function useBudgetState() {
   useEffect(() => { localStorage.setItem('vs_skatpct', JSON.stringify(skatPct)); }, [skatPct]);
   useEffect(() => { localStorage.setItem('vs_budgetmode', JSON.stringify(budgetMode)); }, [budgetMode]);
   useEffect(() => { localStorage.setItem('vs_custompl', JSON.stringify(customPL)); }, [customPL]);
+  useEffect(() => { localStorage.setItem('vs_vtype', JSON.stringify(virksomhedstype)); }, [virksomhedstype]);
 
   const activePL = customPL ?? PL;
 
