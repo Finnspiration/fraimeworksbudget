@@ -35,8 +35,14 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
       return d.getFullYear() === YEAR && months.includes(d.getMonth()) && tx.moms === 'I25';
     }).reduce((s, tx) => s + tx.belob / 5, 0);
 
+  const computeSalgsmoms = (months: number[]) =>
+    txns.filter(tx => {
+      if (!tx.dato) return false;
+      const d = new Date(tx.dato);
+      return d.getFullYear() === YEAR && months.includes(d.getMonth()) && tx.moms === 'U25';
+    }).reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
+
   const omsRow = pl['oms'] as PLValues | undefined;
-  const computeSalgsmoms = (months: number[]) => omsRow ? months.reduce((s, i) => s + Math.max(0, omsRow.r[i]) * 0.25, 0) : 0;
 
   const totalBskatSkyldigt = bskat.reduce((s, r) => s + Number(r.belob || 0), 0);
   const totalBskatBetalt = bskat.reduce((s, r) => s + Number(r.betalt || 0), 0);
@@ -101,7 +107,7 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
               </tbody>
             </table>
           </div>
-          {!omsRow?.r.some(v => v > 0) && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 — fakturadata mangler i kassekladden.</p>}
+          {!txns.some(tx => tx.moms === 'U25') && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 — tilføj momskode U25 på salgsfakturaer i kassekladden.</p>}
         </CardContent>
       </Card>
 

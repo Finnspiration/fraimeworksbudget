@@ -25,8 +25,11 @@ export default function ImportTab({ txns, setTxns }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterMoms, setFilterMoms] = useState('all');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [editingKonto, setEditingKonto] = useState<number | null>(null);
   const [editKontoVal, setEditKontoVal] = useState('');
+  const [editingMoms, setEditingMoms] = useState<number | null>(null);
 
   const parseDanishNumber = (val: unknown): number => {
     if (val == null) return 0;
@@ -129,6 +132,8 @@ export default function ImportTab({ txns, setTxns }: Props) {
     }
     if (filterType !== 'all') result = result.filter(t => t.type === filterType);
     if (filterMoms !== 'all') result = result.filter(t => filterMoms === 'none' ? !t.moms : t.moms === filterMoms);
+    if (filterDateFrom) result = result.filter(t => t.dato >= filterDateFrom);
+    if (filterDateTo) result = result.filter(t => t.dato <= filterDateTo);
     result.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
@@ -141,7 +146,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
-  }, [txns, searchTerm, filterType, filterMoms, sortKey, sortDir]);
+  }, [txns, searchTerm, filterType, filterMoms, filterDateFrom, filterDateTo, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -267,9 +272,15 @@ export default function ImportTab({ txns, setTxns }: Props) {
                   <SelectContent>
                     <SelectItem value="all">Alle moms</SelectItem>
                     <SelectItem value="I25">I25</SelectItem>
+                    <SelectItem value="U25">U25</SelectItem>
                     <SelectItem value="none">Ingen moms</SelectItem>
                   </SelectContent>
                 </Select>
+                <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="w-[150px] h-9 text-sm" placeholder="Fra dato" />
+                <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="w-[150px] h-9 text-sm" placeholder="Til dato" />
+                {(filterDateFrom || filterDateTo) && (
+                  <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setFilterDateFrom(''); setFilterDateTo(''); }}>Nulstil dato</Button>
+                )}
               </div>
 
               <div className="overflow-auto max-h-[500px] rounded-lg border">
@@ -327,7 +338,33 @@ export default function ImportTab({ txns, setTxns }: Props) {
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">{t.moms || '–'}</td>
+                        <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">
+                          {editingMoms === t.id ? (
+                            <select
+                              value={t.moms || ''}
+                              onChange={e => {
+                                const val = e.target.value || null;
+                                setTxns(prev => prev.map(tx => tx.id === t.id ? { ...tx, moms: val } : tx));
+                                setEditingMoms(null);
+                              }}
+                              onBlur={() => setEditingMoms(null)}
+                              className="border border-primary/30 rounded px-1 py-0.5 text-xs bg-secondary"
+                              autoFocus
+                            >
+                              <option value="">Ingen</option>
+                              <option value="I25">I25</option>
+                              <option value="U25">U25</option>
+                            </select>
+                          ) : (
+                            <span
+                              className="cursor-pointer hover:text-primary hover:underline"
+                              onClick={() => setEditingMoms(t.id)}
+                              title="Klik for at ændre moms"
+                            >
+                              {t.moms || '–'}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-1.5 text-right text-xs tabular-nums text-muted-foreground">{t.modkonto || '–'}</td>
                       </tr>
                     ))}
