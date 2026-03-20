@@ -38,7 +38,7 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="overblik">
-            <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} />
+            <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} activePL={state.activePL} />
           </TabsContent>
           <TabsContent value="resultat">
             <ResultatTab pl={state.pl} nReal={state.nReal} setNReal={state.setNReal} budget={state.budget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL} />
