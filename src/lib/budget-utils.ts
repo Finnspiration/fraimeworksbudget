@@ -6,7 +6,7 @@ export interface PLValues {
 }
 
 function netBelob(belob: number, moms: string | null): number {
-  return moms === 'I25' ? belob / 1.25 : Number(belob);
+  return moms === 'I25' || moms === 'U25' ? belob / 1.25 : Number(belob);
 }
 
 export function computeRealized(txns: Transaction[], year: number = YEAR): Record<string, number> {

@@ -338,7 +338,33 @@ export default function ImportTab({ txns, setTxns }: Props) {
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">{t.moms || '–'}</td>
+                        <td className="px-3 py-1.5 text-center text-xs text-muted-foreground">
+                          {editingMoms === t.id ? (
+                            <select
+                              value={t.moms || ''}
+                              onChange={e => {
+                                const val = e.target.value || null;
+                                setTxns(prev => prev.map(tx => tx.id === t.id ? { ...tx, moms: val } : tx));
+                                setEditingMoms(null);
+                              }}
+                              onBlur={() => setEditingMoms(null)}
+                              className="border border-primary/30 rounded px-1 py-0.5 text-xs bg-secondary"
+                              autoFocus
+                            >
+                              <option value="">Ingen</option>
+                              <option value="I25">I25</option>
+                              <option value="U25">U25</option>
+                            </select>
+                          ) : (
+                            <span
+                              className="cursor-pointer hover:text-primary hover:underline"
+                              onClick={() => setEditingMoms(t.id)}
+                              title="Klik for at ændre moms"
+                            >
+                              {t.moms || '–'}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-1.5 text-right text-xs tabular-nums text-muted-foreground">{t.modkonto || '–'}</td>
                       </tr>
                     ))}
