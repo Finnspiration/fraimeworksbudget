@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { MONTHS, MONTHS_FULL, PL } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 interface Props {
   pl: Record<string | number, PLValues>;
@@ -8,6 +10,8 @@ interface Props {
   setNReal: (n: number) => void;
   budget: Record<number, number[]>;
   setBudget: React.Dispatch<React.SetStateAction<Record<number, number[]>>>;
+  budgetMode: 'fixed' | 'dynamic';
+  setBudgetMode: (m: 'fixed' | 'dynamic') => void;
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
@@ -60,7 +64,8 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   );
 }
 
-export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget }: Props) {
+export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode }: Props) {
+  const isDynamic = budgetMode === 'dynamic';
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
   const toggleSec = (lbl: string) => setCollapsedSecs(p => ({ ...p, [lbl]: !p[lbl] }));
@@ -108,12 +113,16 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget }: 
             <td className="px-2 py-1 text-xs truncate max-w-[180px]">{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => [
               <Cell key={`r-${i}`} v={v?.r[i] || 0} realized dimmed={i >= nReal} />,
-              <EditableBudgetCell
-                key={`b-${i}`}
-                value={v?.b[i] || 0}
-                dimmed={i >= nReal}
-                onSave={(val) => updateBudget(row.nr!, i, val)}
-              />,
+              isDynamic ? (
+                <Cell key={`b-${i}`} v={v?.b[i] || 0} dimmed={i >= nReal} />
+              ) : (
+                <EditableBudgetCell
+                  key={`b-${i}`}
+                  value={v?.b[i] || 0}
+                  dimmed={i >= nReal}
+                  onSave={(val) => updateBudget(row.nr!, i, val)}
+                />
+              ),
             ])}
             <Cell v={ytdR} realized />
             <Cell v={ytdB} />
@@ -172,9 +181,16 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget }: 
           <input type="checkbox" checked={showZero} onChange={e => setShowZero(e.target.checked)} className="rounded" />
           Vis konti med nul
         </label>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{isDynamic ? 'Dynamisk' : 'Fast'} budget</span>
+            <Switch checked={isDynamic} onCheckedChange={c => setBudgetMode(c ? 'dynamic' : 'fixed')} />
+          </div>
+          {isDynamic && <Badge variant="secondary" className="text-xs">Rolling forecast</Badge>}
+        </div>
         <div className="flex items-center gap-3 text-xs">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />Realiseret</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/30 inline-block" />Budget (klik for redigering)</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/30 inline-block" />{isDynamic ? 'Dynamisk budget' : 'Budget (klik for redigering)'}</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-destructive inline-block" />Afvigelse</span>
         </div>
       </div>

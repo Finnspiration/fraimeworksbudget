@@ -41,7 +41,7 @@ export default function Index() {
             <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} />
           </TabsContent>
           <TabsContent value="resultat">
-            <ResultatTab pl={state.pl} nReal={state.nReal} setNReal={state.setNReal} budget={state.budget} setBudget={state.setBudget} />
+            <ResultatTab pl={state.pl} nReal={state.nReal} setNReal={state.setNReal} budget={state.budget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} />
           </TabsContent>
           <TabsContent value="skat">
             <SkatTab pl={state.pl} txns={state.txns} nReal={state.nReal}

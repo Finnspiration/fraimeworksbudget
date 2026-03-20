@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { INIT_TXN, INIT_BUDGET, INIT_BSKAT, type Transaction, type BskatRate } from '@/data/budget-constants';
-import { computeRealized, computePL } from '@/lib/budget-utils';
+import { computeRealized, computePL, computeDynamicBudget } from '@/lib/budget-utils';
 
 function loadJSON<T>(key: string, fallback: T): T {
   try {
@@ -19,6 +19,7 @@ export function useBudgetState() {
   const [bskat, setBskat] = useState<BskatRate[]>(() => loadJSON('vs_bskat', INIT_BSKAT));
   const [andenGeld, setAndenGeld] = useState<number>(() => loadJSON('vs_andengeld', 0));
   const [skatPct, setSkatPct] = useState<number>(() => loadJSON('vs_skatpct', 22));
+  const [budgetMode, setBudgetMode] = useState<'fixed' | 'dynamic'>(() => loadJSON('vs_budgetmode', 'fixed'));
 
   useEffect(() => { localStorage.setItem('vs_txns', JSON.stringify(txns)); }, [txns]);
   useEffect(() => { localStorage.setItem('vs_budget', JSON.stringify(budget)); }, [budget]);
@@ -27,9 +28,12 @@ export function useBudgetState() {
   useEffect(() => { localStorage.setItem('vs_bskat', JSON.stringify(bskat)); }, [bskat]);
   useEffect(() => { localStorage.setItem('vs_andengeld', JSON.stringify(andenGeld)); }, [andenGeld]);
   useEffect(() => { localStorage.setItem('vs_skatpct', JSON.stringify(skatPct)); }, [skatPct]);
+  useEffect(() => { localStorage.setItem('vs_budgetmode', JSON.stringify(budgetMode)); }, [budgetMode]);
 
   const realized = useMemo(() => computeRealized(txns), [txns]);
-  const pl = useMemo(() => computePL(realized, budget), [realized, budget]);
+  const dynamicBudget = useMemo(() => computeDynamicBudget(realized, nReal), [realized, nReal]);
+  const activeBudget = budgetMode === 'dynamic' ? dynamicBudget : budget;
+  const pl = useMemo(() => computePL(realized, activeBudget), [realized, activeBudget]);
 
   const resetAll = useCallback(() => {
     setTxns(INIT_TXN);
@@ -49,6 +53,7 @@ export function useBudgetState() {
     bskat, setBskat,
     andenGeld, setAndenGeld,
     skatPct, setSkatPct,
+    budgetMode, setBudgetMode,
     pl, realized,
     resetAll,
   };

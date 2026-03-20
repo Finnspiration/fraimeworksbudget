@@ -55,6 +55,17 @@ export function computePL(realized: Record<string, number>, budget: Record<numbe
   return vals;
 }
 
+export function computeDynamicBudget(realized: Record<string, number>, nReal: number): Record<number, number[]> {
+  const dynBudget: Record<number, number[]> = {};
+  PL.filter(x => x.t === 'acct').forEach(x => {
+    const nr = x.nr!;
+    const rArr = Array.from({ length: 12 }, (_, i) => realized[`${nr}-${i + 1}`] || 0);
+    const avg = nReal > 0 ? rArr.slice(0, nReal).reduce((a, b) => a + b, 0) / nReal : 0;
+    dynBudget[nr] = Array.from({ length: 12 }, (_, i) => i < nReal ? rArr[i] : avg);
+  });
+  return dynBudget;
+}
+
 export function fmt(n: number | null | undefined): string {
   if (n === 0 || n == null || isNaN(n)) return '–';
   return new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(Math.round(n));
