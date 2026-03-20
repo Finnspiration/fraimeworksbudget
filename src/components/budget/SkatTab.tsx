@@ -1,6 +1,7 @@
 import { YEAR } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { Transaction, BskatRate } from '@/data/budget-constants';
 
 interface Props {
@@ -15,6 +16,8 @@ interface Props {
   setAndenGeld: (v: number) => void;
   skatPct: number;
   setSkatPct: (v: number) => void;
+  virksomhedstype: 'personlig' | 'selskab';
+  setVirksomhedstype: (v: 'personlig' | 'selskab') => void;
 }
 
 const quarters = [
