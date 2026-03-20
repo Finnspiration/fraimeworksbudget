@@ -1,26 +1,22 @@
 
 
-# Tilføj U25 moms-redigering og dato-filtrering
+# Forbedret duplikat-detektion ved import
+
+## Problem
+Den nuværende duplikat-detektion matcher kun på `bilag + dato`, hvilket kan give false positives/negatives. Derudover ser brugeren ikke i forhåndsvisningen hvilke rækker der allerede findes.
 
 ## Ændringer
 
-### 1. Redigerbar moms-kolonne i kassekladden (`ImportTab.tsx`)
-- Gør moms-cellen klikbar (samme inline-edit mønster som konto)
-- Dropdown/input med valgmulighederne: `I25`, `U25`, eller tom (ingen moms)
-- Bruges til manuelt at tilføje U25 på salgsfakturaer efter import
+### 1. Forbedret duplikat-nøgle (`ImportTab.tsx`)
+- Udvid match-nøglen til `bilag + dato + konto + belob` for mere præcis detektion
+- Samme nøgle bruges ved både filtrering og preview-markering
 
-### 2. Dato-filter i kassekladden (`ImportTab.tsx`)
-- Tilføj to dato-inputs (fra/til) i filterrækken
-- Filtrér posteringer baseret på dato-range
-- Nulstil-knap for at fjerne datofilter
+### 2. Vis duplikater i forhåndsvisningen
+- Marker duplikat-rækker visuelt (grå/strikethrough) i preview-tabellen
+- Vis tæller: "X nye posteringer, Y duplikater sprunget over"
+- Opdater import-knappen til kun at vise antal nye: "Importér X nye posteringer"
 
-### 3. Opdater moms-filter dropdown (`ImportTab.tsx`)
-- Tilføj `U25` som filtreringsmulighed (ud over `I25` og `Ingen moms`)
-
-### 4. Opdater SkatTab salgsmoms-beregning (`SkatTab.tsx`)
-- Beregn salgsmoms fra transaktioner med `moms === 'U25'` i stedet for P&L-approksimation
-- Fallback til gammel metode hvis ingen U25-transaktioner findes
-
-### 5. Opdater netBelob i `budget-utils.ts`
-- Håndter `U25` ligesom `I25`: `belob / 1.25` for korrekt nettobeløb i P&L
+### 3. Automatisk filtrering
+- Preview filtrerer automatisk duplikater fra, men viser dem stadig med markering
+- Import-funktionen overfører kun de nye posteringer (som nu, men med bedre nøgle)
 
