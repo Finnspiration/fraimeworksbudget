@@ -69,6 +69,8 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
           </ToggleGroup>
         </CardContent>
       </Card>
+
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">📋 Momsafregning {YEAR}</CardTitle>
         </CardHeader>
