@@ -112,6 +112,8 @@ export interface Transaction {
   belob: number;
   konto: number;
   moms: string | null;
+  modkonto?: number;
+  faktura?: string;
 }
 
 export const INIT_TXN: Transaction[] = [
