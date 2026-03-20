@@ -19,6 +19,7 @@ export function useBudgetState() {
   const [bskat, setBskat] = useState<BskatRate[]>(() => loadJSON('vs_bskat', INIT_BSKAT));
   const [andenGeld, setAndenGeld] = useState<number>(() => loadJSON('vs_andengeld', 0));
   const [skatPct, setSkatPct] = useState<number>(() => loadJSON('vs_skatpct', 22));
+  const [budgetMode, setBudgetMode] = useState<'fixed' | 'dynamic'>(() => loadJSON('vs_budgetmode', 'fixed'));
 
   useEffect(() => { localStorage.setItem('vs_txns', JSON.stringify(txns)); }, [txns]);
   useEffect(() => { localStorage.setItem('vs_budget', JSON.stringify(budget)); }, [budget]);
