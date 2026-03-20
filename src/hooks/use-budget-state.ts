@@ -21,6 +21,7 @@ export function useBudgetState() {
   const [skatPct, setSkatPct] = useState<number>(() => loadJSON('vs_skatpct', 22));
   const [budgetMode, setBudgetMode] = useState<'fixed' | 'dynamic'>(() => loadJSON('vs_budgetmode', 'fixed'));
   const [customPL, setCustomPL] = useState<PLRow[] | null>(() => loadJSON('vs_custompl', null));
+  const [virksomhedstype, setVirksomhedstype] = useState<'personlig' | 'selskab'>(() => loadJSON('vs_vtype', 'personlig'));
 
   useEffect(() => { localStorage.setItem('vs_txns', JSON.stringify(txns)); }, [txns]);
   useEffect(() => { localStorage.setItem('vs_budget', JSON.stringify(budget)); }, [budget]);
