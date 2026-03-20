@@ -1,52 +1,34 @@
 
-# Budget App — Visual Strategies
 
-## Overview
-A comprehensive Danish budget/accounting app for "Visual Strategies v/Charlotte Rosenberg" with P&L tracking, tax management, and transaction import — built from the provided financial model.
+# Opdater import-parser til det korrekte kassekladde-format
 
-## Pages & Features
+## Problem
+Det nuværende importformat matcher ikke det faktiske Excel-format fra regnskabsprogrammet. Formatet har kolonnerne: **Type, Dato, Bilag, Faktura, Tekst, Beløb, Konto, Moms, Modkonto**.
 
-### 1. Main Layout with Tab Navigation
-- Company header with logo/name
-- Four tabs: **Overblik**, **Resultatopgørelse**, **Skat & Moms**, **Import**
+Derudover bruger dato-formatet `dd.mm.yyyy` (f.eks. `25.02.2026`) og beløb bruger dansk format med komma som decimaltegn og punktum som tusindtalsseparator (f.eks. `1.989,00`).
 
-### 2. Overblik (Dashboard) Tab
-- KPI cards: YTD result, YTD revenue, projected annual result, budget status
-- Bar chart: Monthly revenue vs. expenses
-- Line chart: Cumulative actual vs. budget
-- Top 6 expense categories YTD with progress bars
+## Ændringer
 
-### 3. Resultatopgørelse (P&L) Tab
-- Full chart of accounts with monthly columns (Jan–Dec)
-- Dual rows per month: Realized + Budget values
-- Collapsible sections (Revenue, Direct costs, Salaries, etc.)
-- YTD, Deviation, Projected Year, and Budget Year summary columns
-- Toggle for realized months count and zero-value accounts
-- Color-coded cells (blue for actual, green for budget positive, red for negative)
+### 1. Opdater header-søgning (`ImportTab.tsx`)
+- Tilføj "type" og "modkonto" som mulige header-kolonner der kan genkendes
+- Gør header-match mere fleksibel: match også på "type" + "konto" kombination (ikke kun "konto" + "beløb")
 
-### 4. Skat & Moms (Tax) Tab
-- **VAT/Moms quarterly table**: Sales tax, purchase tax, net payable, payments tracking
-- **B-skat (prepaid tax) table**: 10 installments with amounts, due dates, payment tracking
-- **Estimated annual tax**: Configurable tax rate, projected result, estimated tax, residual calculation
-- **Total liabilities overview**: Combined outstanding amounts
+### 2. Tilføj "Type"-kolonne-mapping
+- Parse "Type"-kolonnen (Finansbilag, Kundeindbetaling, etc.) og gem den i transaktionens `type`-felt
 
-### 5. Import Tab
-- Drag-and-drop Excel/CSV file upload
-- Auto-detect header rows (Konto, Beløb columns)
-- Preview imported rows before confirming
-- Duplicate detection on import
-- Transaction ledger view with clear-all option
+### 3. Fix dato-parsing for `dd.mm.yyyy`-format
+- Konvertér `25.02.2026` → `2026-02-25` (ISO-format) ved at splitte på `.` og vende rækkefølgen
 
-## Data & State
-- All data stored in React state (localStorage persistence)
-- Pre-loaded with the provided chart of accounts (PL structure with ~70 accounts)
-- Initial sample transactions and budget figures included
-- Real-time P&L computation from transactions
-- Moms calculation from transaction VAT codes
+### 4. Fix beløb-parsing for dansk talformat
+- Fjern tusindtalsseparator (`.`) og erstat komma (`,`) med punktum inden `Number()` konvertering
+- F.eks. `1.989,00` → `1989.00`
 
-## Design
-- Clean, professional financial UI with Tailwind
-- Blue/green/red color coding for financial data
-- Responsive tables with sticky headers
-- Danish language throughout
-- Recharts for all visualizations
+### 5. Tilføj "Faktura"-kolonne (valgfri)
+- Parse faktura-nummer hvis kolonnen findes
+
+### 6. Opdater kassekladde-tabel i bunden
+- Vis "Type"-kolonne i visningen af importerede posteringer
+
+## Teknisk detalje
+Alle ændringer sker i `src/components/budget/ImportTab.tsx`. Transaction-interfacet har allerede `type`-felt, så ingen ændring i constants behøves.
+
