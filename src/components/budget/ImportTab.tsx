@@ -16,6 +16,26 @@ export default function ImportTab({ txns, setTxns }: Props) {
   const [preview, setPreview] = useState<Transaction[] | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  const parseDanishNumber = (val: unknown): number => {
+    if (val == null) return 0;
+    if (typeof val === 'number') return val;
+    const s = String(val).trim();
+    if (!s) return 0;
+    // Danish: 1.989,00 → remove dots, replace comma with dot
+    const cleaned = s.replace(/\./g, '').replace(',', '.');
+    return Number(cleaned) || 0;
+  };
+
+  const parseDanishDate = (val: unknown): string => {
+    if (val == null) return '';
+    if (typeof val === 'object' && 'toISOString' in (val as object)) return (val as Date).toISOString().slice(0, 10);
+    const s = String(val).trim();
+    // dd.mm.yyyy → yyyy-mm-dd
+    const match = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (match) return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+    return s;
+  };
+
   const parseFile = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -26,28 +46,27 @@ export default function ImportTab({ txns, setTxns }: Props) {
       let headerIdx = -1;
       for (let i = 0; i < Math.min(rows.length, 20); i++) {
         const r = rows[i].map(c => String(c || '').toLowerCase());
-        if (r.some(c => c.includes('konto')) && r.some(c => c.includes('beløb') || c.includes('belob'))) { headerIdx = i; break; }
+        if (r.some(c => c.includes('konto')) && (r.some(c => c.includes('beløb') || c.includes('belob')) || r.some(c => c.includes('type')))) { headerIdx = i; break; }
       }
-      if (headerIdx === -1) { setStatus({ type: 'error', msg: 'Kunne ikke finde header-række (skal indeholde Konto og Beløb)' }); return; }
-      const headers = rows[headerIdx].map(h => String(h || '').toLowerCase());
+      if (headerIdx === -1) { setStatus({ type: 'error', msg: 'Kunne ikke finde header-række (skal indeholde Konto og Beløb/Type)' }); return; }
+      const headers = rows[headerIdx].map(h => String(h || '').toLowerCase().trim());
       const col = (name: string) => headers.findIndex(h => h.includes(name));
       const cDato = col('dato'), cBelob = col('beløb') !== -1 ? col('beløb') : col('belob');
       const cKonto = col('konto'), cMoms = col('moms'), cBilag = col('bilag'), cTekst = col('tekst');
+      const cType = col('type'), cFaktura = col('faktura');
       const parsed: Transaction[] = [];
       for (let i = headerIdx + 1; i < rows.length; i++) {
         const r = rows[i];
         if (!r || !r[cKonto]) continue;
-        const belob = Number(r[cBelob]) || 0;
+        const belob = cBelob >= 0 ? parseDanishNumber(r[cBelob]) : 0;
         if (belob === 0) continue;
-        let dato = '';
-        if (cDato >= 0 && r[cDato]) {
-          const dv = r[cDato];
-          if (dv != null && typeof dv === 'object' && 'toISOString' in (dv as object)) dato = (dv as Date).toISOString().slice(0, 10);
-          else if (dv != null) dato = String(dv);
-        }
+        const dato = cDato >= 0 ? parseDanishDate(r[cDato]) : '';
         parsed.push({
-          id: 0, dato, type: 'Import', bilag: cBilag >= 0 ? String(r[cBilag] || '') : '',
-          tekst: cTekst >= 0 ? String(r[cTekst] || '') : '', belob,
+          id: 0, dato,
+          type: cType >= 0 && r[cType] ? String(r[cType]) : 'Import',
+          bilag: cBilag >= 0 ? String(r[cBilag] || '') : '',
+          tekst: cTekst >= 0 ? String(r[cTekst] || '') : '',
+          belob,
           konto: Number(r[cKonto]), moms: cMoms >= 0 && r[cMoms] ? String(r[cMoms]) : null,
         });
       }
@@ -149,6 +168,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b text-xs text-muted-foreground">
+                    <th className="px-3 py-2 text-left">Type</th>
                     <th className="px-3 py-2 text-left">Dato</th>
                     <th className="px-3 py-2 text-left">Bilag</th>
                     <th className="px-3 py-2 text-left">Tekst</th>
@@ -160,6 +180,7 @@ export default function ImportTab({ txns, setTxns }: Props) {
                 <tbody>
                   {txns.map(t => (
                     <tr key={t.id} className="border-b border-border/30 hover:bg-secondary/30">
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground">{t.type}</td>
                       <td className="px-3 py-1.5 text-xs tabular-nums">{t.dato}</td>
                       <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
                       <td className="px-3 py-1.5 text-xs truncate max-w-[250px]">{t.tekst}</td>
