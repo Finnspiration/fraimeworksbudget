@@ -34,6 +34,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const [editingMoms, setEditingMoms] = useState<number | null>(null);
   const kontoPlanRef = useRef<HTMLInputElement>(null);
   const [kontoPlanPreview, setKontoPlanPreview] = useState<PLRow[] | null>(null);
+  const [kontoPlanMeta, setKontoPlanMeta] = useState<{ origType: number; moms: string; sumfra: string }[]>([]);
   const [kontoPlanStatus, setKontoPlanStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const parseDanishNumber = (val: unknown): number => {
@@ -213,7 +214,10 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
 
       if (cNr === -1 || cNavn === -1) { setKontoPlanStatus({ type: 'error', msg: 'Mangler kolonnerne Nr og/eller Navn' }); return; }
 
+      const cMoms = headers.findIndex(h => h === 'moms');
+
       const plRows: PLRow[] = [];
+      const previewMeta: { origType: number; moms: string; sumfra: string }[] = [];
       let currentGrp = 'default';
       let grpCounter = 0;
       const totalIds: string[] = [];
@@ -225,26 +229,36 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
         const nr = Number(r[cNr]) || 0;
         const navn = String(r[cNavn] || '').trim();
         const type = cType >= 0 ? Number(r[cType]) || 0 : 1;
+        const moms = cMoms >= 0 ? String(r[cMoms] || '').trim() : '';
+        const sumfra = cSumfra >= 0 ? String(r[cSumfra] || '').trim() : '';
 
         if (!navn && !nr) continue;
         if (type === 2) continue;
 
+        const addMeta = () => previewMeta.push({ origType: type, moms, sumfra });
+
         if (type === 4) {
           currentGrp = `grp${++grpCounter}`;
           plRows.push({ t: 'sec', lbl: navn });
+          addMeta();
         } else if (type === 5) {
           currentGrp = `grp${++grpCounter}`;
           plRows.push({ t: 'sp' });
+          previewMeta.push({ origType: type, moms: '', sumfra: '' });
           plRows.push({ t: 'sec', lbl: navn });
+          addMeta();
         } else if (type === 1) {
           plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp });
+          addMeta();
         } else if (type === 3) {
           const id = `t${nr}`;
           totalIds.push(id);
           plRows.push({ t: 'total', nr, lbl: navn, id, sum: `grp:${currentGrp}` });
+          addMeta();
         } else if (type === 6) {
           const id = `r${nr}`;
           plRows.push({ t: 'res', lbl: navn, id, sum: totalIds.map(tid => `id:${tid}`).join('+') });
+          addMeta();
         }
       }
 
@@ -263,6 +277,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
       }
 
       setKontoPlanPreview(plRows);
+      setKontoPlanMeta(previewMeta);
       setKontoPlanStatus(null);
     };
     reader.readAsArrayBuffer(file);
@@ -328,25 +343,31 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-card">
                     <tr className="border-b text-xs text-muted-foreground">
-                      <th className="px-3 py-2 text-left">Type</th>
-                      <th className="px-3 py-2 text-right">Nr</th>
+                      <th className="px-3 py-2 text-right">Nr.</th>
                       <th className="px-3 py-2 text-left">Navn</th>
-                      <th className="px-3 py-2 text-left">Gruppe</th>
+                      <th className="px-3 py-2 text-center">Type</th>
+                      <th className="px-3 py-2 text-left">Moms</th>
+                      <th className="px-3 py-2 text-left">Sumfra</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {kontoPlanPreview.map((row, i) => (
-                      <tr key={i} className={`border-b border-border/30 ${row.t === 'sec' ? 'bg-secondary/50 font-semibold' : row.t === 'total' || row.t === 'res' || row.t === 'final' ? 'bg-primary/5 font-medium' : row.t === 'sp' ? 'h-2' : ''}`}>
-                        {row.t === 'sp' ? <td colSpan={4} /> : (
-                          <>
-                            <td className="px-3 py-1 text-xs text-muted-foreground">{row.t}</td>
-                            <td className="px-3 py-1 text-xs tabular-nums text-right">{row.nr || ''}</td>
-                            <td className="px-3 py-1 text-xs">{row.lbl || ''}</td>
-                            <td className="px-3 py-1 text-xs text-muted-foreground">{row.grp || row.sum || ''}</td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
+                    {kontoPlanPreview.map((row, i) => {
+                      const meta = kontoPlanMeta[i];
+                      const typeLabels: Record<number, string> = { 1: 'Drift', 3: 'SumFra', 4: 'Overskrift', 5: 'Overskr. Start', 6: 'SumInterval' };
+                      return (
+                        <tr key={i} className={`border-b border-border/30 ${row.t === 'sec' ? 'bg-secondary/50 font-semibold' : row.t === 'total' || row.t === 'res' || row.t === 'final' ? 'bg-primary/5 font-medium' : row.t === 'sp' ? 'h-2' : ''}`}>
+                          {row.t === 'sp' ? <td colSpan={5} /> : (
+                            <>
+                              <td className="px-3 py-1 text-xs tabular-nums text-right">{row.nr || ''}</td>
+                              <td className="px-3 py-1 text-xs">{row.lbl || ''}</td>
+                              <td className="px-3 py-1 text-xs text-center text-muted-foreground">{meta ? `${meta.origType} (${typeLabels[meta.origType] || ''})` : ''}</td>
+                              <td className="px-3 py-1 text-xs text-muted-foreground">{meta?.moms || ''}</td>
+                              <td className="px-3 py-1 text-xs text-muted-foreground">{meta?.sumfra || ''}</td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
