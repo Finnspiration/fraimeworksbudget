@@ -113,12 +113,16 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
             <td className="px-2 py-1 text-xs truncate max-w-[180px]">{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => [
               <Cell key={`r-${i}`} v={v?.r[i] || 0} realized dimmed={i >= nReal} />,
-              <EditableBudgetCell
-                key={`b-${i}`}
-                value={v?.b[i] || 0}
-                dimmed={i >= nReal}
-                onSave={(val) => updateBudget(row.nr!, i, val)}
-              />,
+              isDynamic ? (
+                <Cell key={`b-${i}`} v={v?.b[i] || 0} dimmed={i >= nReal} />
+              ) : (
+                <EditableBudgetCell
+                  key={`b-${i}`}
+                  value={v?.b[i] || 0}
+                  dimmed={i >= nReal}
+                  onSave={(val) => updateBudget(row.nr!, i, val)}
+                />
+              ),
             ])}
             <Cell v={ytdR} realized />
             <Cell v={ytdB} />
