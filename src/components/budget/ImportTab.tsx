@@ -213,7 +213,10 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
 
       if (cNr === -1 || cNavn === -1) { setKontoPlanStatus({ type: 'error', msg: 'Mangler kolonnerne Nr og/eller Navn' }); return; }
 
+      const cMoms = headers.findIndex(h => h === 'moms');
+
       const plRows: PLRow[] = [];
+      const previewMeta: { origType: number; moms: string; sumfra: string }[] = [];
       let currentGrp = 'default';
       let grpCounter = 0;
       const totalIds: string[] = [];
@@ -225,26 +228,36 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
         const nr = Number(r[cNr]) || 0;
         const navn = String(r[cNavn] || '').trim();
         const type = cType >= 0 ? Number(r[cType]) || 0 : 1;
+        const moms = cMoms >= 0 ? String(r[cMoms] || '').trim() : '';
+        const sumfra = cSumfra >= 0 ? String(r[cSumfra] || '').trim() : '';
 
         if (!navn && !nr) continue;
         if (type === 2) continue;
 
+        const addMeta = () => previewMeta.push({ origType: type, moms, sumfra });
+
         if (type === 4) {
           currentGrp = `grp${++grpCounter}`;
           plRows.push({ t: 'sec', lbl: navn });
+          addMeta();
         } else if (type === 5) {
           currentGrp = `grp${++grpCounter}`;
           plRows.push({ t: 'sp' });
+          previewMeta.push({ origType: type, moms: '', sumfra: '' });
           plRows.push({ t: 'sec', lbl: navn });
+          addMeta();
         } else if (type === 1) {
           plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp });
+          addMeta();
         } else if (type === 3) {
           const id = `t${nr}`;
           totalIds.push(id);
           plRows.push({ t: 'total', nr, lbl: navn, id, sum: `grp:${currentGrp}` });
+          addMeta();
         } else if (type === 6) {
           const id = `r${nr}`;
           plRows.push({ t: 'res', lbl: navn, id, sum: totalIds.map(tid => `id:${tid}`).join('+') });
+          addMeta();
         }
       }
 
