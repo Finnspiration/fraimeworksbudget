@@ -1,38 +1,26 @@
 
 
-# Budget Toggle: Fast vs. Dynamisk Budget
-
-## Koncept
-Tilføj en toggle i Resultatopgørelsen (og Overblik) der skifter mellem:
-
-- **Fast budget**: De manuelt indtastede budgettal (som nu)
-- **Dynamisk budget**: Auto-beregnet fra realiserede tal — tager gennemsnit af realiserede måneder og projicerer det ud på de resterende måneder
-
-## Beregning af dynamisk budget
-For hver konto:
-- Måneder 0..nReal-1: brug det realiserede tal som "budget" (altså budget = actual)
-- Måneder nReal..11: brug gennemsnit af realiserede måneder (`sumArr(realized, 0, nReal-1) / nReal`)
-
-Dette giver et "rolling forecast" baseret på faktisk performance.
+# Tilføj U25 moms-redigering og dato-filtrering
 
 ## Ændringer
 
-### 1. Ny utility-funktion (`budget-utils.ts`)
-- `computeDynamicBudget(pl, nReal)` → returnerer `Record<number, number[]>` med dynamisk budget per konto
-- For ikke-realiserede måneder: gennemsnit af realiserede
+### 1. Redigerbar moms-kolonne i kassekladden (`ImportTab.tsx`)
+- Gør moms-cellen klikbar (samme inline-edit mønster som konto)
+- Dropdown/input med valgmulighederne: `I25`, `U25`, eller tom (ingen moms)
+- Bruges til manuelt at tilføje U25 på salgsfakturaer efter import
 
-### 2. Toggle i `ResultatTab`
-- Tilføj en toggle/switch ved siden af "Realiserede måneder" med label "Fast budget / Dynamisk budget"
-- Når dynamisk er valgt: beregn `pl` med dynamiske budgettal via `computePL(realized, dynamicBudget)`
-- Budget-celler er kun redigerbare i "Fast budget"-mode
-- Visuel indikator (badge/farve) for hvilken mode der er aktiv
+### 2. Dato-filter i kassekladden (`ImportTab.tsx`)
+- Tilføj to dato-inputs (fra/til) i filterrækken
+- Filtrér posteringer baseret på dato-range
+- Nulstil-knap for at fjerne datofilter
 
-### 3. Opdater `useBudgetState` og `Index.tsx`
-- Tilføj `budgetMode` state (`'fixed' | 'dynamic'`) med localStorage-persistering
-- Pass `budgetMode` + `setBudgetMode` til ResultatTab og OverblikTab
-- Beregn alternativ `pl` baseret på mode og send den rigtige videre
+### 3. Opdater moms-filter dropdown (`ImportTab.tsx`)
+- Tilføj `U25` som filtreringsmulighed (ud over `I25` og `Ingen moms`)
 
-### 4. Opdater `OverblikTab`
-- KPI-kort og grafer bruger den aktive budget-mode's tal
-- Evt. lille badge der viser hvilken budget-mode der er aktiv
+### 4. Opdater SkatTab salgsmoms-beregning (`SkatTab.tsx`)
+- Beregn salgsmoms fra transaktioner med `moms === 'U25'` i stedet for P&L-approksimation
+- Fallback til gammel metode hvis ingen U25-transaktioner findes
+
+### 5. Opdater netBelob i `budget-utils.ts`
+- Håndter `U25` ligesom `I25`: `belob / 1.25` for korrekt nettobeløb i P&L
 
