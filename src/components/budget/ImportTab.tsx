@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { Transaction } from '@/data/budget-constants';
-import { Upload, Trash2, FileSpreadsheet, Check, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
+import type { Transaction, PLRow } from '@/data/budget-constants';
+import { Upload, Trash2, FileSpreadsheet, Check, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Search, BookOpen, RotateCcw } from 'lucide-react';
 
 interface Props {
   txns: Transaction[];
   setTxns: React.Dispatch<React.SetStateAction<Transaction[]>>;
+  customPL: PLRow[] | null;
+  setCustomPL: React.Dispatch<React.SetStateAction<PLRow[] | null>>;
 }
 
 type SortKey = 'dato' | 'belob' | 'konto' | 'type' | 'bilag';
