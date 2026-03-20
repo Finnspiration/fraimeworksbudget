@@ -537,23 +537,49 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                         <td className="px-3 py-1.5 text-xs truncate max-w-[250px]">{t.tekst}</td>
                         <td className={`px-3 py-1.5 text-right text-xs tabular-nums ${t.belob < 0 ? 'text-[hsl(var(--budget-positive))]' : ''}`}>{fmtDec(t.belob)}</td>
                         <td className="px-3 py-1.5 text-right text-xs tabular-nums">
-                          {editingKonto === t.id ? (
-                            <input
-                              type="number"
-                              value={editKontoVal}
-                              onChange={e => setEditKontoVal(e.target.value)}
-                              onBlur={() => commitKontoEdit(t.id)}
-                              onKeyDown={e => { if (e.key === 'Enter') commitKontoEdit(t.id); if (e.key === 'Escape') setEditingKonto(null); }}
-                              className="w-16 text-right border border-primary/30 rounded px-1 py-0.5 text-xs bg-secondary"
-                              autoFocus
-                            />
+                          {kontoPopoverOpen === t.id ? (
+                            <Popover open onOpenChange={(open) => { if (!open) setKontoPopoverOpen(null); }}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-6 w-auto min-w-[60px] text-xs px-2 font-mono">
+                                  {t.konto} <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[300px] p-0" align="end">
+                                <Command>
+                                  <CommandInput placeholder="Søg konto..." className="h-8 text-xs" />
+                                  <CommandList>
+                                    <CommandEmpty>Ingen konto fundet</CommandEmpty>
+                                    <CommandGroup>
+                                      {acctList.map(a => (
+                                        <CommandItem
+                                          key={a.nr}
+                                          value={`${a.nr} ${a.lbl}`}
+                                          onSelect={() => {
+                                            setTxns(prev => prev.map(tx => tx.id === t.id ? { ...tx, konto: a.nr! } : tx));
+                                            setKontoPopoverOpen(null);
+                                          }}
+                                          className="text-xs"
+                                        >
+                                          <Check className={`mr-2 h-3 w-3 ${t.konto === a.nr ? 'opacity-100' : 'opacity-0'}`} />
+                                          <span className="font-mono mr-2">{a.nr}</span>
+                                          <span className="truncate">{a.lbl}</span>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           ) : (
                             <span
-                              className="cursor-pointer hover:text-primary hover:underline"
-                              onClick={() => startEditKonto(t.id, t.konto)}
-                              title="Klik for at ændre konto"
+                              className={`cursor-pointer hover:text-primary hover:underline ${!acctMap.has(t.konto) ? 'text-destructive' : ''}`}
+                              onClick={() => setKontoPopoverOpen(t.id)}
+                              title={acctMap.get(t.konto) || 'Ukendt konto — klik for at ændre'}
                             >
                               {t.konto}
+                              {acctMap.has(t.konto) && (
+                                <span className="ml-1 text-muted-foreground font-normal hidden lg:inline">{acctMap.get(t.konto)}</span>
+                              )}
                             </span>
                           )}
                         </td>
