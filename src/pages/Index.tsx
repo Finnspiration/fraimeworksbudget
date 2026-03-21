@@ -44,6 +44,17 @@ export default function Index() {
     return computePL(state.realized, mergedBudget, state.activePL);
   }, [state.realized, mergedBudget, state.activePL]);
 
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Indlæser data…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card px-4 sm:px-6 py-4">
