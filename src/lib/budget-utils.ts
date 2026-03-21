@@ -36,7 +36,13 @@ export function computePL(realized: Record<string, number>, budget: Record<numbe
     const b = new Array(12).fill(0);
     x.sum!.split('+').forEach(p => {
       p = p.trim();
-      if (p.startsWith('grp:')) {
+      if (p.startsWith('range:')) {
+        const [start, end] = p.slice(6).split('-').map(Number);
+        plRows.filter(a => a.t === 'acct' && a.nr! >= start && a.nr! <= end).forEach(a => {
+          vals[a.nr!]?.r.forEach((v, i) => r[i] += v);
+          vals[a.nr!]?.b.forEach((v, i) => b[i] += v);
+        });
+      } else if (p.startsWith('grp:')) {
         const g = p.slice(4);
         plRows.filter(a => a.t === 'acct' && a.grp === g).forEach(a => {
           vals[a.nr!]?.r.forEach((v, i) => r[i] += v);
