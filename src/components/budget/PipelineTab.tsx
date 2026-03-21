@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Users, Target, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Users, Target, TrendingUp, Pencil } from 'lucide-react';
 import { fmt } from '@/lib/budget-utils';
 import { useCustomers, usePipelineJobs, useCreateCustomer, useDeleteCustomer, useCreateJob, useUpdateJob, useDeleteJob, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { PLRow } from '@/data/budget-constants';
@@ -39,12 +39,12 @@ export default function PipelineTab({ activePL }: Props) {
   const updateJob = useUpdateJob();
   const deleteJob = useDeleteJob();
 
-  // Customer form
   const [custName, setCustName] = useState('');
   const [custEmail, setCustEmail] = useState('');
 
-  // Job form
+  // Create/Edit job form state
   const [jobOpen, setJobOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<PipelineJobWithCustomer | null>(null);
   const [jobCustomerId, setJobCustomerId] = useState('');
   const [jobDesc, setJobDesc] = useState('');
   const [jobAmount, setJobAmount] = useState('');
@@ -53,11 +53,40 @@ export default function PipelineTab({ activePL }: Props) {
   const [jobStatus, setJobStatus] = useState('lead');
   const [jobKonto, setJobKonto] = useState('1010');
 
-  const omsAccts = activePL.filter(r => r.t === 'acct' && r.grp === 'oms');
+  // Show ALL account rows, not just revenue
+  const allAccts = activePL.filter(r => r.t === 'acct');
 
   const activeJobs = jobs.filter(j => j.status !== 'tabt');
   const totalPipeline = activeJobs.reduce((s, j) => s + Number(j.amount), 0);
   const weightedPipeline = activeJobs.reduce((s, j) => s + Number(j.amount) * j.probability / 100, 0);
+
+  const resetForm = () => {
+    setEditingJob(null);
+    setJobCustomerId('');
+    setJobDesc('');
+    setJobAmount('');
+    setJobProb(50);
+    setJobDate('');
+    setJobStatus('lead');
+    setJobKonto('1010');
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setJobOpen(true);
+  };
+
+  const openEditDialog = (job: PipelineJobWithCustomer) => {
+    setEditingJob(job);
+    setJobCustomerId(job.customer_id);
+    setJobDesc(job.description);
+    setJobAmount(String(job.amount));
+    setJobProb(job.probability);
+    setJobDate(job.expected_payment_date);
+    setJobStatus(job.status);
+    setJobKonto(String(job.konto));
+    setJobOpen(true);
+  };
 
   const handleAddCustomer = () => {
     if (!custName.trim()) return;
@@ -66,12 +95,12 @@ export default function PipelineTab({ activePL }: Props) {
     });
   };
 
-  const handleAddJob = () => {
+  const handleSaveJob = () => {
     if (!jobCustomerId || !jobDesc || !jobAmount || !jobDate) {
       toast.error('Udfyld alle felter');
       return;
     }
-    createJob.mutate({
+    const payload = {
       customer_id: jobCustomerId,
       description: jobDesc,
       amount: Number(jobAmount),
@@ -80,13 +109,25 @@ export default function PipelineTab({ activePL }: Props) {
       status: jobStatus,
       konto: Number(jobKonto),
       notes: null,
-    }, {
-      onSuccess: () => {
-        setJobOpen(false);
-        setJobDesc(''); setJobAmount(''); setJobProb(50); setJobDate(''); setJobStatus('lead');
-        toast.success('Job tilføjet');
-      },
-    });
+    };
+
+    if (editingJob) {
+      updateJob.mutate({ id: editingJob.id, ...payload }, {
+        onSuccess: () => {
+          setJobOpen(false);
+          resetForm();
+          toast.success('Job opdateret');
+        },
+      });
+    } else {
+      createJob.mutate(payload, {
+        onSuccess: () => {
+          setJobOpen(false);
+          resetForm();
+          toast.success('Job tilføjet');
+        },
+      });
+    }
   };
 
   const handleStatusChange = (job: PipelineJobWithCustomer, newStatus: string) => {
@@ -123,67 +164,7 @@ export default function PipelineTab({ activePL }: Props) {
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-semibold">📋 Salgspipeline</CardTitle>
-          <Dialog open={jobOpen} onOpenChange={setJobOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-1"><Plus className="h-3.5 w-3.5" />Tilføj job</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Nyt pipeline-job</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Kunde</Label>
-                  <Select value={jobCustomerId} onValueChange={setJobCustomerId}>
-                    <SelectTrigger><SelectValue placeholder="Vælg kunde..." /></SelectTrigger>
-                    <SelectContent>
-                      {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Beskrivelse</Label>
-                  <Input value={jobDesc} onChange={e => setJobDesc(e.target.value)} placeholder="Projektbeskrivelse" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Beløb (ekskl. moms)</Label>
-                    <Input type="number" value={jobAmount} onChange={e => setJobAmount(e.target.value)} placeholder="0" />
-                  </div>
-                  <div>
-                    <Label>Forventet betalingsdato</Label>
-                    <Input type="date" value={jobDate} onChange={e => setJobDate(e.target.value)} />
-                  </div>
-                </div>
-                <div>
-                  <Label>Sandsynlighed: {jobProb}%</Label>
-                  <Slider value={[jobProb]} onValueChange={([v]) => setJobProb(v)} min={0} max={100} step={5} className="mt-2" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Status</Label>
-                    <Select value={jobStatus} onValueChange={setJobStatus}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Konto</Label>
-                    <Select value={jobKonto} onValueChange={setJobKonto}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {omsAccts.map(a => <SelectItem key={a.nr} value={String(a.nr)}>{a.nr} {a.lbl}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Annullér</Button></DialogClose>
-                <Button onClick={handleAddJob} disabled={createJob.isPending}>Tilføj</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" className="gap-1" onClick={openCreateDialog}><Plus className="h-3.5 w-3.5" />Tilføj job</Button>
         </CardHeader>
         <CardContent>
           {loadingJ ? <p className="text-sm text-muted-foreground">Indlæser...</p> : (
@@ -218,7 +199,10 @@ export default function PipelineTab({ activePL }: Props) {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-center flex gap-1 justify-center">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(j)}>
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteJob.mutate(j.id)}>
                           <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                         </Button>
@@ -234,6 +218,68 @@ export default function PipelineTab({ activePL }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* Create/Edit Job Dialog */}
+      <Dialog open={jobOpen} onOpenChange={(open) => { setJobOpen(open); if (!open) resetForm(); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingJob ? 'Rediger pipeline-job' : 'Nyt pipeline-job'}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Kunde</Label>
+              <Select value={jobCustomerId} onValueChange={setJobCustomerId}>
+                <SelectTrigger><SelectValue placeholder="Vælg kunde..." /></SelectTrigger>
+                <SelectContent>
+                  {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Beskrivelse</Label>
+              <Input value={jobDesc} onChange={e => setJobDesc(e.target.value)} placeholder="Projektbeskrivelse" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Beløb (ekskl. moms)</Label>
+                <Input type="number" value={jobAmount} onChange={e => setJobAmount(e.target.value)} placeholder="0" />
+              </div>
+              <div>
+                <Label>Forventet betalingsdato</Label>
+                <Input type="date" value={jobDate} onChange={e => setJobDate(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label>Sandsynlighed: {jobProb}%</Label>
+              <Slider value={[jobProb]} onValueChange={([v]) => setJobProb(v)} min={0} max={100} step={5} className="mt-2" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Status</Label>
+                <Select value={jobStatus} onValueChange={setJobStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Konto</Label>
+                <Select value={jobKonto} onValueChange={setJobKonto}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {allAccts.map(a => <SelectItem key={a.nr} value={String(a.nr)}>{a.nr} {a.lbl}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Annullér</Button></DialogClose>
+            <Button onClick={handleSaveJob} disabled={createJob.isPending || updateJob.isPending}>
+              {editingJob ? 'Gem ændringer' : 'Tilføj'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Customers */}
       <Card>

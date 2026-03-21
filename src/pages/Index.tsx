@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useBudgetState } from '@/hooks/use-budget-state';
+import { computePL } from '@/lib/budget-utils';
 import { COMPANY, YEAR } from '@/data/budget-constants';
 import OverblikTab from '@/components/budget/OverblikTab';
 import ResultatTab from '@/components/budget/ResultatTab';
@@ -14,6 +15,34 @@ export default function Index() {
   const state = useBudgetState();
   const [tab, setTab] = useState('overblik');
   const { data: pipelineJobs = [] } = usePipelineJobs();
+
+  // Merge weighted pipeline into budget for PL calculation
+  const mergedBudget = useMemo(() => {
+    const base = { ...state.budget };
+    // Deep-copy existing arrays
+    for (const k of Object.keys(base)) {
+      base[Number(k)] = [...base[Number(k)]];
+    }
+    // Add pipeline forecast
+    pipelineJobs.forEach(job => {
+      if (job.status === 'tabt') return;
+      const d = new Date(job.expected_payment_date);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      const month = d.getMonth();
+      const weighted = Number(job.amount) * job.probability / 100;
+      const konto = job.konto;
+      if (!base[konto]) {
+        base[konto] = new Array(12).fill(0);
+      }
+      base[konto][month] += weighted;
+    });
+    return base;
+  }, [state.budget, pipelineJobs]);
+
+  // Recompute PL with merged budget
+  const mergedPL = useMemo(() => {
+    return computePL(state.realized, mergedBudget, state.activePL);
+  }, [state.realized, mergedBudget, state.activePL]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,16 +71,16 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="overblik">
-            <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} activePL={state.activePL} pipelineJobs={pipelineJobs} />
+            <OverblikTab pl={mergedPL} nReal={state.nReal} txns={state.txns} activePL={state.activePL} pipelineJobs={pipelineJobs} />
           </TabsContent>
           <TabsContent value="resultat">
-            <ResultatTab pl={state.pl} nReal={state.nReal} setNReal={state.setNReal} budget={state.budget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL} />
+            <ResultatTab pl={mergedPL} nReal={state.nReal} setNReal={state.setNReal} budget={mergedBudget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL} />
           </TabsContent>
           <TabsContent value="pipeline">
             <PipelineTab activePL={state.activePL} />
           </TabsContent>
           <TabsContent value="skat">
-            <SkatTab pl={state.pl} txns={state.txns} nReal={state.nReal}
+            <SkatTab pl={mergedPL} txns={state.txns} nReal={state.nReal}
               momsBetalt={state.momsBetalt} setMomsBetalt={state.setMomsBetalt}
               bskat={state.bskat} setBskat={state.setBskat}
               andenGeld={state.andenGeld} setAndenGeld={state.setAndenGeld}
