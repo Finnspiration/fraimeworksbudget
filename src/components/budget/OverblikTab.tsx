@@ -26,7 +26,7 @@ function KpiCard({ label, value, sub, positive, icon }: { label: string; value: 
   );
 }
 
-export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
+export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = [] }: Props) {
   const resRow = pl['res'] as PLValues | undefined;
 
   // Dynamically find revenue total from PL structure (supports custom kontoplaner)
