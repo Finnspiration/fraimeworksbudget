@@ -85,12 +85,27 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
     return v.r.some(x => x !== 0) || v.b.some(x => x !== 0);
   };
 
+  const visibleSections = useMemo(() => {
+    if (showZero) return null;
+    const secs = new Set<string>();
+    let curS: string | null = null;
+    for (const row of activePL) {
+      if (row.t === 'sec') curS = row.lbl!;
+      if (row.t === 'acct' && curS && hasAnyData(row.nr!)) secs.add(curS);
+    }
+    return secs;
+  }, [showZero, activePL, pl]);
+
   const rows = useMemo(() => {
     let curSec: string | null = null;
     return activePL.map((row, idx) => {
-      if (row.t === 'sp') return <tr key={`sp-${idx}`} className="h-3" />;
+      if (row.t === 'sp') {
+        if (!showZero && visibleSections && curSec && !visibleSections.has(curSec)) return null;
+        return <tr key={`sp-${idx}`} className="h-3" />;
+      }
       if (row.t === 'sec') {
         curSec = row.lbl!;
+        if (!showZero && visibleSections && !visibleSections.has(curSec)) return null;
         return (
           <tr key={`sec-${idx}`} className="cursor-pointer hover:bg-secondary/50" onClick={() => toggleSec(row.lbl!)}>
             <td colSpan={28} className="px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
@@ -167,7 +182,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       }
       return null;
     });
-  }, [pl, nReal, showZero, collapsedSecs, budget, activePL]);
+  }, [pl, nReal, showZero, collapsedSecs, budget, activePL, visibleSections]);
 
   return (
     <div className="space-y-4">
