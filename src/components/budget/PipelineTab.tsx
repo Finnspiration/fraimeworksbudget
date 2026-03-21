@@ -168,9 +168,9 @@ export default function PipelineTab({ activePL }: Props) {
         </CardHeader>
         <CardContent>
           {loadingJ ? <p className="text-sm text-muted-foreground">Indlæser...</p> : (
-            <div className="overflow-auto">
+            <div className="overflow-auto max-h-[calc(100vh-400px)]">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-card">
                   <tr className="border-b text-xs text-muted-foreground">
                     <th className="text-left px-3 py-2">Kunde</th>
                     <th className="text-left px-3 py-2">Beskrivelse</th>
