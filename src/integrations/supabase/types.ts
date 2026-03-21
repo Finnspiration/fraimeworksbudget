@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      bskat_rates: {
+        Row: {
+          belob: number
+          betalt: number
+          betalt_dato: string | null
+          forfald: string | null
+          id: number
+        }
+        Insert: {
+          belob?: number
+          betalt?: number
+          betalt_dato?: string | null
+          forfald?: string | null
+          id: number
+        }
+        Update: {
+          belob?: number
+          betalt?: number
+          betalt_dato?: string | null
+          forfald?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
+      budget_entries: {
+        Row: {
+          amount: number
+          id: string
+          konto: number
+          month_index: number
+        }
+        Insert: {
+          amount?: number
+          id?: string
+          konto: number
+          month_index: number
+        }
+        Update: {
+          amount?: number
+          id?: string
+          konto?: number
+          month_index?: number
+        }
+        Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          grp: string | null
+          id: string
+          label: string | null
+          nr: number | null
+          row_id: string | null
+          row_type: string
+          sort_order: number
+          sum_formula: string | null
+        }
+        Insert: {
+          grp?: string | null
+          id?: string
+          label?: string | null
+          nr?: number | null
+          row_id?: string | null
+          row_type: string
+          sort_order: number
+          sum_formula?: string | null
+        }
+        Update: {
+          grp?: string | null
+          id?: string
+          label?: string | null
+          nr?: number | null
+          row_id?: string | null
+          row_type?: string
+          sort_order?: number
+          sum_formula?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           contact_email: string | null
@@ -35,6 +113,21 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+        }
+        Relationships: []
+      }
+      moms_betalt: {
+        Row: {
+          amount: number
+          quarter: number
+        }
+        Insert: {
+          amount?: number
+          quarter: number
+        }
+        Update: {
+          amount?: number
+          quarter?: number
         }
         Relationships: []
       }
@@ -84,6 +177,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      settings: {
+        Row: {
+          key: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          belob: number
+          bilag: string | null
+          dato: string | null
+          faktura: string | null
+          id: number
+          konto: number
+          modkonto: number | null
+          moms: string | null
+          tekst: string | null
+          type: string | null
+        }
+        Insert: {
+          belob?: number
+          bilag?: string | null
+          dato?: string | null
+          faktura?: string | null
+          id?: number
+          konto: number
+          modkonto?: number | null
+          moms?: string | null
+          tekst?: string | null
+          type?: string | null
+        }
+        Update: {
+          belob?: number
+          bilag?: string | null
+          dato?: string | null
+          faktura?: string | null
+          id?: number
+          konto?: number
+          modkonto?: number | null
+          moms?: string | null
+          tekst?: string | null
+          type?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

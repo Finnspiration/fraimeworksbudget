@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useBudgetState } from '@/hooks/use-budget-state';
+import { useDbState } from '@/hooks/use-db-state';
 import { computePL } from '@/lib/budget-utils';
 import { COMPANY, YEAR } from '@/data/budget-constants';
 import OverblikTab from '@/components/budget/OverblikTab';
@@ -9,10 +9,10 @@ import SkatTab from '@/components/budget/SkatTab';
 import ImportTab from '@/components/budget/ImportTab';
 import PipelineTab from '@/components/budget/PipelineTab';
 import { usePipelineJobs } from '@/hooks/use-pipeline';
-import { BarChart3, Table, Receipt, FileSpreadsheet, Target } from 'lucide-react';
+import { BarChart3, Table, Receipt, FileSpreadsheet, Target, Loader2 } from 'lucide-react';
 
 export default function Index() {
-  const state = useBudgetState();
+  const state = useDbState();
   const [tab, setTab] = useState('overblik');
   const { data: pipelineJobs = [] } = usePipelineJobs();
 
@@ -43,6 +43,17 @@ export default function Index() {
   const mergedPL = useMemo(() => {
     return computePL(state.realized, mergedBudget, state.activePL);
   }, [state.realized, mergedBudget, state.activePL]);
+
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Indlæser data…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
