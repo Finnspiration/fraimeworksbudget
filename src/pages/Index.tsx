@@ -41,8 +41,8 @@ export default function Index() {
 
   // Recompute PL with merged budget
   const mergedPL = useMemo(() => {
-    const { computePL } = require('@/lib/budget-utils');
     return computePL(state.realized, mergedBudget, state.activePL);
+  }, [state.realized, mergedBudget, state.activePL]);
   }, [state.realized, mergedBudget, state.activePL]);
 
   return (
