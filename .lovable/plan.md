@@ -1,56 +1,78 @@
 
 
-# Fix dashboard: ukorrekte tal for omsætning og udgifter
+# Kundedatabase med salgspipeline
 
-## Identificerede problemer
+## Overblik
 
-### Problem 1: YTD Omsætning viser "– kr"
-OverblikTab slår op i `pl['oms']` for at finde omsætningen. I den hardkodede PL har omsætningstotalen `id: 'oms'`. Men når en custom kontoplan importeres, genereres ID'er automatisk som `t1099`, `t1300` osv. — der er intet `oms`-id. Derfor returnerer `pl['oms']` `undefined`, og `fmt(0)` giver '–'.
+Sæt Supabase op som backend og byg en ny "Pipeline"-fane hvor du kan indtaste kunder og jobs med beskrivelse, forventet betalingsdato, beløb og sandsynlighed. Den vægtede pipeline (beløb × sandsynlighed) integreres i budgettet.
 
-### Problem 2: Bar chart viser ingen omsætning
-Samme årsag som problem 1 — `omsRow` er undefined med custom kontoplan.
+## 1. Supabase setup
 
-### Problem 3: Udgifter misser direkte omkostninger
-Udgiftsberegningen bruger `row.nr > 1999` hardkodet, hvilket udelukker direkte omkostninger i 1xxx-området (f.eks. konto 1305 "Finders fee", 1310 "Direkte omkostninger m/moms"). Bruger ønsker alle omkostninger inkluderet.
+Aktivér Lovable Cloud (Supabase) og opret følgende tabeller:
 
-### Problem 4: Udgifter virker ikke med custom kontoplan
-Med en importeret kontoplan kan kontonumre have helt andre intervaller — `> 1999` er meningsløst.
+**`customers`**
+- `id` (uuid, PK)
+- `name` (text, not null)
+- `contact_email` (text)
+- `notes` (text)
+- `created_at` (timestamptz)
 
-## Løsning
+**`pipeline_jobs`**
+- `id` (uuid, PK)
+- `customer_id` (uuid, FK → customers)
+- `description` (text, not null)
+- `amount` (numeric, not null) — forventet beløb ekskl. moms
+- `probability` (integer, 0-100) — sandsynlighed i %
+- `expected_payment_date` (date, not null)
+- `status` (text: 'lead', 'tilbud', 'forhandling', 'vundet', 'tabt')
+- `konto` (integer) — kontonummer fra kontoplanen (default: omsætningskonto)
+- `notes` (text)
+- `created_at` (timestamptz)
 
-### Ændring i `OverblikTab.tsx`
+RLS: Åben for authenticated users (single-user app). Evt. kan vi tilføje auth senere.
 
-Udled omsætning og udgifter dynamisk fra PL-strukturen i stedet for hardkodede ID'er og kontonummer-intervaller:
+## 2. Ny fane: "Pipeline"
 
-1. **Find omsætning**: Find den første `total`-linje i `activePL` — det er omsætningstotalen. Brug dens `id` til at slå op i `pl`.
+Tilføj 5. fane med ikon (Funnel/Target) i `Index.tsx`.
 
-2. **Find udgifter**: Sum alle `acct`-linjer der IKKE er i samme gruppe som den første `total` (dvs. alle konti undtagen omsætningen). Eller beregn det som `omsætning - resultat` (da resultat = omsætning - alle omkostninger).
+**Pipeline-fanen viser:**
+- **Kunde-sektion**: Simpel tabel med kunder (navn, email, noter). Tilføj/rediger/slet.
+- **Pipeline-tabel**: Alle jobs med kolonner: Kunde, Beskrivelse, Beløb, Sandsynlighed, Vægtet beløb, Forventet dato, Status. Sorteret efter dato.
+- **Pipeline-summary cards**: Total pipeline, vægtet pipeline, antal aktive jobs
+- **Tilføj job**: Dialog/form med felter for kunde (dropdown), beskrivelse, beløb, sandsynlighed (slider 0-100%), forventet betalingsdato, status, kontonummer
 
-3. **Udgiftsposter YTD**: Erstat `nr > 1999` med "alle acct-rækker der ikke er i omsætningsgruppen".
+## 3. Integration med budget
 
-**Konkret:**
-```
-// Find første total = omsætning
-const firstTotal = activePL.find(r => r.t === 'total');
-const omsId = firstTotal?.id;
-const omsRow = omsId ? pl[omsId] : undefined;
+Den vægtede pipeline (beløb × sandsynlighed/100) fordeles på måneder baseret på forventet betalingsdato og vises som en ekstra "Pipeline forecast" kolonne/linje i budgettet.
 
-// Find omsætnings-gruppen
-const omsGrp = firstTotal?.sum?.startsWith('grp:') 
-  ? firstTotal.sum.split('+').map(s => s.replace('grp:','').trim())
-  : [];
+**I `use-budget-state.ts`:**
+- Hent pipeline_jobs fra Supabase
+- Beregn `pipelineBudget`: for hvert job, tilføj `amount × probability/100` til den måned som `expected_payment_date` falder i, på den relevante konto
+- Merge med eksisterende budget: `budget + pipelineBudget`
 
-// Udgifter = alle acct-rækker IKKE i omsætnings-gruppen
-const expenseAccts = activePL.filter(r => 
-  r.t === 'acct' && !omsGrp.includes(r.grp!)
-);
-```
+**I `ResultatTab.tsx`:**
+- Vis pipeline-bidraget visuelt (f.eks. som en tredje farve/markering i budget-cellerne)
 
-### Filer der ændres
-- **`src/components/budget/OverblikTab.tsx`** — al logik for omsætning/udgifter refaktoreres
+**I `OverblikTab.tsx`:**
+- Tilføj KPI-card: "Pipeline (vægtet)" med total vægtet beløb
 
-### Ingen ændringer i
-- `budget-utils.ts` — beregningerne er korrekte
-- `use-budget-state.ts` — state-håndtering er korrekt
-- `ImportTab.tsx` — kontoplan-import er korrekt
+## 4. Filer der oprettes/ændres
+
+| Fil | Handling |
+|---|---|
+| `src/integrations/supabase/client.ts` | Oprettes — Supabase client |
+| `supabase/migrations/001_pipeline.sql` | Migration med customers + pipeline_jobs tabeller |
+| `src/components/budget/PipelineTab.tsx` | **Ny** — Pipeline-fane med CRUD |
+| `src/hooks/use-pipeline.ts` | **Ny** — React Query hooks for pipeline data |
+| `src/hooks/use-budget-state.ts` | Ændres — integrer pipeline i budget |
+| `src/pages/Index.tsx` | Ændres — tilføj Pipeline-fane |
+| `src/components/budget/OverblikTab.tsx` | Ændres — pipeline KPI |
+
+## 5. Rækkefølge
+
+1. Aktivér Supabase / Lovable Cloud
+2. Opret database-tabeller (migration)
+3. Byg Pipeline-fane med CRUD
+4. Integrer vægtet pipeline i budget-beregninger
+5. Vis pipeline-KPI på dashboard
 
