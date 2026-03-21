@@ -18,7 +18,7 @@ export default function Index() {
 
   // Merge weighted pipeline into budget for PL calculation
   const mergedBudget = useMemo(() => {
-    const base = { ...state.budget };
+    const base = { ...state.activeBudget };
     // Deep-copy existing arrays
     for (const k of Object.keys(base)) {
       base[Number(k)] = [...base[Number(k)]];
@@ -37,7 +37,7 @@ export default function Index() {
       base[konto][month] += weighted;
     });
     return base;
-  }, [state.budget, pipelineJobs]);
+  }, [state.activeBudget, pipelineJobs]);
 
   // Recompute PL with merged budget
   const mergedPL = useMemo(() => {
