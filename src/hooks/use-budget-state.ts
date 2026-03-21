@@ -59,7 +59,7 @@ export function useBudgetState() {
 
   return {
     txns, setTxns,
-    budget, setBudget,
+    budget, setBudget, activeBudget,
     nReal, setNReal,
     momsBetalt, setMomsBetalt,
     bskat, setBskat,

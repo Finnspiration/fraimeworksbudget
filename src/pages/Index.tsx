@@ -37,7 +37,7 @@ export default function Index() {
       base[konto][month] += weighted;
     });
     return base;
-  }, [state.budget, pipelineJobs]);
+  }, [state.activeBudget, pipelineJobs]);
 
   // Recompute PL with merged budget
   const mergedPL = useMemo(() => {
