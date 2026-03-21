@@ -1,0 +1,1 @@
+UPDATE budget_entries SET amount = 50000 WHERE konto = 1010 AND month_index = 4;
