@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useBudgetState } from '@/hooks/use-budget-state';
+import { useDbState } from '@/hooks/use-db-state';
 import { computePL } from '@/lib/budget-utils';
 import { COMPANY, YEAR } from '@/data/budget-constants';
 import OverblikTab from '@/components/budget/OverblikTab';
@@ -9,10 +9,10 @@ import SkatTab from '@/components/budget/SkatTab';
 import ImportTab from '@/components/budget/ImportTab';
 import PipelineTab from '@/components/budget/PipelineTab';
 import { usePipelineJobs } from '@/hooks/use-pipeline';
-import { BarChart3, Table, Receipt, FileSpreadsheet, Target } from 'lucide-react';
+import { BarChart3, Table, Receipt, FileSpreadsheet, Target, Loader2 } from 'lucide-react';
 
 export default function Index() {
-  const state = useBudgetState();
+  const state = useDbState();
   const [tab, setTab] = useState('overblik');
   const { data: pipelineJobs = [] } = usePipelineJobs();
 
