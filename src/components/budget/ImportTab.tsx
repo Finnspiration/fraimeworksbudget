@@ -247,7 +247,9 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
         } else if (type === 3) {
           const id = `t${nr}`;
           totalIds.push(id);
-          plRows.push({ t: 'total', nr, lbl: navn, id, sum: `grp:${currentGrp}` });
+          const sumfraNum = Number(sumfra);
+          const formula = sumfraNum > 0 ? `range:${sumfraNum}-${nr}` : `grp:${currentGrp}`;
+          plRows.push({ t: 'total', nr, lbl: navn, id, sum: formula });
           addMeta();
         } else if (type === 6) {
           const id = `r${nr}`;
