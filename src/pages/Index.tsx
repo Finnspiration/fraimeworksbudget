@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useBudgetState } from '@/hooks/use-budget-state';
+import { computePL } from '@/lib/budget-utils';
 import { COMPANY, YEAR } from '@/data/budget-constants';
 import OverblikTab from '@/components/budget/OverblikTab';
 import ResultatTab from '@/components/budget/ResultatTab';
