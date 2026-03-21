@@ -215,7 +215,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
         </div>
       </div>
 
-      <div className="overflow-auto rounded-lg border bg-card">
+      <div className="overflow-auto max-h-[calc(100vh-220px)] rounded-lg border bg-card">
         <table className="w-full text-sm border-collapse min-w-[1800px]">
           <thead className="sticky top-0 z-10 bg-card">
             <tr className="border-b-2">

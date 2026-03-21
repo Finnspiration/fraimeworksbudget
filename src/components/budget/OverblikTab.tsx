@@ -43,6 +43,7 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
   const ytdReal = resRow ? sumArr(resRow.r, 0, nReal - 1) : 0;
   const ytdBud = resRow ? sumArr(resRow.b, 0, nReal - 1) : 0;
   const ytdOms = omsRow ? sumArr(omsRow.r, 0, nReal - 1) : 0;
+  const ytdOmsBud = omsRow ? sumArr(omsRow.b, 0, nReal - 1) : 0;
   const projYear = nReal > 0 && resRow ? (sumArr(resRow.r, 0, nReal - 1) / nReal) * 12 : 0;
   const yearBud = resRow ? sumArr(resRow.b) : 0;
 
@@ -96,7 +97,7 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard icon={<DollarSign className="h-3.5 w-3.5" />} label="YTD Resultat" value={`${fmt(ytdReal)} kr`} sub={`Budget: ${fmt(ytdBud)} kr`} positive={ytdReal >= ytdBud} />
-        <KpiCard icon={<BarChart3 className="h-3.5 w-3.5" />} label="YTD Omsætning" value={`${fmt(ytdOms)} kr`} />
+        <KpiCard icon={<BarChart3 className="h-3.5 w-3.5" />} label="YTD Omsætning" value={`${fmt(ytdOms)} kr`} sub={`Budget: ${fmt(ytdOmsBud)} kr`} positive={ytdOms >= ytdOmsBud} />
         <KpiCard icon={<TrendingUp className="h-3.5 w-3.5" />} label="Proj. årsresultat" value={`${fmt(projYear)} kr`} sub={`Årsbudget: ${fmt(yearBud)} kr`} positive={projYear >= yearBud} />
         <KpiCard icon={<Crosshair className="h-3.5 w-3.5" />} label="Pipeline (vægtet)" value={`${fmt(weightedPipeline)} kr`} sub={`${pipelineJobs.filter(j => j.status !== 'tabt').length} aktive jobs`} />
         <KpiCard icon={ytdReal >= ytdBud ? <Target className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />} label="Budget status" value={ytdReal >= ytdBud ? '✓ Foran budget' : '⚠ Bag budget'} positive={ytdReal >= ytdBud} />
