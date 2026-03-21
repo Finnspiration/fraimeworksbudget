@@ -43,7 +43,6 @@ export default function Index() {
   const mergedPL = useMemo(() => {
     return computePL(state.realized, mergedBudget, state.activePL);
   }, [state.realized, mergedBudget, state.activePL]);
-  }, [state.realized, mergedBudget, state.activePL]);
 
   return (
     <div className="min-h-screen bg-background">
