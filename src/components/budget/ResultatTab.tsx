@@ -155,6 +155,10 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       if (isTotal || isRes || isFinal) {
         const v = pl[row.id!];
         if (!v) return null;
+        if (!showZero) {
+          const hasData = v.r.some(x => x !== 0) || v.b.some(x => x !== 0);
+          if (!hasData) return null;
+        }
         const ytdR = sumArr(v.r, 0, nReal - 1);
         const ytdB = sumArr(v.b, 0, nReal - 1);
         const yrB = sumArr(v.b);
