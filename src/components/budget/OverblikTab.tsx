@@ -3,13 +3,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { MONTHS, type PLRow, PL } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Crosshair } from 'lucide-react';
+import type { PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 
 interface Props {
   pl: Record<string | number, PLValues>;
   nReal: number;
   txns: { konto: number }[];
   activePL: PLRow[];
+  pipelineJobs?: PipelineJobWithCustomer[];
 }
 
 function KpiCard({ label, value, sub, positive, icon }: { label: string; value: string; sub?: string; positive?: boolean; icon: React.ReactNode }) {
@@ -24,7 +26,7 @@ function KpiCard({ label, value, sub, positive, icon }: { label: string; value: 
   );
 }
 
-export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
+export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = [] }: Props) {
   const resRow = pl['res'] as PLValues | undefined;
 
   // Dynamically find revenue total from PL structure (supports custom kontoplaner)
@@ -86,12 +88,17 @@ export default function OverblikTab({ pl, nReal, txns, activePL }: Props) {
 
   const maxExp = expenseAccts[0]?.ytd || 1;
 
+  const weightedPipeline = pipelineJobs
+    .filter(j => j.status !== 'tabt')
+    .reduce((s, j) => s + Number(j.amount) * j.probability / 100, 0);
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard icon={<DollarSign className="h-3.5 w-3.5" />} label="YTD Resultat" value={`${fmt(ytdReal)} kr`} sub={`Budget: ${fmt(ytdBud)} kr`} positive={ytdReal >= ytdBud} />
         <KpiCard icon={<BarChart3 className="h-3.5 w-3.5" />} label="YTD Omsætning" value={`${fmt(ytdOms)} kr`} />
         <KpiCard icon={<TrendingUp className="h-3.5 w-3.5" />} label="Proj. årsresultat" value={`${fmt(projYear)} kr`} sub={`Årsbudget: ${fmt(yearBud)} kr`} positive={projYear >= yearBud} />
+        <KpiCard icon={<Crosshair className="h-3.5 w-3.5" />} label="Pipeline (vægtet)" value={`${fmt(weightedPipeline)} kr`} sub={`${pipelineJobs.filter(j => j.status !== 'tabt').length} aktive jobs`} />
         <KpiCard icon={ytdReal >= ytdBud ? <Target className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />} label="Budget status" value={ytdReal >= ytdBud ? '✓ Foran budget' : '⚠ Bag budget'} positive={ytdReal >= ytdBud} />
       </div>
 
