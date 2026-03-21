@@ -6,11 +6,14 @@ import OverblikTab from '@/components/budget/OverblikTab';
 import ResultatTab from '@/components/budget/ResultatTab';
 import SkatTab from '@/components/budget/SkatTab';
 import ImportTab from '@/components/budget/ImportTab';
-import { BarChart3, Table, Receipt, FileSpreadsheet } from 'lucide-react';
+import PipelineTab from '@/components/budget/PipelineTab';
+import { usePipelineJobs } from '@/hooks/use-pipeline';
+import { BarChart3, Table, Receipt, FileSpreadsheet, Target } from 'lucide-react';
 
 export default function Index() {
   const state = useBudgetState();
   const [tab, setTab] = useState('overblik');
+  const { data: pipelineJobs = [] } = usePipelineJobs();
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,15 +36,19 @@ export default function Index() {
           <TabsList className="mb-6">
             <TabsTrigger value="overblik" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" />Overblik</TabsTrigger>
             <TabsTrigger value="resultat" className="gap-1.5"><Table className="h-3.5 w-3.5" />Resultatopgørelse</TabsTrigger>
+            <TabsTrigger value="pipeline" className="gap-1.5"><Target className="h-3.5 w-3.5" />Pipeline</TabsTrigger>
             <TabsTrigger value="skat" className="gap-1.5"><Receipt className="h-3.5 w-3.5" />Skat & Moms</TabsTrigger>
             <TabsTrigger value="import" className="gap-1.5"><FileSpreadsheet className="h-3.5 w-3.5" />Kassekladde</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overblik">
-            <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} activePL={state.activePL} />
+            <OverblikTab pl={state.pl} nReal={state.nReal} txns={state.txns} activePL={state.activePL} pipelineJobs={pipelineJobs} />
           </TabsContent>
           <TabsContent value="resultat">
             <ResultatTab pl={state.pl} nReal={state.nReal} setNReal={state.setNReal} budget={state.budget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL} />
+          </TabsContent>
+          <TabsContent value="pipeline">
+            <PipelineTab activePL={state.activePL} />
           </TabsContent>
           <TabsContent value="skat">
             <SkatTab pl={state.pl} txns={state.txns} nReal={state.nReal}

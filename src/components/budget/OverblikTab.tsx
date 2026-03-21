@@ -3,13 +3,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { MONTHS, type PLRow, PL } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Crosshair } from 'lucide-react';
+import type { PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 
 interface Props {
   pl: Record<string | number, PLValues>;
   nReal: number;
   txns: { konto: number }[];
   activePL: PLRow[];
+  pipelineJobs?: PipelineJobWithCustomer[];
 }
 
 function KpiCard({ label, value, sub, positive, icon }: { label: string; value: string; sub?: string; positive?: boolean; icon: React.ReactNode }) {
