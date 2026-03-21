@@ -1,78 +1,44 @@
 
 
-# Kundedatabase med salgspipeline
+# Fix Pipeline: Redigering, Kontonumre og Integration med Resultatopgørelse
 
-## Overblik
+## Tre problemer
 
-Sæt Supabase op som backend og byg en ny "Pipeline"-fane hvor du kan indtaste kunder og jobs med beskrivelse, forventet betalingsdato, beløb og sandsynlighed. Den vægtede pipeline (beløb × sandsynlighed) integreres i budgettet.
+### 1. Kan ikke redigere pipeline-jobs
+Tabellen viser kun data og en status-dropdown. Der er ingen mulighed for at redigere beskrivelse, beløb, sandsynlighed, dato eller konto på eksisterende jobs.
 
-## 1. Supabase setup
+**Løsning:** Gør celler i pipeline-tabellen klikbare for inline-redigering (ligesom kassekladden), eller tilføj en "Rediger"-knap der åbner en dialog med alle felter udfyldt.
 
-Aktivér Lovable Cloud (Supabase) og opret følgende tabeller:
+### 2. Konto-dropdown er tom
+Linje 56: `activePL.filter(r => r.t === 'acct' && r.grp === 'oms')` — med en custom kontoplan kan omsætningsgruppen hedde noget andet end `'oms'`. Dropdownen viser derfor ingen konti.
 
-**`customers`**
-- `id` (uuid, PK)
-- `name` (text, not null)
-- `contact_email` (text)
-- `notes` (text)
-- `created_at` (timestamptz)
+**Løsning:** Vis ALLE `acct`-rækker fra `activePL` i konto-dropdown (ikke kun `grp === 'oms'`), grupperet efter sektion. Brugeren vælger selv den relevante konto.
 
-**`pipeline_jobs`**
-- `id` (uuid, PK)
-- `customer_id` (uuid, FK → customers)
-- `description` (text, not null)
-- `amount` (numeric, not null) — forventet beløb ekskl. moms
-- `probability` (integer, 0-100) — sandsynlighed i %
-- `expected_payment_date` (date, not null)
-- `status` (text: 'lead', 'tilbud', 'forhandling', 'vundet', 'tabt')
-- `konto` (integer) — kontonummer fra kontoplanen (default: omsætningskonto)
-- `notes` (text)
-- `created_at` (timestamptz)
+### 3. Pipeline-indtægter vises ikke i resultatopgørelsen
+Pipeline-jobs med vægtet beløb integreres ikke i budget-beregningen. `computePL` kender ikke til pipeline-data.
 
-RLS: Åben for authenticated users (single-user app). Evt. kan vi tilføje auth senere.
+**Løsning:** I `use-budget-state.ts` (eller `Index.tsx`), merge pipeline-jobs ind i budgettet: for hvert aktivt job, tilføj `amount × probability/100` til `budget[konto][måned]` baseret på `expected_payment_date`. Denne merged budget sendes til `computePL`, så pipeline-forecast automatisk vises i resultatopgørelsen.
 
-## 2. Ny fane: "Pipeline"
+## Ændringer per fil
 
-Tilføj 5. fane med ikon (Funnel/Target) i `Index.tsx`.
+### `src/components/budget/PipelineTab.tsx`
+- Tilføj edit-dialog: klik på en job-række åbner en dialog med alle felter (kunde, beskrivelse, beløb, sandsynlighed, dato, status, konto) udfyldt med eksisterende værdier
+- Ændr konto-filter fra `grp === 'oms'` til alle `acct`-rækker
+- Tilføj en Pencil/Edit-knap ved siden af slet-knappen
 
-**Pipeline-fanen viser:**
-- **Kunde-sektion**: Simpel tabel med kunder (navn, email, noter). Tilføj/rediger/slet.
-- **Pipeline-tabel**: Alle jobs med kolonner: Kunde, Beskrivelse, Beløb, Sandsynlighed, Vægtet beløb, Forventet dato, Status. Sorteret efter dato.
-- **Pipeline-summary cards**: Total pipeline, vægtet pipeline, antal aktive jobs
-- **Tilføj job**: Dialog/form med felter for kunde (dropdown), beskrivelse, beløb, sandsynlighed (slider 0-100%), forventet betalingsdato, status, kontonummer
+### `src/hooks/use-budget-state.ts` eller `src/pages/Index.tsx`
+- Hent pipeline-jobs (allerede hentet i Index)
+- Beregn `pipelineBudget`: for hvert job med status !== 'tabt', find måneden fra `expected_payment_date`, tilføj `amount * probability / 100` til `budget[job.konto][month]`
+- Merge med eksisterende budget og send til `computePL`
+- Dette gør at pipeline-beløb automatisk vises i resultatopgørelsen under den korrekte konto
 
-## 3. Integration med budget
-
-Den vægtede pipeline (beløb × sandsynlighed/100) fordeles på måneder baseret på forventet betalingsdato og vises som en ekstra "Pipeline forecast" kolonne/linje i budgettet.
-
-**I `use-budget-state.ts`:**
-- Hent pipeline_jobs fra Supabase
-- Beregn `pipelineBudget`: for hvert job, tilføj `amount × probability/100` til den måned som `expected_payment_date` falder i, på den relevante konto
-- Merge med eksisterende budget: `budget + pipelineBudget`
-
-**I `ResultatTab.tsx`:**
-- Vis pipeline-bidraget visuelt (f.eks. som en tredje farve/markering i budget-cellerne)
-
-**I `OverblikTab.tsx`:**
-- Tilføj KPI-card: "Pipeline (vægtet)" med total vægtet beløb
-
-## 4. Filer der oprettes/ændres
-
-| Fil | Handling |
-|---|---|
-| `src/integrations/supabase/client.ts` | Oprettes — Supabase client |
-| `supabase/migrations/001_pipeline.sql` | Migration med customers + pipeline_jobs tabeller |
-| `src/components/budget/PipelineTab.tsx` | **Ny** — Pipeline-fane med CRUD |
-| `src/hooks/use-pipeline.ts` | **Ny** — React Query hooks for pipeline data |
-| `src/hooks/use-budget-state.ts` | Ændres — integrer pipeline i budget |
-| `src/pages/Index.tsx` | Ændres — tilføj Pipeline-fane |
-| `src/components/budget/OverblikTab.tsx` | Ændres — pipeline KPI |
-
-## 5. Rækkefølge
-
-1. Aktivér Supabase / Lovable Cloud
-2. Opret database-tabeller (migration)
-3. Byg Pipeline-fane med CRUD
-4. Integrer vægtet pipeline i budget-beregninger
-5. Vis pipeline-KPI på dashboard
+### Teknisk detalje: Budget-merge
+```
+pipelineJobs.forEach(job => {
+  if (job.status === 'tabt') return;
+  const month = new Date(job.expected_payment_date).getMonth();
+  const weighted = job.amount * job.probability / 100;
+  mergedBudget[job.konto][month] += weighted;
+});
+```
 
