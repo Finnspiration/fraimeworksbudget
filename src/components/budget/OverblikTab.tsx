@@ -156,9 +156,9 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
       {/* Budget toggle */}
       <div className="flex items-center gap-3">
         <span className="text-xs font-medium text-muted-foreground">Budget:</span>
-        <ToggleGroup type="single" value={budgetMode} onValueChange={v => v && setBudgetMode(v as 'fast' | 'dynamisk')}>
-          <ToggleGroupItem value="fast" className="text-xs px-3 h-7">Fast budget</ToggleGroupItem>
-          <ToggleGroupItem value="dynamisk" className="text-xs px-3 h-7">Dynamisk budget</ToggleGroupItem>
+        <ToggleGroup type="single" value={budgetMode} onValueChange={v => v && setBudgetMode(v as 'fixed' | 'dynamic')}>
+          <ToggleGroupItem value="fixed" className="text-xs px-3 h-7">Fast budget</ToggleGroupItem>
+          <ToggleGroupItem value="dynamic" className="text-xs px-3 h-7">Dynamisk budget</ToggleGroupItem>
         </ToggleGroup>
       </div>
 
