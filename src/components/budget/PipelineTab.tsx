@@ -34,11 +34,13 @@ interface Props {
 export default function PipelineTab({ activePL }: Props) {
   const { data: customers = [], isLoading: loadingC } = useCustomers();
   const { data: jobs = [], isLoading: loadingJ } = usePipelineJobs();
+  const { data: revenueTxns = [] } = useRevenueTransactions();
   const createCustomer = useCreateCustomer();
   const deleteCustomer = useDeleteCustomer();
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
   const deleteJob = useDeleteJob();
+  const assignCustomerToTxn = useAssignCustomerToTxn();
 
   const [custName, setCustName] = useState('');
   const [custEmail, setCustEmail] = useState('');
