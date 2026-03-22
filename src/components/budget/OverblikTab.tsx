@@ -69,13 +69,24 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     });
   }, [pl, expenseAcctRows]);
 
+  const expenseBudgetByMonth = useMemo(() => {
+    return MONTHS.map((_, i) => {
+      let total = 0;
+      for (const row of expenseAcctRows) {
+        const vals = pl[row.nr!] as PLValues | undefined;
+        if (vals) total += Math.abs(vals.b[i]);
+      }
+      return total;
+    });
+  }, [pl, expenseAcctRows]);
+
   const chartData = useMemo(() => MONTHS.map((m, i) => ({
     name: m,
+    'Budget oms.': omsRow ? Math.max(0, omsRow.b[i]) : 0,
     Omsætning: omsRow ? Math.max(0, omsRow.r[i]) : 0,
+    'Budget udg.': expenseBudgetByMonth[i],
     Udgifter: expensesByMonth[i],
-    'Budget resultat': resRow ? resRow.b[i] : 0,
-    Realiseret: i < nReal ? (resRow ? resRow.r[i] : 0) : null,
-  })), [omsRow, resRow, nReal, expensesByMonth]);
+  })), [omsRow, nReal, expensesByMonth, expenseBudgetByMonth]);
 
   const runData = useMemo(() => {
     let cumReal = 0, cumBud = 0;
