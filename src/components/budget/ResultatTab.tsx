@@ -19,7 +19,7 @@ function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?:
   if (v === 0 || v == null || isNaN(v)) return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : 'text-muted-foreground'}`}>–</td>;
   const color = realized
     ? (v < 0 ? 'text-destructive' : 'text-primary')
-    : (v < 0 ? 'text-muted-foreground' : 'text-[hsl(var(--budget-positive))]');
+    : (v < 0 ? 'text-foreground/50' : 'text-[hsl(142,40%,35%)]');
   return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${color}`}>{fmt(v)}</td>;
 }
 
@@ -52,7 +52,7 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   }
 
   const display = value === 0 || isNaN(value) ? '–' : fmt(value);
-  const color = value < 0 ? 'text-muted-foreground' : value > 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-muted-foreground';
+  const color = value < 0 ? 'text-foreground/50' : value > 0 ? 'text-[hsl(142,40%,35%)]' : 'text-muted-foreground';
 
   return (
     <td
@@ -173,14 +173,14 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               const dimmed = i >= nReal;
               return [
                 <td key={`r-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${vr >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{vr ? fmt(vr) : '–'}</td>,
-                <td key={`b-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} text-muted-foreground`}>{vb ? fmt(vb) : '–'}</td>,
+                <td key={`b-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} text-foreground/60`}>{vb ? fmt(vb) : '–'}</td>,
               ];
             })}
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums ${ytdR >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(ytdR)}</td>
-            <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted-foreground">{fmt(ytdB)}</td>
+            <td className="px-2 py-1.5 text-right text-xs tabular-nums text-foreground/60">{fmt(ytdB)}</td>
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums font-medium ${ytdR - ytdB >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(ytdR - ytdB)}</td>
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums ${proj >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(proj)}</td>
-            <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted-foreground">{fmt(yrB)}</td>
+            <td className="px-2 py-1.5 text-right text-xs tabular-nums text-foreground/60">{fmt(yrB)}</td>
           </tr>
         );
       }

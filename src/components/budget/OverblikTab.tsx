@@ -69,13 +69,24 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     });
   }, [pl, expenseAcctRows]);
 
+  const expenseBudgetByMonth = useMemo(() => {
+    return MONTHS.map((_, i) => {
+      let total = 0;
+      for (const row of expenseAcctRows) {
+        const vals = pl[row.nr!] as PLValues | undefined;
+        if (vals) total += Math.abs(vals.b[i]);
+      }
+      return total;
+    });
+  }, [pl, expenseAcctRows]);
+
   const chartData = useMemo(() => MONTHS.map((m, i) => ({
     name: m,
+    'Budget oms.': omsRow ? Math.max(0, omsRow.b[i]) : 0,
     Omsætning: omsRow ? Math.max(0, omsRow.r[i]) : 0,
+    'Budget udg.': expenseBudgetByMonth[i],
     Udgifter: expensesByMonth[i],
-    'Budget resultat': resRow ? resRow.b[i] : 0,
-    Realiseret: i < nReal ? (resRow ? resRow.r[i] : 0) : null,
-  })), [omsRow, resRow, nReal, expensesByMonth]);
+  })), [omsRow, nReal, expensesByMonth, expenseBudgetByMonth]);
 
   const runData = useMemo(() => {
     let cumReal = 0, cumBud = 0;
@@ -183,7 +194,9 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
                 <YAxis tickFormatter={v => v === 0 ? '0' : `${(v / 1000).toFixed(0)}t`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number, n: string) => [`${fmt(v)} kr`, n]} />
                 <Legend />
+                <Bar dataKey="Budget oms." fill="hsl(var(--budget-positive))" fillOpacity={0.25} radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Omsætning" fill="hsl(var(--budget-positive))" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Budget udg." fill="hsl(var(--destructive))" fillOpacity={0.25} radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Udgifter" fill="hsl(var(--destructive))" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
