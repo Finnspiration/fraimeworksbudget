@@ -173,7 +173,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               const dimmed = i >= nReal;
               return [
                 <td key={`r-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${vr >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{vr ? fmt(vr) : '–'}</td>,
-                <td key={`b-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} text-muted-foreground`}>{vb ? fmt(vb) : '–'}</td>,
+                <td key={`b-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} text-foreground/60`}>{vb ? fmt(vb) : '–'}</td>,
               ];
             })}
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums ${ytdR >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(ytdR)}</td>
