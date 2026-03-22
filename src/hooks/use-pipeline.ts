@@ -33,6 +33,7 @@ export interface RevenueTransaction {
   konto: number;
   tekst: string | null;
   faktura: string | null;
+  moms: string | null;
   customer_id: string | null;
   customers: { name: string } | null;
 }
