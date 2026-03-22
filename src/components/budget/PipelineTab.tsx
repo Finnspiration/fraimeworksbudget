@@ -198,7 +198,7 @@ export default function PipelineTab({ activePL }: Props) {
                         <Select value={j.status} onValueChange={(v) => handleStatusChange(j, v)}>
                           <SelectTrigger className="h-7 w-28 text-xs border-none">{statusBadge(j.status)}</SelectTrigger>
                           <SelectContent>
-                            {STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                            {STATUS_OPTIONS.filter(o => o.value !== 'betalt').map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </td>
@@ -212,7 +212,31 @@ export default function PipelineTab({ activePL }: Props) {
                       </td>
                     </tr>
                   ))}
-                  {jobs.length === 0 && (
+                  {revenueTxns.map(txn => (
+                    <tr key={`txn-${txn.id}`} className="border-b border-border/30 bg-[hsl(var(--budget-positive))]/5">
+                      <td className="px-3 py-2">
+                        <Select
+                          value={txn.customer_id || ''}
+                          onValueChange={(v) => assignCustomerToTxn.mutate({ id: txn.id, customer_id: v || null })}
+                        >
+                          <SelectTrigger className="h-7 w-32 text-xs">
+                            <SelectValue placeholder="Vælg kunde...">{txn.customers?.name || 'Vælg kunde...'}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">{txn.tekst || '–'}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{fmt(Math.abs(txn.belob))}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">100%</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(Math.abs(txn.belob))}</td>
+                      <td className="px-3 py-2 text-center text-muted-foreground text-xs">{txn.dato || '–'}</td>
+                      <td className="px-3 py-2 text-center">{statusBadge('betalt')}</td>
+                      <td className="px-3 py-2"></td>
+                    </tr>
+                  ))}
+                  {jobs.length === 0 && revenueTxns.length === 0 && (
                     <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Ingen jobs endnu — tilføj dit første pipeline-job ovenfor</td></tr>
                   )}
                 </tbody>
