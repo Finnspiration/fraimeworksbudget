@@ -82,7 +82,11 @@ export default function Index() {
           </TabsList>
 
           <TabsContent value="overblik">
-            <OverblikTab pl={mergedPL} nReal={state.nReal} txns={state.txns} activePL={state.activePL} pipelineJobs={pipelineJobs} />
+            <OverblikTab pl={mergedPL} nReal={state.nReal} txns={state.txns} activePL={state.activePL} pipelineJobs={pipelineJobs}
+              budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode}
+              momsBetalt={state.momsBetalt} bskat={state.bskat}
+              andenGeld={state.andenGeld} skatPct={state.skatPct}
+              virksomhedstype={state.virksomhedstype} />
           </TabsContent>
           <TabsContent value="resultat">
             <ResultatTab pl={mergedPL} nReal={state.nReal} setNReal={state.setNReal} budget={mergedBudget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL} />
