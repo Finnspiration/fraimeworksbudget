@@ -1,37 +1,53 @@
 
 
-# Sticky headers + YTD Budget omsætning
+# Overblik-side: Budget-toggle, Top-kunder og Gældsoversigt
 
-## 1. Sticky table headers
+## 1. Budget-toggle på Overblik
 
-ResultatTab har allerede `sticky top-0` på `<thead>`, men det virker kun hvis parent-containeren har en fast højde med scroll. Lige nu scroller hele siden — `overflow-auto` på wrapperen gør intet uden en max-height.
-
-**Løsning:** Giv table-wrapperen (`div.overflow-auto`) en `max-h-[calc(100vh-220px)]` så tabellen scroller internt og thead forbliver synlig.
+OverblikTab modtager ikke `budgetMode`/`setBudgetMode` i dag. Disse props skal sendes fra Index.tsx, og en toggle (samme stil som ResultatTab) tilføjes øverst på Overblik-siden.
 
 ### Filer:
+- **`src/pages/Index.tsx`** — send `budgetMode` og `setBudgetMode` som props til OverblikTab
+- **`src/components/budget/OverblikTab.tsx`** — tilføj props, vis ToggleGroup øverst (Fast/Dynamisk)
 
-**`src/components/budget/ResultatTab.tsx`** (linje 218)
-- Tilføj `max-h-[calc(100vh-220px)]` til `<div className="overflow-auto ...">` wrapperen
+## 2. Top-kunder (akkumuleret omsætning fra kassekladde + pipeline)
 
-**`src/components/budget/PipelineTab.tsx`** (linje 171-173)
-- Tilføj `sticky top-0 z-10 bg-card` til pipeline-tabellens `<thead>` (linje 173)
-- Tilføj `max-h-[calc(100vh-400px)]` til `<div className="overflow-auto">` wrapperen (linje 171)
+Ny sektion: "Største kunder" — viser kunder rangeret efter samlet værdi (realiseret + vægtet pipeline).
 
-Kundetabellen er en simpel liste uden `<table>`, så sticky header er ikke relevant der.
+- **Realiseret**: Brug `txns` — match transaktioner via `faktura`-felt eller tilknyt kundenavn hvis muligt. Da kassekladden ikke har direkte kundereference, baseres dette udelukkende på pipeline-data.
+- **Pipeline**: Brug `pipelineJobs` med `customer`-data (allerede joined via `PipelineJobWithCustomer`). Sumér `amount * probability/100` pr. kunde.
+- Vis top 6 kunder med horizontal bar (som udgiftsposter).
 
-## 2. YTD Budget omsætning i Overblik
+### Fil:
+- **`src/components/budget/OverblikTab.tsx`** — ny Card "Største kunder" med bar-chart baseret på pipeline-data grupperet pr. kunde
 
-**`src/components/budget/OverblikTab.tsx`** (linje 44-45, 97)
+## 3. Gældsoversigt (Skat, Moms, Anden gæld)
 
-Beregn `ytdOmsBud` (budget-omsætning YTD) og vis det som `sub`-tekst under YTD Omsætning KPI-kortet:
+Ny sektion: "Skyldige poster" — kompakt oversigt med tre rækker:
 
-```typescript
-const ytdOmsBud = omsRow ? sumArr(omsRow.b, 0, nReal - 1) : 0;
-```
+| Post | Beløb |
+|---|---|
+| Skyldig moms | Netto moms - betalt moms |
+| Skyldig skat | Estimeret skat - betalt B-skat |
+| Anden gæld | Fra `andenGeld` |
+| **I alt** | Sum |
 
-Opdatér KpiCard for YTD Omsætning (ca. linje 97) til:
-```
-sub={`Budget: ${fmt(ytdOmsBud)} kr`}
-positive={ytdOms >= ytdOmsBud}
-```
+### Props fra Index.tsx:
+OverblikTab skal modtage: `momsBetalt`, `bskat`, `andenGeld`, `skatPct`, `virksomhedstype`, `txns` (allerede der)
+
+### Beregning:
+- **Moms**: For hvert kvartal: salgsmoms (U25-txns) - købsmoms (I25-txns) - betalt. Sum af udestående.
+- **Skat**: `projRes * skatPct/100 - sum(bskat.betalt)`
+- **Anden gæld**: Direkte fra `andenGeld`
+
+### Filer:
+- **`src/pages/Index.tsx`** — send ekstra props til OverblikTab
+- **`src/components/budget/OverblikTab.tsx`** — tilføj Props-interface, beregn gældsposter, ny Card "Skyldige poster"
+
+## Opsummering af ændringer
+
+| Fil | Ændring |
+|---|---|
+| `src/pages/Index.tsx` | Send budgetMode, setBudgetMode, momsBetalt, bskat, andenGeld, skatPct, virksomhedstype til OverblikTab |
+| `src/components/budget/OverblikTab.tsx` | 1) Budget-toggle øverst 2) Top-kunder kort 3) Gældsoversigt kort |
 
