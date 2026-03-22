@@ -26,6 +26,17 @@ export interface PipelineJobWithCustomer extends PipelineJob {
   customers: { name: string } | null;
 }
 
+export interface RevenueTransaction {
+  id: number;
+  dato: string | null;
+  belob: number;
+  konto: number;
+  tekst: string | null;
+  faktura: string | null;
+  customer_id: string | null;
+  customers: { name: string } | null;
+}
+
 export function useCustomers() {
   return useQuery({
     queryKey: ['customers'],
@@ -50,6 +61,37 @@ export function usePipelineJobs() {
         .order('expected_payment_date');
       if (error) throw error;
       return data as PipelineJobWithCustomer[];
+    },
+  });
+}
+
+export function useRevenueTransactions() {
+  return useQuery({
+    queryKey: ['revenue_transactions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id, dato, belob, konto, tekst, faktura, customer_id, customers(name)')
+        .lt('belob', 0)
+        .order('dato', { ascending: false });
+      if (error) throw error;
+      return data as RevenueTransaction[];
+    },
+  });
+}
+
+export function useAssignCustomerToTxn() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, customer_id }: { id: number; customer_id: string | null }) => {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ customer_id })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['revenue_transactions'] });
     },
   });
 }
