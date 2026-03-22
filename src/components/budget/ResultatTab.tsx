@@ -177,7 +177,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               ];
             })}
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums ${ytdR >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(ytdR)}</td>
-            <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted-foreground">{fmt(ytdB)}</td>
+            <td className="px-2 py-1.5 text-right text-xs tabular-nums text-foreground/60">{fmt(ytdB)}</td>
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums font-medium ${ytdR - ytdB >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(ytdR - ytdB)}</td>
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums ${proj >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(proj)}</td>
             <td className="px-2 py-1.5 text-right text-xs tabular-nums text-muted-foreground">{fmt(yrB)}</td>
