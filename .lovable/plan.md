@@ -1,48 +1,35 @@
 
 
-# Kundeindbetalinger fra kassekladde i salgspipeline-listen
+# Største kunder: Inkludér kassekladde-indbetalinger (eks. moms)
 
-## Overblik
+## Ændring
 
-Indtægtstransaktioner (negative beløb) fra kassekladden vises direkte i pipeline-tabellen med status "betalt". Brugeren kan tilknytte en kunde til hver indbetaling via dropdown.
+I `src/components/budget/OverblikTab.tsx`, udvid `topCustomers`-beregningen (linje 114-126) til også at inkludere transaktioner fra `txns` der har en `customer_id`.
 
-## 1. Database: Tilføj `customer_id` til `transactions`
+### Logik
 
-Migration:
-```sql
-ALTER TABLE transactions ADD COLUMN customer_id uuid REFERENCES customers(id) ON DELETE SET NULL;
+1. Behold eksisterende pipeline-baserede kundebeløb (vægtet)
+2. Tilføj: for hver transaktion i `txns` med negativt beløb og `customer_id` — find kundenavnet og tilføj beløbet eks. moms:
+   - Hvis `moms === 'U25'`: `Math.abs(belob) / 1.25`
+   - Ellers: `Math.abs(belob)`
+3. Kundenavne hentes via `customers`-join — `txns` har allerede `customer_id`, men ikke kundenavn. Behøver enten:
+   - At sende `useRevenueTransactions()`-data (som allerede joiner kundenavn) som prop, eller
+   - At bruge kundelisten til at slå navne op
+
+**Valgt tilgang**: Importér og kald `useRevenueTransactions()` direkte i OverblikTab (ligesom PipelineTab gør), da den allerede joiner `customers(name)`. Ingen prop-ændring nødvendig.
+
+### Fil: `src/components/budget/OverblikTab.tsx`
+
+- Importér `useRevenueTransactions` fra `@/hooks/use-pipeline`
+- Kald hooken i komponenten
+- I `topCustomers` useMemo: iterer også over revenue transactions med `customer_id`, beregn eks. moms beløb, og akkumulér pr. kunde
+
+```typescript
+// Tilføj kassekladde-indbetalinger eks. moms
+for (const txn of revenueTxns) {
+  if (!txn.customer_id || !txn.customers?.name) continue;
+  const exMoms = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+  map[txn.customers.name] = (map[txn.customers.name] || 0) + exMoms;
+}
 ```
-
-## 2. Hooks (`src/hooks/use-pipeline.ts`)
-
-- Tilføj `useRevenueTransactions()` — henter transaktioner med negativt beløb, joined med `customers(name)`
-- Tilføj `useAssignCustomerToTxn()` — mutation der opdaterer `customer_id` på en transaktion
-
-## 3. Status-liste (`src/components/budget/PipelineTab.tsx`)
-
-- Tilføj ny status `betalt` med grøn styling til `STATUS_OPTIONS`
-- Hent revenue transactions via `useRevenueTransactions()`
-- Map transaktioner til samme row-format som pipeline-jobs og merge dem ind i tabellen (sorteret efter dato)
-- Transaktions-rækker viser:
-  - **Kunde**: Select-dropdown med kundelisten (via `useAssignCustomerToTxn`)
-  - **Beskrivelse**: `txn.tekst`
-  - **Beløb**: `Math.abs(txn.belob)`
-  - **Sandsynlighed**: 100%
-  - **Vægtet**: = beløb
-  - **Dato**: `txn.dato`
-  - **Status**: Fast "Betalt" badge (ikke redigerbar)
-  - **Handlinger**: Ingen slet/rediger (det er kassekladde-data)
-
-## 4. Props-ændringer
-
-- `PipelineTab` behøver ikke nye props — data hentes direkte via hooks fra databasen
-- `Index.tsx` uændret
-
-## Filer
-
-| Fil | Ændring |
-|---|---|
-| Database migration | Tilføj `customer_id` til `transactions` |
-| `src/hooks/use-pipeline.ts` | `useRevenueTransactions` + `useAssignCustomerToTxn` |
-| `src/components/budget/PipelineTab.tsx` | Merge indbetalinger i pipeline-tabel, kunde-dropdown |
 
