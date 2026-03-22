@@ -5,7 +5,7 @@ import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Crosshair, Users, AlertTriangle } from 'lucide-react';
-import type { PipelineJobWithCustomer } from '@/hooks/use-pipeline';
+import { useRevenueTransactions, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { Transaction } from '@/data/budget-constants';
 
 interface Props {
