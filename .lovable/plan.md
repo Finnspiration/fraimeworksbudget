@@ -1,53 +1,37 @@
 
 
-# Overblik-side: Budget-toggle, Top-kunder og Gældsoversigt
+# Budget-tal på bar chart + mørkere budget-farver i resultatopgørelse
 
-## 1. Budget-toggle på Overblik
+## 1. Bar chart: Tilføj budgetteret omsætning og udgifter
 
-OverblikTab modtager ikke `budgetMode`/`setBudgetMode` i dag. Disse props skal sendes fra Index.tsx, og en toggle (samme stil som ResultatTab) tilføjes øverst på Overblik-siden.
+I `src/components/budget/OverblikTab.tsx`:
 
-### Filer:
-- **`src/pages/Index.tsx`** — send `budgetMode` og `setBudgetMode` som props til OverblikTab
-- **`src/components/budget/OverblikTab.tsx`** — tilføj props, vis ToggleGroup øverst (Fast/Dynamisk)
+- Udvid `chartData` med to nye felter: `'Budget oms.'` (omsætningsbudget pr. måned) og `'Budget udg.'` (sum af udgiftskonti-budget pr. måned)
+- Tilføj to nye `<Bar>` i BarChart med svagere/lysere farver (opacity 0.3) af de eksisterende farver
+- Placér budget-bars bag de realiserede bars (før i JSX-rækkefølgen)
 
-## 2. Top-kunder (akkumuleret omsætning fra kassekladde + pipeline)
+```
+Budget oms.: omsRow?.b[i] || 0
+Budget udg.: sum af expenseAcctRows budget for måned i (Math.abs)
+```
 
-Ny sektion: "Største kunder" — viser kunder rangeret efter samlet værdi (realiseret + vægtet pipeline).
+Farver:
+- Budget omsætning: `hsl(var(--budget-positive))` med `fillOpacity={0.3}`
+- Budget udgifter: `hsl(var(--destructive))` med `fillOpacity={0.3}`
 
-- **Realiseret**: Brug `txns` — match transaktioner via `faktura`-felt eller tilknyt kundenavn hvis muligt. Da kassekladden ikke har direkte kundereference, baseres dette udelukkende på pipeline-data.
-- **Pipeline**: Brug `pipelineJobs` med `customer`-data (allerede joined via `PipelineJobWithCustomer`). Sumér `amount * probability/100` pr. kunde.
-- Vis top 6 kunder med horizontal bar (som udgiftsposter).
+## 2. Mørkere budget-tal i ResultatTab
 
-### Fil:
-- **`src/components/budget/OverblikTab.tsx`** — ny Card "Største kunder" med bar-chart baseret på pipeline-data grupperet pr. kunde
+I `src/components/budget/ResultatTab.tsx`:
 
-## 3. Gældsoversigt (Skat, Moms, Anden gæld)
+- I `Cell`-komponenten: budget-værdier (ikke `realized`) bruger i dag `text-[hsl(var(--budget-positive))]` og `text-muted-foreground`. Ændr til mørkere varianter:
+  - Positive budget: `text-[hsl(142,40%,35%)]` (mørkere grøn)
+  - Negative budget: `text-muted-foreground` (behold)
+- I total/res/final-rækker: budget-kolonnen bruger `text-muted-foreground` — ændr til en lidt mørkere farve som `text-foreground/60`
 
-Ny sektion: "Skyldige poster" — kompakt oversigt med tre rækker:
-
-| Post | Beløb |
-|---|---|
-| Skyldig moms | Netto moms - betalt moms |
-| Skyldig skat | Estimeret skat - betalt B-skat |
-| Anden gæld | Fra `andenGeld` |
-| **I alt** | Sum |
-
-### Props fra Index.tsx:
-OverblikTab skal modtage: `momsBetalt`, `bskat`, `andenGeld`, `skatPct`, `virksomhedstype`, `txns` (allerede der)
-
-### Beregning:
-- **Moms**: For hvert kvartal: salgsmoms (U25-txns) - købsmoms (I25-txns) - betalt. Sum af udestående.
-- **Skat**: `projRes * skatPct/100 - sum(bskat.betalt)`
-- **Anden gæld**: Direkte fra `andenGeld`
-
-### Filer:
-- **`src/pages/Index.tsx`** — send ekstra props til OverblikTab
-- **`src/components/budget/OverblikTab.tsx`** — tilføj Props-interface, beregn gældsposter, ny Card "Skyldige poster"
-
-## Opsummering af ændringer
+## Filer
 
 | Fil | Ændring |
 |---|---|
-| `src/pages/Index.tsx` | Send budgetMode, setBudgetMode, momsBetalt, bskat, andenGeld, skatPct, virksomhedstype til OverblikTab |
-| `src/components/budget/OverblikTab.tsx` | 1) Budget-toggle øverst 2) Top-kunder kort 3) Gældsoversigt kort |
+| `src/components/budget/OverblikTab.tsx` | Tilføj budget-bars i chartData + BarChart |
+| `src/components/budget/ResultatTab.tsx` | Mørkere farver for budget-tal i Cell og total-rækker |
 
