@@ -1,37 +1,48 @@
 
 
-# Budget-tal på bar chart + mørkere budget-farver i resultatopgørelse
+# Kundeindbetalinger fra kassekladde i salgspipeline-listen
 
-## 1. Bar chart: Tilføj budgetteret omsætning og udgifter
+## Overblik
 
-I `src/components/budget/OverblikTab.tsx`:
+Indtægtstransaktioner (negative beløb) fra kassekladden vises direkte i pipeline-tabellen med status "betalt". Brugeren kan tilknytte en kunde til hver indbetaling via dropdown.
 
-- Udvid `chartData` med to nye felter: `'Budget oms.'` (omsætningsbudget pr. måned) og `'Budget udg.'` (sum af udgiftskonti-budget pr. måned)
-- Tilføj to nye `<Bar>` i BarChart med svagere/lysere farver (opacity 0.3) af de eksisterende farver
-- Placér budget-bars bag de realiserede bars (før i JSX-rækkefølgen)
+## 1. Database: Tilføj `customer_id` til `transactions`
 
-```
-Budget oms.: omsRow?.b[i] || 0
-Budget udg.: sum af expenseAcctRows budget for måned i (Math.abs)
+Migration:
+```sql
+ALTER TABLE transactions ADD COLUMN customer_id uuid REFERENCES customers(id) ON DELETE SET NULL;
 ```
 
-Farver:
-- Budget omsætning: `hsl(var(--budget-positive))` med `fillOpacity={0.3}`
-- Budget udgifter: `hsl(var(--destructive))` med `fillOpacity={0.3}`
+## 2. Hooks (`src/hooks/use-pipeline.ts`)
 
-## 2. Mørkere budget-tal i ResultatTab
+- Tilføj `useRevenueTransactions()` — henter transaktioner med negativt beløb, joined med `customers(name)`
+- Tilføj `useAssignCustomerToTxn()` — mutation der opdaterer `customer_id` på en transaktion
 
-I `src/components/budget/ResultatTab.tsx`:
+## 3. Status-liste (`src/components/budget/PipelineTab.tsx`)
 
-- I `Cell`-komponenten: budget-værdier (ikke `realized`) bruger i dag `text-[hsl(var(--budget-positive))]` og `text-muted-foreground`. Ændr til mørkere varianter:
-  - Positive budget: `text-[hsl(142,40%,35%)]` (mørkere grøn)
-  - Negative budget: `text-muted-foreground` (behold)
-- I total/res/final-rækker: budget-kolonnen bruger `text-muted-foreground` — ændr til en lidt mørkere farve som `text-foreground/60`
+- Tilføj ny status `betalt` med grøn styling til `STATUS_OPTIONS`
+- Hent revenue transactions via `useRevenueTransactions()`
+- Map transaktioner til samme row-format som pipeline-jobs og merge dem ind i tabellen (sorteret efter dato)
+- Transaktions-rækker viser:
+  - **Kunde**: Select-dropdown med kundelisten (via `useAssignCustomerToTxn`)
+  - **Beskrivelse**: `txn.tekst`
+  - **Beløb**: `Math.abs(txn.belob)`
+  - **Sandsynlighed**: 100%
+  - **Vægtet**: = beløb
+  - **Dato**: `txn.dato`
+  - **Status**: Fast "Betalt" badge (ikke redigerbar)
+  - **Handlinger**: Ingen slet/rediger (det er kassekladde-data)
+
+## 4. Props-ændringer
+
+- `PipelineTab` behøver ikke nye props — data hentes direkte via hooks fra databasen
+- `Index.tsx` uændret
 
 ## Filer
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/OverblikTab.tsx` | Tilføj budget-bars i chartData + BarChart |
-| `src/components/budget/ResultatTab.tsx` | Mørkere farver for budget-tal i Cell og total-rækker |
+| Database migration | Tilføj `customer_id` til `transactions` |
+| `src/hooks/use-pipeline.ts` | `useRevenueTransactions` + `useAssignCustomerToTxn` |
+| `src/components/budget/PipelineTab.tsx` | Merge indbetalinger i pipeline-tabel, kunde-dropdown |
 
