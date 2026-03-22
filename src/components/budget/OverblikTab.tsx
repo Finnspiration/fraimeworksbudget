@@ -194,7 +194,9 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
                 <YAxis tickFormatter={v => v === 0 ? '0' : `${(v / 1000).toFixed(0)}t`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number, n: string) => [`${fmt(v)} kr`, n]} />
                 <Legend />
+                <Bar dataKey="Budget oms." fill="hsl(var(--budget-positive))" fillOpacity={0.25} radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Omsætning" fill="hsl(var(--budget-positive))" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Budget udg." fill="hsl(var(--destructive))" fillOpacity={0.25} radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Udgifter" fill="hsl(var(--destructive))" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
