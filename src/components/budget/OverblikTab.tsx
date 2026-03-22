@@ -120,11 +120,17 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
       const val = Number(j.amount) * j.probability / 100;
       map[name] = (map[name] || 0) + val;
     }
+    // Tilføj kassekladde-indbetalinger eks. moms
+    for (const txn of revenueTxns) {
+      if (!txn.customer_id || !txn.customers?.name) continue;
+      const exMoms = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+      map[txn.customers.name] = (map[txn.customers.name] || 0) + exMoms;
+    }
     return Object.entries(map)
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 6);
-  }, [pipelineJobs]);
+  }, [pipelineJobs, revenueTxns]);
 
   const maxCustomer = topCustomers[0]?.amount || 1;
 
