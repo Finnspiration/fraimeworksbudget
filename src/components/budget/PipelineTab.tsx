@@ -19,6 +19,7 @@ const STATUS_OPTIONS = [
   { value: 'forhandling', label: 'Forhandling', color: 'bg-accent text-accent-foreground' },
   { value: 'vundet', label: 'Vundet', color: 'bg-[hsl(var(--budget-positive))]/20 text-[hsl(var(--budget-positive))]' },
   { value: 'tabt', label: 'Tabt', color: 'bg-destructive/20 text-destructive' },
+  { value: 'betalt', label: 'Betalt', color: 'bg-[hsl(var(--budget-positive))]/30 text-[hsl(var(--budget-positive))]' },
 ];
 
 function statusBadge(status: string) {
