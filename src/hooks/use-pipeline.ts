@@ -33,6 +33,7 @@ export interface RevenueTransaction {
   konto: number;
   tekst: string | null;
   faktura: string | null;
+  moms: string | null;
   customer_id: string | null;
   customers: { name: string } | null;
 }
@@ -71,7 +72,7 @@ export function useRevenueTransactions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, dato, belob, konto, tekst, faktura, customer_id, customers(name)')
+        .select('id, dato, belob, konto, tekst, faktura, moms, customer_id, customers(name)')
         .lt('belob', 0)
         .order('dato', { ascending: false });
       if (error) throw error;

@@ -5,7 +5,7 @@ import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Crosshair, Users, AlertTriangle } from 'lucide-react';
-import type { PipelineJobWithCustomer } from '@/hooks/use-pipeline';
+import { useRevenueTransactions, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { Transaction } from '@/data/budget-constants';
 
 interface Props {
@@ -36,6 +36,7 @@ function KpiCard({ label, value, sub, positive, icon }: { label: string; value: 
 }
 
 export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = [], budgetMode, setBudgetMode, momsBetalt, bskat, andenGeld, skatPct, virksomhedstype }: Props) {
+  const { data: revenueTxns = [] } = useRevenueTransactions();
   const resRow = pl['res'] as PLValues | undefined;
 
   const firstTotal = activePL.find(r => r.t === 'total');
@@ -119,11 +120,17 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
       const val = Number(j.amount) * j.probability / 100;
       map[name] = (map[name] || 0) + val;
     }
+    // Tilføj kassekladde-indbetalinger eks. moms
+    for (const txn of revenueTxns) {
+      if (!txn.customer_id || !txn.customers?.name) continue;
+      const exMoms = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+      map[txn.customers.name] = (map[txn.customers.name] || 0) + exMoms;
+    }
     return Object.entries(map)
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 6);
-  }, [pipelineJobs]);
+  }, [pipelineJobs, revenueTxns]);
 
   const maxCustomer = topCustomers[0]?.amount || 1;
 
