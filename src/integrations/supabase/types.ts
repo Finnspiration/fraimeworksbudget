@@ -197,6 +197,7 @@ export type Database = {
         Row: {
           belob: number
           bilag: string | null
+          customer_id: string | null
           dato: string | null
           faktura: string | null
           id: number
@@ -209,6 +210,7 @@ export type Database = {
         Insert: {
           belob?: number
           bilag?: string | null
+          customer_id?: string | null
           dato?: string | null
           faktura?: string | null
           id?: number
@@ -221,6 +223,7 @@ export type Database = {
         Update: {
           belob?: number
           bilag?: string | null
+          customer_id?: string | null
           dato?: string | null
           faktura?: string | null
           id?: number
@@ -230,7 +233,15 @@ export type Database = {
           tekst?: string | null
           type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
