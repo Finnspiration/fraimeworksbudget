@@ -52,7 +52,7 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   }
 
   const display = value === 0 || isNaN(value) ? '–' : fmt(value);
-  const color = value < 0 ? 'text-muted-foreground' : value > 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-muted-foreground';
+  const color = value < 0 ? 'text-foreground/50' : value > 0 ? 'text-[hsl(142,40%,35%)]' : 'text-muted-foreground';
 
   return (
     <td
