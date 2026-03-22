@@ -36,6 +36,7 @@ function KpiCard({ label, value, sub, positive, icon }: { label: string; value: 
 }
 
 export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = [], budgetMode, setBudgetMode, momsBetalt, bskat, andenGeld, skatPct, virksomhedstype }: Props) {
+  const { data: revenueTxns = [] } = useRevenueTransactions();
   const resRow = pl['res'] as PLValues | undefined;
 
   const firstTotal = activePL.find(r => r.t === 'total');
