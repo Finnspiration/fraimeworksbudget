@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Users, Target, TrendingUp, Pencil } from 'lucide-react';
 import { fmt } from '@/lib/budget-utils';
-import { useCustomers, usePipelineJobs, useCreateCustomer, useDeleteCustomer, useCreateJob, useUpdateJob, useDeleteJob, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
+import { useCustomers, usePipelineJobs, useCreateCustomer, useDeleteCustomer, useCreateJob, useUpdateJob, useDeleteJob, useRevenueTransactions, useAssignCustomerToTxn, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { PLRow } from '@/data/budget-constants';
 import { toast } from 'sonner';
 
