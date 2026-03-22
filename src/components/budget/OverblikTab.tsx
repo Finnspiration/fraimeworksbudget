@@ -14,8 +14,8 @@ interface Props {
   txns: Transaction[];
   activePL: PLRow[];
   pipelineJobs?: PipelineJobWithCustomer[];
-  budgetMode: 'fast' | 'dynamisk';
-  setBudgetMode: (v: 'fast' | 'dynamisk') => void;
+  budgetMode: 'fixed' | 'dynamic';
+  setBudgetMode: (v: 'fixed' | 'dynamic') => void;
   momsBetalt: number[];
   bskat: BskatRate[];
   andenGeld: number;
