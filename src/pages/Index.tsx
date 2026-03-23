@@ -9,7 +9,9 @@ import SkatTab from '@/components/budget/SkatTab';
 import ImportTab from '@/components/budget/ImportTab';
 import PipelineTab from '@/components/budget/PipelineTab';
 import { usePipelineJobs } from '@/hooks/use-pipeline';
-import { BarChart3, Table, Receipt, FileSpreadsheet, Target, Loader2 } from 'lucide-react';
+import { useFutureExpenses } from '@/hooks/use-future-expenses';
+import FutureExpensesTab from '@/components/budget/FutureExpensesTab';
+import { BarChart3, Table, Receipt, FileSpreadsheet, Target, CalendarClock, Loader2 } from 'lucide-react';
 
 export default function Index() {
   const state = useDbState();
