@@ -1,71 +1,47 @@
 
 
-# Fix: Kontoplan-import og beregningsfejl
+# Fix: Manglende konti ved kontoplan-import
 
-## Identificerede problemer
+## Problem
 
-### Problem 1: Manglende konti i kontoplanen
-Transaktioner med konto 1950, 6135 og 6920 findes i kassekladden, men der er ingen `acct`-rækker for disse i kontoplanen. Kontoplanimportens type=1 logik fungerer korrekt — problemet er at Excel-filen ikke indeholdt disse som type 1-konti, eller de blev filtreret fra. **Resultat**: Beløbene tæller ikke med i resultatopgørelsen.
+Kontoplan-importen håndterer kun type 1, 3, 4, 5, 6 og springer type 2 over. Rækker med **type 0** (tom type-kolonne eller eksplicit 0) droppes stille — de falder gennem alle if/else-grene uden at blive importeret. 
 
-### Problem 2: `res`-rækker (type 6) summer ALLE tidligere totaler — dobbelt-tælling
-Når en type=6 række importeres, oprettes en `res`-række der summer **alle** hidtidige `totalIds`. Det inkluderer:
-- Gruppetotaler: `t1099` (Omsætning i alt), `t1399` (Direkte omk. i alt), `t2299` (Lønninger i alt), etc.
-- Kumulative totaler: `t2000` (Dækningsbidrag = range:1000-2000), `t3800` (Resultat før afskr. = range:1000-3800), `t4990` (PERIODENS RESULTAT = range:1000-4990)
-
-Når en `res`-række summer alle disse, tælles f.eks. omsætningen mange gange — én gang via `t1099`, én gang via `t2000`, én gang via `t3800`, osv. **Det er årsagen til de skæve tal.**
-
-### Problem 3: `final`-rækken summer `res`-rækker der allerede overlapper
-`PERIODENS RESULTAT` (final) = `r6112 + r6199 + r8999` — tre res-rækker der hver allerede indeholder overlappende totaler.
+Konto 1950 "Mellemregning med andre banker" har sandsynligvis type 0 (eller blank) i Excel-filen, og bliver derfor aldrig oprettet som `acct`-række.
 
 ## Løsning
 
-### 1. Fix type=6 import-logik (`ImportTab.tsx`, linje 254-257)
+### 1. Behandl type 0 som driftskonto (`ImportTab.tsx`, linje 244)
 
-Type 6 i dansk kontoplan er et "SumInterval" — den summerer et interval, ligesom type 3. Den skal IKKE summere alle foregående totaler. Fix:
+Rækker med `type === 0` og et gyldigt `nr > 0` skal behandles som type 1 (driftskonto):
 
-- Hvis `sumfra` er udfyldt: brug `range:${sumfraNum}-${nr}` (ligesom type 3)
-- Hvis `sumfra` er tom: brug `range:${lastTotalNr+1}-${nr}` (fra efter sidste total til nuværende)
-- Ændr type fra `res` til `total` — type 6 er en total, ikke et resultat
+```typescript
+// Ændr: } else if (type === 1) {
+// Til:
+} else if (type === 1 || (type === 0 && nr > 0)) {
+```
 
-### 2. Fix auto-genereret `final`-række (linje 261-268)
+Dette fanger konti hvor type-kolonnen er tom eller 0, men som har et gyldigt kontonummer.
 
-Erstat logikken så `final`-rækken bruger den SIDSTE kumulative total (typisk `t4990` for P&L) i stedet for at summere alle res/total-rækker.
+### 2. Vis advarsel om manglende konti efter kassekladde-import
 
-Bedre: Brug `range:1000-4990` for PERIODENS RESULTAT — en enkelt range der dækker hele P&L.
+Efter import af kassekladde: find kontonumre i transaktionerne som ikke findes i den aktive kontoplan, og vis en advarsel med liste over manglende konti. Brugeren kan så genimportere kontoplanen.
 
-### 3. Fix eksisterende data i databasen
+### 3. Ret eksisterende data i databasen (migration)
 
-Ret de forkerte `res`-rækker i `chart_of_accounts`:
-- "Periodens resultat" (r6112): Bør bruge `range:1000-4990` eller kun `id:t4990` (da t4990 allerede er range:1000-4990)
-- "EGENKAPITAL I ALT" (r6199): Bør bruge korrekt interval
-- "PASSIVER I ALT" (r8999): Bør bruge korrekt interval
-- "PERIODENS RESULTAT" (final): Bør kun pege på den rigtige resultat-total
+Opdatér de tre placeholder-rækker der blev indsat med forkerte navne:
 
-### 4. Tilføj manglende konti
+| Nr | Nuværende label | Korrekt label |
+|---|---|---|
+| 1950 | "Konto 1950" | "Mellemregning med andre banker" |
+| 6135 | "Konto 6135" | (skal slås op — eller brugeren genimporterer) |
+| 6920 | "Konto 6920" | (skal slås op — eller brugeren genimporterer) |
 
-Tilføj `acct`-rækker for konto 1950, 6135, 6920 i den korrekte sektion af kontoplanen — eller vis en advarsel til brugeren om at der er transaktioner med kontonumre der ikke findes i kontoplanen.
+Da vi ikke kender de korrekte navne for 6135 og 6920, sætter vi en generisk besked og opfordrer brugeren til at genimportere kontoplanen.
 
-## Filer der ændres
+### Filer
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/ImportTab.tsx` | Fix type=6 logik: brug range-formel i stedet for at summere alle totalIds. Fix final-generering. |
-| Database (data update) | Ret de forkerte sum_formula-værdier for res- og final-rækker |
-
-## Teknisk detalje: Ny type=6 logik
-
-```typescript
-} else if (type === 6) {
-  const id = `t${nr}`;
-  totalIds.push(id);
-  const sumfraNum = Number(sumfra);
-  const formula = sumfraNum > 0 
-    ? `range:${sumfraNum}-${nr}` 
-    : `grp:${currentGrp}`;
-  plRows.push({ t: 'total', nr, lbl: navn, id, sum: formula });
-  addMeta();
-}
-```
-
-Og for `final`-generering: find den kumulative P&L total (typisk den med det højeste nr under 5000) og brug dens id.
+| `src/components/budget/ImportTab.tsx` | Tilføj `type === 0 && nr > 0` til acct-betingelsen. Tilføj advarsel om manglende konti efter kassekladde-import. |
+| Database migration | Ret label for konto 1950 til "Mellemregning med andre banker" |
 
