@@ -299,8 +299,25 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto} {acctMap.get(exp.konto) || ''}</span>}
                         </td>
                         <td className="py-1.5 pr-2">
-                          {isEditing ? <Input className="h-7 text-xs w-16" value={editRow.moms || ''} onChange={e => setEditRow(p => ({ ...p, moms: e.target.value || null }))} />
-                            : (exp.moms || '—')}
+                          {isEditing ? (
+                            <Select value={editRow.moms || '_none'} onValueChange={v => setEditRow(p => ({ ...p, moms: v === '_none' ? null : v }))}>
+                              <SelectTrigger className="h-7 text-xs w-20"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="I25">I25</SelectItem>
+                                <SelectItem value="U25">U25</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Select value={exp.moms || '_none'} onValueChange={v => updateExpense(exp.id, { moms: v === '_none' ? null : v })}>
+                              <SelectTrigger className="h-7 text-xs w-20 border-transparent hover:border-input"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="I25">I25</SelectItem>
+                                <SelectItem value="U25">U25</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </td>
                         <td className="py-1.5 pr-2">
                           {exp.matched
