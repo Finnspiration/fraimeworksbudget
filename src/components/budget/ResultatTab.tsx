@@ -70,7 +70,7 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   );
 }
 
-export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL }: Props) {
+export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL, txns = [], pipelineJobs = [], futureExpenses = [] }: Props) {
   const isDynamic = budgetMode === 'dynamic';
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
