@@ -116,14 +116,26 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
 
   const txnKey = (t: Transaction) => `${t.bilag}_${t.dato}_${t.konto}_${t.belob}`;
 
-  const existingKeys = useMemo(() => new Set(txns.map(txnKey)), [txns]);
+  const existingMap = useMemo(() => {
+    const m = new Map<string, Transaction>();
+    txns.forEach(t => m.set(txnKey(t), t));
+    return m;
+  }, [txns]);
 
-  const { newRows, dupRows } = useMemo(() => {
-    if (!preview) return { newRows: [] as Transaction[], dupRows: [] as Transaction[] };
-    const n: Transaction[] = [], d: Transaction[] = [];
-    preview.forEach(t => (existingKeys.has(txnKey(t)) ? d : n).push(t));
-    return { newRows: n, dupRows: d };
-  }, [preview, existingKeys]);
+  const { newRows, dupRows, updatedRows } = useMemo(() => {
+    if (!preview) return { newRows: [] as Transaction[], dupRows: [] as Transaction[], updatedRows: [] as Transaction[] };
+    const n: Transaction[] = [], d: Transaction[] = [], u: Transaction[] = [];
+    preview.forEach(t => {
+      const key = txnKey(t);
+      const existing = existingMap.get(key);
+      if (!existing) n.push(t);
+      else if (existing.tekst !== t.tekst || existing.faktura !== t.faktura
+               || existing.moms !== t.moms || existing.modkonto !== t.modkonto)
+        u.push(t);
+      else d.push(t);
+    });
+    return { newRows: n, dupRows: d, updatedRows: u };
+  }, [preview, existingMap]);
 
   const doImport = () => {
     if (!newRows.length) return;
