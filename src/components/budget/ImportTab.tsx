@@ -266,7 +266,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
         const sumfra = cSumfra >= 0 ? String(r[cSumfra] || '').trim() : '';
 
         if (!navn && !nr) continue;
-        if (type === 2) continue;
+        
 
         const addMeta = () => previewMeta.push({ origType: type, moms, sumfra });
 
