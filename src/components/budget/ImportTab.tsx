@@ -348,7 +348,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
             <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--budget-positive))]/30 bg-[hsl(var(--budget-positive))]/5 p-3">
               <div className="text-sm">
                 <span className="font-medium">Brugerdefineret kontoplan aktiv</span>
-                <span className="text-muted-foreground ml-2">({customPL.filter(r => r.t === 'acct').length} konti)</span>
+                <span className="text-muted-foreground ml-2">({customPL.filter(r => r.t === 'acct' || r.t === 'bal').length} konti)</span>
               </div>
               <Button variant="outline" size="sm" onClick={() => { if (window.confirm('Nulstil til standard-kontoplanen?')) setCustomPL(null); }}>
                 <RotateCcw className="h-3.5 w-3.5 mr-1" />Nulstil
