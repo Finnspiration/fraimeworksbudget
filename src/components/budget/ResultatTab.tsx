@@ -15,6 +15,9 @@ interface Props {
   budgetMode: 'fixed' | 'dynamic';
   setBudgetMode: (m: 'fixed' | 'dynamic') => void;
   activePL: PLRow[];
+  txns?: Transaction[];
+  pipelineJobs?: { konto: number; amount: number; probability: number; expected_payment_date: string; description: string; status: string }[];
+  futureExpenses?: FutureExpense[];
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
