@@ -243,7 +243,14 @@ export default function FutureExpensesTab({ activePL }: Props) {
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Moms</label>
-              <Input className="h-8 text-xs" value={newRow.moms || ''} onChange={e => setNewRow(p => ({ ...p, moms: e.target.value || null }))} placeholder="I25" />
+              <Select value={newRow.moms || '_none'} onValueChange={v => setNewRow(p => ({ ...p, moms: v === '_none' ? null : v }))}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Ingen</SelectItem>
+                  <SelectItem value="I25">I25</SelectItem>
+                  <SelectItem value="U25">U25</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button size="sm" className="h-8 w-8 p-0" onClick={handleAdd}><Plus className="h-4 w-4" /></Button>
           </div>
