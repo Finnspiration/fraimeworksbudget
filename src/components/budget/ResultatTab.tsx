@@ -116,7 +116,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       }
       if (collapsedSecs[curSec!]) return null;
 
-      if (row.t === 'acct' || row.t === 'bal') {
+      if (row.t === 'acct') {
         if (!showZero && !hasAnyData(row.nr!)) return null;
         const v = pl[row.nr!];
         const ytdR = v ? sumArr(v.r, 0, nReal - 1) : 0;
