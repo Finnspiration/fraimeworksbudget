@@ -3,6 +3,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -242,7 +243,14 @@ export default function FutureExpensesTab({ activePL }: Props) {
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Moms</label>
-              <Input className="h-8 text-xs" value={newRow.moms || ''} onChange={e => setNewRow(p => ({ ...p, moms: e.target.value || null }))} placeholder="I25" />
+              <Select value={newRow.moms || '_none'} onValueChange={v => setNewRow(p => ({ ...p, moms: v === '_none' ? null : v }))}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Ingen</SelectItem>
+                  <SelectItem value="I25">I25</SelectItem>
+                  <SelectItem value="U25">U25</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button size="sm" className="h-8 w-8 p-0" onClick={handleAdd}><Plus className="h-4 w-4" /></Button>
           </div>
@@ -291,8 +299,25 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto} {acctMap.get(exp.konto) || ''}</span>}
                         </td>
                         <td className="py-1.5 pr-2">
-                          {isEditing ? <Input className="h-7 text-xs w-16" value={editRow.moms || ''} onChange={e => setEditRow(p => ({ ...p, moms: e.target.value || null }))} />
-                            : (exp.moms || '—')}
+                          {isEditing ? (
+                            <Select value={editRow.moms || '_none'} onValueChange={v => setEditRow(p => ({ ...p, moms: v === '_none' ? null : v }))}>
+                              <SelectTrigger className="h-7 text-xs w-20"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="I25">I25</SelectItem>
+                                <SelectItem value="U25">U25</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Select value={exp.moms || '_none'} onValueChange={v => updateExpense(exp.id, { moms: v === '_none' ? null : v })}>
+                              <SelectTrigger className="h-7 text-xs w-20 border-transparent hover:border-input"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="I25">I25</SelectItem>
+                                <SelectItem value="U25">U25</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </td>
                         <td className="py-1.5 pr-2">
                           {exp.matched
