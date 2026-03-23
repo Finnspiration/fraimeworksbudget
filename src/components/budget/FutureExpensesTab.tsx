@@ -288,6 +288,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             </Button>
                           ) : (
                             <div className="flex gap-1 justify-end">
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => startEdit(exp)} title="Redigér">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
                               <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCopyDialog(exp); setCopyMonths(1); }} title="Kopiér frem">
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
