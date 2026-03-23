@@ -1,51 +1,32 @@
 
 
-# Tre forbedringer: Konto-dropdown, foldet import, og celle-tooltip i resultatopgørelsen
+# Fix: Fremtidige udgifter — layout og funktionalitetsforbedringer
 
-## 1. Konto-dropdown i Fremtidige udgifter
+## Problemer
 
-**Fil: `src/components/budget/FutureExpensesTab.tsx`**
+1. **Momskode mangler** i tabellen (vises, men gemmes/vises ikke konsistent)
+2. **Datoformat** bruger `dd/MM/yyyy` men kassekladden viser råformat (`yyyy-MM-dd`) — skal matche kassekladdens format
+3. **Redigering** virker kun via double-click — ikke tydeligt nok
+4. **Tekst-kolonnen** er for smal, dato-kolonnen for bred
+5. **Konto** viser kun nummer — skal også vise kontonavn som i kassekladden
 
-Erstat `<Input type="number">` for konto med en searchable Combobox (Command + Popover), der viser alle konti fra `acctMap` med nr + navn. Gælder både "tilføj ny"-formularen og inline-redigering.
+## Løsning
 
-Mønsteret bruges allerede i `ImportTab.tsx` (se `kontoPopoverOpen` + Command-komponent der). Genanvend samme tilgang.
+### Fil: `src/components/budget/FutureExpensesTab.tsx`
 
-## 2. Kontoplan og kassekladde-import foldet ind som default
+**1. Datoformat:** Kassekladden viser dato som `yyyy-MM-dd` (rå ISO-format fra `t.dato`). Ændr FutureExpensesTab til samme format — vis `exp.dato` direkte i stedet for at reformatere til `dd/MM/yyyy`.
 
-**Fil: `src/components/budget/ImportTab.tsx`**
+**2. Konto med navn:** I tabelvisningen, vis konto som `{exp.konto} {acctMap.get(exp.konto)}` — ligesom kassekladden gør det (linje 639-642 i ImportTab).
 
-Wrap de to Card-sektioner (Kontoplan + Kassekladde) i Collapsible-komponenter med `defaultOpen={false}`. Brug `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` fra shadcn. CardHeader bliver trigger med en chevron-ikon.
+**3. Tekst-kolonne bredere, dato smallere:** Ændr grid-layout:
+- Add-formularen: `grid-cols-[90px_1fr_90px_180px_60px_40px]` (dato smallere, tekst 1fr)
+- Tabel: dato-kolonne `w-24`, tekst uden max-width begrænsning
 
-## 3. Hover-tooltip på celler i resultatopgørelsen
+**4. Moms synlig:** Momskoden vises allerede i tabellen, men sørg for den også gemmes og vises korrekt (den er der allerede — verificeret i koden).
 
-**Fil: `src/components/budget/ResultatTab.tsx`**
-
-### For `acct`-rækker (individuelle konti):
-Celleværdien (realiseret) kommer fra transaktioner. For at vise detaljer skal `ResultatTab` modtage `txns` som ny prop. Ved hover på en realiseret celle, vis en tooltip med de individuelle posteringer der bidrager til værdien (filtreret på konto + måned): dato, tekst, beløb (netto).
-
-For budgetceller: vis kilderne — fast budget, pipeline-bidrag og fremtidige udgifter der bidrager til den måned+konto.
-
-### For `total`/`res`/`final`-rækker (summer):
-Vis de individuelle konti/subtotaler der summer op til værdien, med deres respektive beløb for den pågældende måned.
-
-### Implementation:
-- Tilføj `txns: Transaction[]` prop til `ResultatTab`
-- Opdatér `Index.tsx` til at sende `txns={state.txns}`
-- Opret en `CellWithTooltip`-komponent der wrapper celler med `HoverCard` (bedre end tooltip, da den kan vise mere indhold)
-- For realiserede acct-celler: filtrér `txns` på konto + måned, vis liste
-- For budget acct-celler: vis fast budget + pipeline + future expenses bidrag
-- For total-rækker: dekomponér `sum`-formlen og vis bidrag fra hver underliggende konto/subtotal
-- Brug `HoverCardContent` med en lille tabel over bidragene
-
-### Props-ændring i Index.tsx:
-Tilføj `txns={state.txns}` og `pipelineJobs={pipelineJobs}` og `futureExpenses={activeExpenses}` til ResultatTab for at kunne vise alle kilder i tooltip.
-
-## Filer der ændres
+**5. Redigering mere tilgængelig:** Tilføj en edit-knap (blyant-ikon) i actions-kolonnen for aktive rækker, i stedet for kun double-click.
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/FutureExpensesTab.tsx` | Erstat konto-input med searchable dropdown |
-| `src/components/budget/ImportTab.tsx` | Wrap kontoplan + kassekladde i Collapsible, default lukket |
-| `src/components/budget/ResultatTab.tsx` | Tilføj txns/pipeline/futureExpenses props, HoverCard på celler |
-| `src/pages/Index.tsx` | Send ekstra props til ResultatTab |
+| `src/components/budget/FutureExpensesTab.tsx` | Datoformat, konto med navn, layout-justeringer, edit-knap |
 
