@@ -17,6 +17,7 @@ function plRowToDb(row: PLRow, i: number) {
     grp: row.grp ?? null,
     row_id: row.id ?? null,
     sum_formula: row.sum ?? null,
+    moms: row.moms ?? null,
   };
 }
 
@@ -27,6 +28,7 @@ function dbToPlRow(r: any): PLRow {
   if (r.grp) row.grp = r.grp;
   if (r.row_id) row.id = r.row_id;
   if (r.sum_formula) row.sum = r.sum_formula;
+  if (r.moms) row.moms = r.moms;
   return row;
 }
 

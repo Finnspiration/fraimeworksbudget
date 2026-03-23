@@ -114,6 +114,11 @@ export default function FutureExpensesTab({ activePL }: Props) {
     acctList.forEach(r => m.set(r.nr!, r.lbl || ''));
     return m;
   }, [acctList]);
+  const acctMomsMap = useMemo(() => {
+    const m = new Map<number, string | null>();
+    acctList.forEach(r => m.set(r.nr!, r.moms ?? null));
+    return m;
+  }, [acctList]);
 
   const handleAdd = async () => {
     if (!newRow.konto || !newRow.tekst) {
@@ -226,7 +231,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </div>
 
           {/* Add new row */}
-          <div className="grid grid-cols-[68px_minmax(0,1fr)_76px_148px_55px_36px] items-end gap-1 overflow-visible mb-4">
+          <div className="grid grid-cols-[80px_minmax(0,1fr)_80px_200px_70px_36px] items-end gap-1 overflow-visible mb-4">
             <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground">Dato</label>
               <DatePicker value={newRow.dato} onChange={v => setNewRow(p => ({ ...p, dato: v }))} />
@@ -241,14 +246,17 @@ export default function FutureExpensesTab({ activePL }: Props) {
             </div>
             <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground">Konto</label>
-              <KontoPicker value={newRow.konto} onChange={v => setNewRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-full" />
+              <KontoPicker value={newRow.konto} onChange={v => {
+                const momsFromAcct = acctMomsMap.get(v);
+                setNewRow(p => ({ ...p, konto: v, moms: momsFromAcct || null }));
+              }} acctList={acctList} acctMap={acctMap} className="w-full" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Moms</label>
               <Select value={newRow.moms || '_none'} onValueChange={v => setNewRow(p => ({ ...p, moms: v === '_none' ? null : v }))}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_none">Ingen</SelectItem>
+                  <SelectItem value="_none">–</SelectItem>
                   <SelectItem value="I25">I25</SelectItem>
                   <SelectItem value="U25">U25</SelectItem>
                 </SelectContent>
@@ -297,7 +305,10 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             : fmtDec(exp.belob)}
                         </td>
                         <td className="py-1.5 pr-2" style={!kontoValid ? { color: 'hsl(var(--destructive))' } : {}}>
-                          {isEditing ? <KontoPicker value={editRow.konto ?? exp.konto} onChange={v => setEditRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-44" />
+                          {isEditing ? <KontoPicker value={editRow.konto ?? exp.konto} onChange={v => {
+                              const momsFromAcct = acctMomsMap.get(v);
+                              setEditRow(p => ({ ...p, konto: v, moms: momsFromAcct || null }));
+                            }} acctList={acctList} acctMap={acctMap} className="w-44" />
                             : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto} {acctMap.get(exp.konto) || ''}</span>}
                         </td>
                         <td className="py-1.5 pr-2">
@@ -305,7 +316,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             <Select value={editRow.moms || '_none'} onValueChange={v => setEditRow(p => ({ ...p, moms: v === '_none' ? null : v }))}>
                               <SelectTrigger className="h-7 text-xs w-20"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="_none">–</SelectItem>
                                 <SelectItem value="I25">I25</SelectItem>
                                 <SelectItem value="U25">U25</SelectItem>
                               </SelectContent>
@@ -314,7 +325,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             <Select value={exp.moms || '_none'} onValueChange={v => updateExpense(exp.id, { moms: v === '_none' ? null : v })}>
                               <SelectTrigger className="h-7 text-xs w-20 border-transparent hover:border-input"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="_none">–</SelectItem>
                                 <SelectItem value="I25">I25</SelectItem>
                                 <SelectItem value="U25">U25</SelectItem>
                               </SelectContent>

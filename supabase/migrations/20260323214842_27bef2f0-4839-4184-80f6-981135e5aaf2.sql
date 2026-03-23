@@ -1,0 +1,1 @@
+ALTER TABLE public.chart_of_accounts ADD COLUMN moms text DEFAULT NULL;
