@@ -16,6 +16,7 @@ interface Props {
   setTxns: React.Dispatch<React.SetStateAction<Transaction[]>>;
   customPL: PLRow[] | null;
   setCustomPL: React.Dispatch<React.SetStateAction<PLRow[] | null>>;
+  onImportComplete?: (txns: Transaction[]) => void;
 }
 
 type SortKey = 'dato' | 'belob' | 'konto' | 'type' | 'bilag';
