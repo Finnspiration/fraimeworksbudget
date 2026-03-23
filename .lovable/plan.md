@@ -1,59 +1,82 @@
 
+# Fix: Type 2-balancekonti bliver stadig filtreret fra
 
-# Kassekladde-import: Overskriv ændrede posteringer
+## Årsag
 
-## Problem
+Jeg fandt den konkrete fejl i `src/components/budget/ImportTab.tsx`:
 
-Nuværende duplikatlogik bruger nøglen `bilag_dato_konto_belob` til at finde dubletter. Hvis teksten er ændret i den nye fil (men bilag, dato, konto og beløb er ens), markeres rækken som dublet og springes over — den opdaterede tekst importeres aldrig.
-
-## Løsning
-
-### Fil: `src/components/budget/ImportTab.tsx`
-
-1. **Udvid duplikat-kategorisering** (linje 121-126): Tilføj en tredje kategori `updatedRows` — rækker hvor nøglen matcher, men `tekst` er anderledes.
-
-2. **Ændr `txnKey`** — behold som den er (bilag+dato+konto+belob). Tilføj en `txnFullKey` der inkluderer tekst til sammenligning.
-
-3. **Ny logik i `useMemo`**:
-   - Byg et map fra `txnKey` → eksisterende transaktion (med alle felter inkl. tekst)
-   - For hver preview-række:
-     - Hvis nøglen ikke findes: `newRow`
-     - Hvis nøglen findes OG tekst er ens: `dupRow` (skip)
-     - Hvis nøglen findes OG tekst er anderledes: `updatedRow` (overskriv)
-
-4. **Opdatér `doImport`** (linje 128-144):
-   - Indsæt nye rækker som nu
-   - For `updatedRows`: find og erstat de eksisterende rækker i `txns` (match på `txnKey`, overskriv med nye værdier inkl. tekst, faktura, moms, modkonto)
-   - Opdatér statusbesked: `"✓ Importerede X nye, opdaterede Y posteringer (Z uændrede sprunget over)"`
-
-5. **Opdatér preview-visning** (linje 420-422):
-   - Vis antal nye + opdaterede i knapteksten
-   - Vis info om opdaterede rækker i preview-området
-
-### Teknisk detalje
-
-```typescript
-const existingMap = useMemo(() => {
-  const m = new Map<string, Transaction>();
-  txns.forEach(t => m.set(txnKey(t), t));
-  return m;
-}, [txns]);
-
-const { newRows, dupRows, updatedRows } = useMemo(() => {
-  if (!preview) return { newRows: [], dupRows: [], updatedRows: [] };
-  const n: Transaction[] = [], d: Transaction[] = [], u: Transaction[] = [];
-  preview.forEach(t => {
-    const key = txnKey(t);
-    const existing = existingMap.get(key);
-    if (!existing) n.push(t);
-    else if (existing.tekst !== t.tekst || existing.faktura !== t.faktura 
-             || existing.moms !== t.moms || existing.modkonto !== t.modkonto) 
-      u.push(t);
-    else d.push(t);
-  });
-  return { newRows: n, dupRows: d, updatedRows: u };
-}, [preview, existingMap]);
+```ts
+if (type === 2) continue;
 ```
 
-I `doImport`: erstat matchende rækker og tilføj nye.
+Den linje kører **før** logikken, der ellers forsøger at importere `type === 2` som `acct`. Derfor bliver alle balancekonti stadig droppet ved genimport, og konto 1950 ender rød i kassekladden igen.
 
+Derudover blev den manuelt indsatte 1950-række fjernet, fordi kontoplan-importen erstatter hele den gemte kontoplan.
+
+## Plan
+
+### 1. Ret importlogikken for kontoplan
+I `src/components/budget/ImportTab.tsx`:
+
+- Fjern den tidlige filtrering af `type === 2`
+- Behold/importér type 2 i samme gren som øvrige konti:
+  - `type === 1` = drift
+  - `type === 2` = balance
+  - `type === 0 && nr > 0` = fallback-konto
+
+Det sikrer, at balancekonti som 1950 faktisk bliver oprettet som `acct`-rækker i den importerede kontoplan.
+
+### 2. Opdatér hjælpeteksten under kontoplan
+Skift teksten fra:
+
+```text
+Importér kontoplan fra Excel. Format: Nr, Navn, Type (1=Drift, 3=SumFra, 4=Overskrift, 5=Overskrift Start, 6=SumInterval), Sumfra.
+```
+
+til:
+
+```text
+Importér kontoplan fra Excel. Format: Nr, Navn, Type (1=Drift, 2=Balance, 3=SumFra, 4=Overskrift, 5=Overskrift Start, 6=SumInterval), Sumfra.
+```
+
+### 3. Ret validerings-/statusbesked
+Opdatér den fejltekst der i dag siger:
+
+```text
+Ingen driftskonti (type 1) fundet i filen
+```
+
+så den matcher den nye logik, fx:
+
+```text
+Ingen konti (type 1 eller 2) fundet i filen
+```
+
+så UI’et ikke misinformerer, når en fil indeholder balancekonti.
+
+### 4. Verificér konsekvensen for eksisterende import
+Efter fixet vil næste kontoplan-import gemme type 2-konti korrekt i backend, så konto 1950 og andre balancekonti ikke længere markeres rødt i kassekladden, når de findes i filen.
+
+## Filer der ændres
+
+| Fil | Ændring |
+|---|---|
+| `src/components/budget/ImportTab.tsx` | Fjern `if (type === 2) continue;`, behold type 2 som `acct`, opdatér hjælpetekst og statusbesked |
+
+## Teknisk note
+
+Den relevante fejl er, at disse to stykker kode modsiger hinanden:
+
+```ts
+if (type === 2) continue;
+```
+
+og senere:
+
+```ts
+} else if (type === 1 || type === 2 || (type === 0 && nr > 0)) {
+  plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp });
+}
+```
+
+Første linje gør, at anden linje aldrig nås for type 2. Det er den primære root cause.
