@@ -84,6 +84,15 @@ export function useFutureExpenses() {
     qc.invalidateQueries({ queryKey: ['future_expenses'] });
   }, [qc]);
 
+  const unmatchExpense = useCallback(async (id: string) => {
+    const { error } = await supabase.from('future_expenses').update({
+      matched: false,
+      matched_txn_id: null,
+    }).eq('id', id);
+    if (error) throw error;
+    qc.invalidateQueries({ queryKey: ['future_expenses'] });
+  }, [qc]);
+
   const matchAgainstTransactions = useCallback(async (txns: Transaction[]) => {
     const unmatched = expenses.filter(e => !e.matched);
     if (unmatched.length === 0) return 0;
@@ -122,6 +131,7 @@ export function useFutureExpenses() {
     addExpense,
     updateExpense,
     deleteExpense,
+    unmatchExpense,
     matchAgainstTransactions,
   };
 }
