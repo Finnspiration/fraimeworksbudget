@@ -116,6 +116,51 @@ export type Database = {
         }
         Relationships: []
       }
+      future_expenses: {
+        Row: {
+          belob: number
+          bilag: string | null
+          created_at: string
+          dato: string | null
+          faktura: string | null
+          id: string
+          konto: number
+          matched: boolean
+          matched_txn_id: number | null
+          modkonto: number | null
+          moms: string | null
+          tekst: string | null
+        }
+        Insert: {
+          belob?: number
+          bilag?: string | null
+          created_at?: string
+          dato?: string | null
+          faktura?: string | null
+          id?: string
+          konto: number
+          matched?: boolean
+          matched_txn_id?: number | null
+          modkonto?: number | null
+          moms?: string | null
+          tekst?: string | null
+        }
+        Update: {
+          belob?: number
+          bilag?: string | null
+          created_at?: string
+          dato?: string | null
+          faktura?: string | null
+          id?: string
+          konto?: number
+          matched?: boolean
+          matched_txn_id?: number | null
+          modkonto?: number | null
+          moms?: string | null
+          tekst?: string | null
+        }
+        Relationships: []
+      }
       moms_betalt: {
         Row: {
           amount: number

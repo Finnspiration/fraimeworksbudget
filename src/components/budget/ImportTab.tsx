@@ -16,12 +16,13 @@ interface Props {
   setTxns: React.Dispatch<React.SetStateAction<Transaction[]>>;
   customPL: PLRow[] | null;
   setCustomPL: React.Dispatch<React.SetStateAction<PLRow[] | null>>;
+  onImportComplete?: (txns: Transaction[]) => void;
 }
 
 type SortKey = 'dato' | 'belob' | 'konto' | 'type' | 'bilag';
 type SortDir = 'asc' | 'desc';
 
-export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Props) {
+export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImportComplete }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Transaction[] | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -171,6 +172,14 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
     }
     setStatus({ type: missingKonti.length > 0 ? 'error' : 'success', msg });
     setPreview(null);
+    // Trigger future expenses matching
+    if (onImportComplete) {
+      // Use timeout to ensure txns state is updated first
+      setTimeout(() => {
+        const allTxns = [...txns, ...withIds];
+        onImportComplete(allTxns);
+      }, 500);
+    }
   };
 
   // Unique types for filter dropdown

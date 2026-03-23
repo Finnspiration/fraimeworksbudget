@@ -9,17 +9,19 @@ import SkatTab from '@/components/budget/SkatTab';
 import ImportTab from '@/components/budget/ImportTab';
 import PipelineTab from '@/components/budget/PipelineTab';
 import { usePipelineJobs } from '@/hooks/use-pipeline';
-import { BarChart3, Table, Receipt, FileSpreadsheet, Target, Loader2 } from 'lucide-react';
+import { useFutureExpenses } from '@/hooks/use-future-expenses';
+import FutureExpensesTab from '@/components/budget/FutureExpensesTab';
+import { BarChart3, Table, Receipt, FileSpreadsheet, Target, CalendarClock, Loader2 } from 'lucide-react';
 
 export default function Index() {
   const state = useDbState();
   const [tab, setTab] = useState('overblik');
   const { data: pipelineJobs = [] } = usePipelineJobs();
+  const { activeExpenses, matchAgainstTransactions } = useFutureExpenses();
 
-  // Merge weighted pipeline into budget for PL calculation
+  // Merge weighted pipeline + future expenses into budget for PL calculation
   const mergedBudget = useMemo(() => {
     const base = { ...state.activeBudget };
-    // Deep-copy existing arrays
     for (const k of Object.keys(base)) {
       base[Number(k)] = [...base[Number(k)]];
     }
@@ -31,13 +33,19 @@ export default function Index() {
       const month = d.getMonth();
       const weighted = Number(job.amount) * job.probability / 100;
       const konto = job.konto;
-      if (!base[konto]) {
-        base[konto] = new Array(12).fill(0);
-      }
+      if (!base[konto]) base[konto] = new Array(12).fill(0);
       base[konto][month] += weighted;
     });
+    // Add future expenses (100% weight)
+    activeExpenses.forEach(exp => {
+      const d = new Date(exp.dato);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      const month = d.getMonth();
+      if (!base[exp.konto]) base[exp.konto] = new Array(12).fill(0);
+      base[exp.konto][month] += exp.belob;
+    });
     return base;
-  }, [state.activeBudget, pipelineJobs]);
+  }, [state.activeBudget, pipelineJobs, activeExpenses]);
 
   // Recompute PL with merged budget
   const mergedPL = useMemo(() => {
@@ -77,6 +85,7 @@ export default function Index() {
             <TabsTrigger value="overblik" className="gap-1.5"><BarChart3 className="h-3.5 w-3.5" />Overblik</TabsTrigger>
             <TabsTrigger value="resultat" className="gap-1.5"><Table className="h-3.5 w-3.5" />Resultatopgørelse</TabsTrigger>
             <TabsTrigger value="pipeline" className="gap-1.5"><Target className="h-3.5 w-3.5" />Pipeline</TabsTrigger>
+            <TabsTrigger value="udgifter" className="gap-1.5"><CalendarClock className="h-3.5 w-3.5" />Fremtidige udgifter</TabsTrigger>
             <TabsTrigger value="skat" className="gap-1.5"><Receipt className="h-3.5 w-3.5" />Skat & Moms</TabsTrigger>
             <TabsTrigger value="import" className="gap-1.5"><FileSpreadsheet className="h-3.5 w-3.5" />Kassekladde</TabsTrigger>
           </TabsList>
@@ -102,8 +111,18 @@ export default function Index() {
               skatPct={state.skatPct} setSkatPct={state.setSkatPct}
               virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype} />
           </TabsContent>
+          <TabsContent value="udgifter">
+            <FutureExpensesTab activePL={state.activePL} />
+          </TabsContent>
           <TabsContent value="import">
-            <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL} />
+            <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL}
+              onImportComplete={async (allTxns) => {
+                const count = await matchAgainstTransactions(allTxns);
+                if (count > 0) {
+                  const { toast } = await import('sonner');
+                  toast.success(`✓ ${count} fremtidige udgifter blev matchet`);
+                }
+              }} />
           </TabsContent>
         </Tabs>
       </main>
