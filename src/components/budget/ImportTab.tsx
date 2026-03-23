@@ -443,12 +443,12 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                 <div>
                   <p className="text-sm font-semibold">Forhåndsvisning ({preview.length} rækker)</p>
                   <p className="text-xs text-muted-foreground">
-                    {newRows.length} nye posteringer{dupRows.length > 0 && <span className="text-destructive/70"> · {dupRows.length} duplikater</span>}
+                    {newRows.length} nye{updatedRows.length > 0 && <span className="text-[hsl(var(--budget-positive))]"> · {updatedRows.length} opdaterede</span>}{dupRows.length > 0 && <span className="text-destructive/70"> · {dupRows.length} uændrede</span>}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => { setPreview(null); setStatus(null); }}>Annuller</Button>
-                  <Button size="sm" onClick={doImport} disabled={newRows.length === 0}>Importér {newRows.length} nye posteringer</Button>
+                  <Button size="sm" onClick={doImport} disabled={newRows.length === 0 && updatedRows.length === 0}>Importér {newRows.length + updatedRows.length} posteringer</Button>
                 </div>
               </div>
               <div className="overflow-auto max-h-80 rounded-lg border">
