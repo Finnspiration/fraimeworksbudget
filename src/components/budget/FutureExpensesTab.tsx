@@ -9,7 +9,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandG
 import { fmtDec } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, addMonths, parse } from 'date-fns';
 import { da } from 'date-fns/locale';
