@@ -1,35 +1,71 @@
 
 
-# Største kunder: Inkludér kassekladde-indbetalinger (eks. moms)
+# Fix: Kontoplan-import og beregningsfejl
 
-## Ændring
+## Identificerede problemer
 
-I `src/components/budget/OverblikTab.tsx`, udvid `topCustomers`-beregningen (linje 114-126) til også at inkludere transaktioner fra `txns` der har en `customer_id`.
+### Problem 1: Manglende konti i kontoplanen
+Transaktioner med konto 1950, 6135 og 6920 findes i kassekladden, men der er ingen `acct`-rækker for disse i kontoplanen. Kontoplanimportens type=1 logik fungerer korrekt — problemet er at Excel-filen ikke indeholdt disse som type 1-konti, eller de blev filtreret fra. **Resultat**: Beløbene tæller ikke med i resultatopgørelsen.
 
-### Logik
+### Problem 2: `res`-rækker (type 6) summer ALLE tidligere totaler — dobbelt-tælling
+Når en type=6 række importeres, oprettes en `res`-række der summer **alle** hidtidige `totalIds`. Det inkluderer:
+- Gruppetotaler: `t1099` (Omsætning i alt), `t1399` (Direkte omk. i alt), `t2299` (Lønninger i alt), etc.
+- Kumulative totaler: `t2000` (Dækningsbidrag = range:1000-2000), `t3800` (Resultat før afskr. = range:1000-3800), `t4990` (PERIODENS RESULTAT = range:1000-4990)
 
-1. Behold eksisterende pipeline-baserede kundebeløb (vægtet)
-2. Tilføj: for hver transaktion i `txns` med negativt beløb og `customer_id` — find kundenavnet og tilføj beløbet eks. moms:
-   - Hvis `moms === 'U25'`: `Math.abs(belob) / 1.25`
-   - Ellers: `Math.abs(belob)`
-3. Kundenavne hentes via `customers`-join — `txns` har allerede `customer_id`, men ikke kundenavn. Behøver enten:
-   - At sende `useRevenueTransactions()`-data (som allerede joiner kundenavn) som prop, eller
-   - At bruge kundelisten til at slå navne op
+Når en `res`-række summer alle disse, tælles f.eks. omsætningen mange gange — én gang via `t1099`, én gang via `t2000`, én gang via `t3800`, osv. **Det er årsagen til de skæve tal.**
 
-**Valgt tilgang**: Importér og kald `useRevenueTransactions()` direkte i OverblikTab (ligesom PipelineTab gør), da den allerede joiner `customers(name)`. Ingen prop-ændring nødvendig.
+### Problem 3: `final`-rækken summer `res`-rækker der allerede overlapper
+`PERIODENS RESULTAT` (final) = `r6112 + r6199 + r8999` — tre res-rækker der hver allerede indeholder overlappende totaler.
 
-### Fil: `src/components/budget/OverblikTab.tsx`
+## Løsning
 
-- Importér `useRevenueTransactions` fra `@/hooks/use-pipeline`
-- Kald hooken i komponenten
-- I `topCustomers` useMemo: iterer også over revenue transactions med `customer_id`, beregn eks. moms beløb, og akkumulér pr. kunde
+### 1. Fix type=6 import-logik (`ImportTab.tsx`, linje 254-257)
+
+Type 6 i dansk kontoplan er et "SumInterval" — den summerer et interval, ligesom type 3. Den skal IKKE summere alle foregående totaler. Fix:
+
+- Hvis `sumfra` er udfyldt: brug `range:${sumfraNum}-${nr}` (ligesom type 3)
+- Hvis `sumfra` er tom: brug `range:${lastTotalNr+1}-${nr}` (fra efter sidste total til nuværende)
+- Ændr type fra `res` til `total` — type 6 er en total, ikke et resultat
+
+### 2. Fix auto-genereret `final`-række (linje 261-268)
+
+Erstat logikken så `final`-rækken bruger den SIDSTE kumulative total (typisk `t4990` for P&L) i stedet for at summere alle res/total-rækker.
+
+Bedre: Brug `range:1000-4990` for PERIODENS RESULTAT — en enkelt range der dækker hele P&L.
+
+### 3. Fix eksisterende data i databasen
+
+Ret de forkerte `res`-rækker i `chart_of_accounts`:
+- "Periodens resultat" (r6112): Bør bruge `range:1000-4990` eller kun `id:t4990` (da t4990 allerede er range:1000-4990)
+- "EGENKAPITAL I ALT" (r6199): Bør bruge korrekt interval
+- "PASSIVER I ALT" (r8999): Bør bruge korrekt interval
+- "PERIODENS RESULTAT" (final): Bør kun pege på den rigtige resultat-total
+
+### 4. Tilføj manglende konti
+
+Tilføj `acct`-rækker for konto 1950, 6135, 6920 i den korrekte sektion af kontoplanen — eller vis en advarsel til brugeren om at der er transaktioner med kontonumre der ikke findes i kontoplanen.
+
+## Filer der ændres
+
+| Fil | Ændring |
+|---|---|
+| `src/components/budget/ImportTab.tsx` | Fix type=6 logik: brug range-formel i stedet for at summere alle totalIds. Fix final-generering. |
+| Database (data update) | Ret de forkerte sum_formula-værdier for res- og final-rækker |
+
+## Teknisk detalje: Ny type=6 logik
 
 ```typescript
-// Tilføj kassekladde-indbetalinger eks. moms
-for (const txn of revenueTxns) {
-  if (!txn.customer_id || !txn.customers?.name) continue;
-  const exMoms = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
-  map[txn.customers.name] = (map[txn.customers.name] || 0) + exMoms;
+} else if (type === 6) {
+  const id = `t${nr}`;
+  totalIds.push(id);
+  const sumfraNum = Number(sumfra);
+  const formula = sumfraNum > 0 
+    ? `range:${sumfraNum}-${nr}` 
+    : `grp:${currentGrp}`;
+  plRows.push({ t: 'total', nr, lbl: navn, id, sum: formula });
+  addMeta();
 }
 ```
+
+Og for `final`-generering: find den kumulative P&L total (typisk den med det højeste nr under 5000) og brug dens id.
 
