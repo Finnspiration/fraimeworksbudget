@@ -208,6 +208,20 @@ export default function FutureExpensesTab({ activePL }: Props) {
             Registrér forventede udgifter. De indgår i budgettet og fjernes automatisk når de matches ved kassekladde-import.
           </p>
 
+          {/* Filter bar */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <ToggleGroup type="single" value={filterStatus} onValueChange={v => v && setFilterStatus(v as 'all' | 'active' | 'matched')} size="sm">
+              <ToggleGroupItem value="all" className="text-xs h-7 px-2">Alle</ToggleGroupItem>
+              <ToggleGroupItem value="active" className="text-xs h-7 px-2">Aktive</ToggleGroupItem>
+              <ToggleGroupItem value="matched" className="text-xs h-7 px-2">Matchede</ToggleGroupItem>
+            </ToggleGroup>
+            <div className="flex items-center gap-1">
+              <KontoPicker value={filterKonto || 0} onChange={v => setFilterKonto(v)} acctList={acctList} acctMap={acctMap} className="w-48" />
+              {filterKonto && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setFilterKonto(null)}>✕</Button>}
+            </div>
+            <span className="text-xs text-muted-foreground ml-auto">{filtered.length} af {expenses.length} vist</span>
+          </div>
+
           {/* Add new row */}
           <div className="grid grid-cols-[90px_1fr_90px_180px_60px_40px] gap-1 mb-4 items-end">
             <div>
