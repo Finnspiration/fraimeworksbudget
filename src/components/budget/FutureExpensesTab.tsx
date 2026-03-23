@@ -200,7 +200,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </p>
 
           {/* Add new row */}
-          <div className="grid grid-cols-[120px_1fr_100px_80px_70px_40px] gap-1 mb-4 items-end">
+          <div className="grid grid-cols-[120px_1fr_100px_160px_70px_40px] gap-1 mb-4 items-end">
             <div>
               <label className="text-[10px] text-muted-foreground">Dato</label>
               <DatePicker value={newRow.dato} onChange={v => setNewRow(p => ({ ...p, dato: v }))} />
@@ -215,8 +215,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Konto</label>
-              <Input type="number" className="h-8 text-xs" value={newRow.konto || ''} onChange={e => setNewRow(p => ({ ...p, konto: Number(e.target.value) }))}
-                style={newRow.konto && !acctMap.has(newRow.konto) ? { color: 'hsl(var(--destructive))' } : {}} />
+              <KontoPicker value={newRow.konto} onChange={v => setNewRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-full" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Moms</label>
