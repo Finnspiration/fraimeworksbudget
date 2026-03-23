@@ -339,7 +339,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
           <CardTitle className="text-sm font-semibold flex items-center gap-2"><BookOpen className="h-4 w-4" />Kontoplan</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">Importér kontoplan fra Excel. Format: Nr, Navn, Type (1=Drift, 3=SumFra, 4=Overskrift, 5=Overskrift Start, 6=SumInterval), Sumfra.</p>
+          <p className="text-sm text-muted-foreground">Importér kontoplan fra Excel. Format: Nr, Navn, Type (1=Drift, 2=Balance, 3=SumFra, 4=Overskrift, 5=Overskrift Start, 6=SumInterval), Sumfra.</p>
 
           {customPL && (
             <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--budget-positive))]/30 bg-[hsl(var(--budget-positive))]/5 p-3">
