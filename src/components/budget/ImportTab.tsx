@@ -516,7 +516,9 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
             </div>
           )}
         </CardContent>
+        </CollapsibleContent>
       </Card>
+      </Collapsible>
 
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
