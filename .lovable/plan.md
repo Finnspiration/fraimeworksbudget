@@ -1,23 +1,29 @@
 
 
-# Tilføj opsummering af kommende betalinger i Fremtidige udgifter
+# Fix: Budget-værdier tydeligere + synlig hover-indikator
 
-## Ændring
+## Problemer
 
-**Fil: `src/components/budget/FutureExpensesTab.tsx`**
+1. **Budget-celler med tooltip har næsten usynlig hover-indikator** — `border-dotted border-current` er svær at se fordi budget-farven (`text-foreground/50` / `text-[hsl(142,40%,35%)]`) allerede er lys
+2. **Budget-tal er for afdæmpede** — `text-foreground/50` (negative) og `text-[hsl(142,40%,35%)]` (positive) er for lyse
 
-Tilføj to opsummeringskort lige under header/over filterbaren, der viser:
+## Løsning
 
-1. **Næste 7 dage**: Sum af aktive (ikke-matchede) udgifter med dato inden for de næste 7 dage fra i dag
-2. **Næste 30 dage**: Sum af aktive udgifter med dato inden for de næste 30 dage fra i dag
+### Fil: `src/components/budget/CellWithTooltip.tsx`
 
-Begge beregnes med `useMemo` baseret på `expenses.filter(e => !e.matched)` og datosammenligning mod `new Date()`.
+**1. Mørkere budget-farver:**
+- Negative budget: `text-foreground/50` → `text-destructive/70` (rødlig men afdæmpet ift. realiseret)
+- Positive budget: `text-[hsl(142,40%,35%)]` → `text-[hsl(142,35%,30%)]` (mørkere grøn)
 
-Layout: To små kort side om side (flex-row, gap-3) med beløb i fed og label i lille tekst. Bruger eksisterende `fmtDec` til formatering.
+**2. Synlig hover-indikator på budget-celler:**
+- Tilføj stærkere border-styling for budget-celler: `border-b border-dotted border-foreground/40` i stedet for `border-current` (som arver den svage farve)
 
-Beregningen er ren client-side og kræver ingen databaseændringer.
+### Fil: `src/components/budget/ResultatTab.tsx`
+
+**Samme farveændringer i `Cell`-komponenten** (linje 25-27), så ikke-tooltip celler også får mørkere budget-farver.
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/FutureExpensesTab.tsx` | Tilføj to opsummeringskort med 7-dages og 30-dages sum |
+| `src/components/budget/CellWithTooltip.tsx` | Mørkere budget-farver, stærkere hover-border |
+| `src/components/budget/ResultatTab.tsx` | Samme farveændringer i Cell-komponenten |
 
