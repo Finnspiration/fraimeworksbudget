@@ -32,7 +32,7 @@ export function CellWithTooltip({
 }: CellWithTooltipProps) {
   const color = realized
     ? (value < 0 ? 'text-destructive' : 'text-primary')
-    : (value < 0 ? 'text-foreground/50' : 'text-[hsl(142,40%,35%)]');
+    : (value < 0 ? 'text-destructive/70' : 'text-[hsl(142,35%,30%)]');
 
   // Build tooltip content
   const tooltipContent = useMemo(() => {
