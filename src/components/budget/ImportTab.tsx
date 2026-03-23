@@ -331,7 +331,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const doImportKontoPlan = () => {
     if (!kontoPlanPreview) return;
     setCustomPL(kontoPlanPreview);
-    setKontoPlanStatus({ type: 'success', msg: `✓ Kontoplan importeret med ${kontoPlanPreview.filter(r => r.t === 'acct').length} konti` });
+    setKontoPlanStatus({ type: 'success', msg: `✓ Kontoplan importeret med ${kontoPlanPreview.filter(r => r.t === 'acct' || r.t === 'bal').length} konti` });
     setKontoPlanPreview(null);
   };
 
