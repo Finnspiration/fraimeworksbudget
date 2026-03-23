@@ -64,6 +64,7 @@ export type Database = {
           grp: string | null
           id: string
           label: string | null
+          moms: string | null
           nr: number | null
           row_id: string | null
           row_type: string
@@ -74,6 +75,7 @@ export type Database = {
           grp?: string | null
           id?: string
           label?: string | null
+          moms?: string | null
           nr?: number | null
           row_id?: string | null
           row_type: string
@@ -84,6 +86,7 @@ export type Database = {
           grp?: string | null
           id?: string
           label?: string | null
+          moms?: string | null
           nr?: number | null
           row_id?: string | null
           row_type?: string
