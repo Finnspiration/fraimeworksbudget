@@ -316,7 +316,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             <Select value={editRow.moms || '_none'} onValueChange={v => setEditRow(p => ({ ...p, moms: v === '_none' ? null : v }))}>
                               <SelectTrigger className="h-7 text-xs w-20"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="_none">–</SelectItem>
                                 <SelectItem value="I25">I25</SelectItem>
                                 <SelectItem value="U25">U25</SelectItem>
                               </SelectContent>
@@ -325,7 +325,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             <Select value={exp.moms || '_none'} onValueChange={v => updateExpense(exp.id, { moms: v === '_none' ? null : v })}>
                               <SelectTrigger className="h-7 text-xs w-20 border-transparent hover:border-input"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="_none">Ingen</SelectItem>
+                                <SelectItem value="_none">–</SelectItem>
                                 <SelectItem value="I25">I25</SelectItem>
                                 <SelectItem value="U25">U25</SelectItem>
                               </SelectContent>
