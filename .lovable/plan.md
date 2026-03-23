@@ -1,52 +1,61 @@
 
 
-# Fix: Fjern Nulkontrol og duplikeret PERIODENS RESULTAT fra resultatopgørelsen
+# Fremtidige udgifter — ny fane med auto-matching mod kassekladde
 
-## Problem
+## Koncept
 
-Den importerede kontoplan indeholder en fuld balance efter resultatopgørelsen (konti 5000-9990). I bunden af resultatopgørelsen vises:
+En ny tabel `future_expenses` i databasen og en ny fane "Fremtidige udgifter" i appen. Strukturen matcher kassekladdens `Transaction`-type. Når nye posteringer importeres i kassekladden, sammenlignes de automatisk mod fremtidige udgifter — matches fjernes fra listen. Beløbene indgår i budgetberegningen (ligesom pipeline allerede gør), men med 100% sandsynlighed og præcis konto+måned.
 
-1. **PERIODENS RESULTAT** (t4990, `range:1000-4990`) — korrekt P&L-resultat
-2. Hele balancen (aktiver, passiver, gæld) — hører ikke hjemme her
-3. **Nulkontrol** (t9990, `range:1000-9990`) — bogføringsmæssig kontrolpost der summer alt inkl. balance
-4. **PERIODENS RESULTAT** igen (final, `id:t9990`) — peger på Nulkontrol, gentager beløbet
+## Database
 
-Resultatopgørelsen skal stoppe efter den rigtige "PERIODENS RESULTAT" (t4990). Alt derefter er balance/kontrol og hører ikke til P&L-visningen.
+Ny tabel `future_expenses`:
 
-## Løsning
+| Kolonne | Type | Bemærkning |
+|---|---|---|
+| id | uuid (PK) | auto-genereret |
+| dato | date | Forventet dato |
+| tekst | text | Beskrivelse |
+| belob | numeric | Beløb |
+| konto | integer | Kontonummer fra kontoplanen |
+| moms | text | Nullable |
+| bilag | text | Nullable — udfyldes evt. |
+| modkonto | integer | Nullable |
+| faktura | text | Nullable |
+| matched | boolean | Default false — sættes true når matchet |
+| matched_txn_id | integer | Nullable — ref til den matchede transaktion |
+| created_at | timestamptz | Default now() |
 
-### Fil: `src/components/budget/ResultatTab.tsx`
+RLS: public access (som de andre tabeller).
 
-Filtrér `activePL` så resultatopgørelsen kun viser rækker der hører til P&L-delen. To ændringer:
+## Auto-matching ved kassekladde-import
 
-1. **Stop rendering efter den første `final`-række ELLER efter PERIODENS RESULTAT (t4990)**:
-   - I `rows` useMemo: tilføj en `stopRendering`-flag. Når vi rammer en `total`-række med id `t4990` (eller den auto-genererede `final`-række), stop med at rendere efterfølgende rækker.
-   
-2. **Alternativt (renere)**: Filtrér `activePL` inden rendering — afskær alt efter den rigtige P&L-slutlinje. Opret en `plForDisplay` memo der finder indekset af rækken med `id === 't4990'` og klipper listen der.
+I `ImportTab.tsx` `doImport()`: efter nye rækker er importeret, kør en match mod aktive (ikke-matchede) fremtidige udgifter. Match-kriterier:
+- **Konto** er ens
+- **Beløb** er ens (inden for 1 kr margin)
+- **Dato** er inden for ±30 dage af den forventede dato
 
-Jeg anbefaler tilgang 2 — den er simplere og mere robust:
+Ved match: sæt `matched = true` og `matched_txn_id` på den fremtidige udgift. Vis en besked: "✓ X fremtidige udgifter blev matchet".
 
-```typescript
-const plForDisplay = useMemo(() => {
-  // Find the real P&L result row (PERIODENS RESULTAT = range:1000-4990)
-  const endIdx = activePL.findIndex(r => r.id === 't4990');
-  if (endIdx >= 0) return activePL.slice(0, endIdx + 1);
-  // Fallback: find first 'final' row
-  const finalIdx = activePL.findIndex(r => r.t === 'final');
-  if (finalIdx >= 0) return activePL.slice(0, finalIdx + 1);
-  return activePL;
-}, [activePL]);
-```
+## Budget-integration
 
-Brug derefter `plForDisplay` i stedet for `activePL` i `visibleSections` og `rows` useMemo.
+I `Index.tsx` `mergedBudget`: tilføj ikke-matchede fremtidige udgifter til budgettet (ligesom pipeline, men med 100% vægt). Udgifter fordeles på konto + måned baseret på `dato`.
 
-### Konsekvens
+## Ny fane: "Fremtidige udgifter"
 
-- Resultatopgørelsen viser konti 1000-4990 (omsætning → PERIODENS RESULTAT)
-- Balance (5000+), Nulkontrol (9990) og den duplikerede final-række vises ikke
-- Ingen data ændres — det er kun et visuelt filter i `ResultatTab`
+Ny fane i tab-baren (ikon: `CalendarClock`). UI:
+- Tabel med kolonner: Dato, Tekst, Beløb, Konto, Moms, Status (aktiv/matchet)
+- Formularer til at tilføje/redigere/slette udgifter
+- Matchede udgifter vises gennemstreget/grå med link til den matchede postering
+- Kontovalidering mod den aktive kontoplan (som kassekladden)
+
+## Filer der ændres/oprettes
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/ResultatTab.tsx` | Tilføj `plForDisplay` memo der afskærer balance-rækker. Brug den i stedet for `activePL` i rendering. |
+| Database migration | Opret `future_expenses` tabel |
+| `src/components/budget/FutureExpensesTab.tsx` | Ny komponent — tabel + CRUD |
+| `src/hooks/use-future-expenses.ts` | React Query hook til CRUD + matching |
+| `src/pages/Index.tsx` | Tilføj fane, merge fremtidige udgifter i budget |
+| `src/components/budget/ImportTab.tsx` | Kald matching-logik efter import |
+| `src/hooks/use-db-state.ts` | Eksportér activePL til brug i FutureExpensesTab |
 
