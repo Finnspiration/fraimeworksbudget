@@ -267,7 +267,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {expenses.map(exp => {
+                  {filtered.map(exp => {
                     const isEditing = editingId === exp.id;
                     const kontoValid = acctMap.has(exp.konto);
                     return (
