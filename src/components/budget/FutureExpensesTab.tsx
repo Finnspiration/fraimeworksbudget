@@ -95,7 +95,15 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const [editRow, setEditRow] = useState<Partial<FutureExpense>>({});
   const [copyDialog, setCopyDialog] = useState<FutureExpense | null>(null);
   const [copyMonths, setCopyMonths] = useState(1);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'matched'>('all');
+  const [filterKonto, setFilterKonto] = useState<number | null>(null);
 
+  const filtered = useMemo(() => expenses.filter(e => {
+    if (filterStatus === 'active' && e.matched) return false;
+    if (filterStatus === 'matched' && !e.matched) return false;
+    if (filterKonto && e.konto !== filterKonto) return false;
+    return true;
+  }), [expenses, filterStatus, filterKonto]);
   const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
   const acctMap = useMemo(() => {
     const m = new Map<number, string>();
