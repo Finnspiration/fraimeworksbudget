@@ -312,7 +312,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
       }
 
       if (plRows.filter(r => r.t === 'acct').length === 0) {
-        setKontoPlanStatus({ type: 'error', msg: 'Ingen driftskonti (type 1) fundet i filen' });
+        setKontoPlanStatus({ type: 'error', msg: 'Ingen konti (type 1 eller 2) fundet i filen' });
         return;
       }
 
