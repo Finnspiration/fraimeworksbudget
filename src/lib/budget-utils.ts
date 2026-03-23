@@ -25,7 +25,7 @@ export function computeRealized(txns: { dato: string; konto: number; belob: numb
 
 export function computePL(realized: Record<string, number>, budget: Record<number, number[]>, plRows: PLRow[] = PL): Record<string | number, PLValues> {
   const vals: Record<string | number, PLValues> = {};
-  plRows.filter(x => x.t === 'acct').forEach(x => {
+  plRows.filter(x => x.t === 'acct' || x.t === 'bal').forEach(x => {
     vals[x.nr!] = {
       r: Array.from({ length: 12 }, (_, i) => realized[`${x.nr}-${i + 1}`] || 0),
       b: Array.from({ length: 12 }, (_, i) => (budget[x.nr!] ? budget[x.nr!][i] : 0) || 0),
