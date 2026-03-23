@@ -347,9 +347,11 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
 
   return (
     <div className="space-y-6">
+      <Collapsible defaultOpen={false}>
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2"><BookOpen className="h-4 w-4" />Kontoplan</CardTitle>
+        <CollapsibleTrigger asChild>
+        <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2"><BookOpen className="h-4 w-4" />Kontoplan <ChevronDown className="h-3.5 w-3.5 ml-auto text-muted-foreground transition-transform group-data-[state=closed]:hidden" /><ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground transition-transform group-data-[state=open]:hidden" /></CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Importér kontoplan fra Excel. Format: Nr, Navn, Type (1=Drift, 2=Balance, 3=SumFra, 4=Overskrift, 5=Overskrift Start, 6=SumInterval), Sumfra.</p>
