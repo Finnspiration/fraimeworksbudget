@@ -1,61 +1,112 @@
 
-# Fix: Datofeltet i Fremtidige udgifter er stadig ikke løst
+# Fix: Auto-moms fra kontoplan + bedre feltbredder i Fremtidige udgifter
 
-## Hvad jeg kan se
-Problemet er reelt stadig der. I den aktuelle kode er grid’en godt nok ændret, men selve datovælger-knappen er ikke gjort kompakt nok, så dens indhold flyder ud over kolonnen. Det er derfor den stadig ser for bred ud og visuelt kolliderer med tekstfeltet.
+## Hvad jeg fandt
+Der er to separate årsager bag det, du beder om:
 
-## Årsag
-I `src/components/budget/FutureExpensesTab.tsx` er der stadig tre ting, der holder layoutet forkert:
+1. **Momskode kan ikke “følge med” fra kontoplanen endnu**
+   - `FutureExpensesTab` har kun `acctMap` med `nr -> navn`
+   - den gemte kontoplan (`chart_of_accounts`) har **ingen moms-kolonne**
+   - kontoplan-importen læser godt nok moms ind i preview (`kontoPlanMeta`), men smider den væk bagefter
 
-1. `DatePicker`-triggeren viser stadig lang tekst og har ikke hård bredde/truncate
-2. Grid-cellerne mangler `min-w-0`, så indhold kan presse sig ud af kolonnen
-3. Popoveren er kun hævet med `z-50`, men ikke gjort eksplicit kompakt/forankret nok til at undgå den oplevede overlap
+2. **Feltbreddene i opret-rækken er skæve**
+   - nuværende grid er gjort for aggressivt smalt på dato
+   - tekstfeltet sluger for meget plads
+   - konto og moms er for smalle i forhold til deres faktiske indhold
 
-## Løsning
+## Implementeringsplan
 
-### Fil: `src/components/budget/FutureExpensesTab.tsx`
+### 1. Gem moms på kontoplan-konti
+**Filer:**
+- `supabase/migrations/...`
+- `src/integrations/supabase/types.ts` (auto-genereres via backend)
+- `src/data/budget-constants.ts`
+- `src/hooks/use-db-state.ts`
+- `src/components/budget/ImportTab.tsx`
 
-### 1. Gør DatePicker-triggeren faktisk smal
-Opdatér `DatePicker` så knappen bliver:
-- `w-full`
-- `min-w-0`
-- mindre horizontal padding
-- tekst med `truncate`
+**Ændringer:**
+- tilføj nullable `moms`-kolonne på `chart_of_accounts`
+- udvid `PLRow` med fx `moms?: string | null`
+- opdatér mapping i `use-db-state`:
+  - `plRowToDb` skal skrive moms
+  - `dbToPlRow` skal læse moms
+- opdatér kontoplan-import, så moms fra Excel faktisk bliver gemt på konto-rækkerne, ikke kun vist i preview
 
-Og gør label kortere:
-- placeholder: `Dato`
-- valgt dato: kompakt visning i triggeren, men behold selve værdien gemt som `yyyy-MM-dd`
+**Resultat:**
+Valgt konto kan have en standard-momskode knyttet til sig.
 
-Det er den vigtigste del af fixet.
+### 2. Auto-udfyld moms når konto vælges i Fremtidige udgifter
+**Fil:**
+- `src/components/budget/FutureExpensesTab.tsx`
 
-### 2. Gør første kolonne smallere og tekstkolonnen bredere
-Skift add-row grid’en fra den nuværende faste fordeling til en, hvor dato tager mindre plads og tekst får resten, fx:
+**Ændringer:**
+- byg også et `acctMomsMap` (`nr -> moms`)
+- når brugeren vælger konto i `KontoPicker`:
+  - sæt `konto`
+  - sæt samtidig `moms` til kontiens moms-kode, hvis den findes
+  - hvis kontoen ikke har moms, sæt `moms` til `null`
+- gør det både for:
+  - ny række
+  - redigering af eksisterende række
+
+**Regel:**
+Kontovalget bliver den styrende standard for moms. Brugeren kan stadig ændre momskoden manuelt bagefter.
+
+### 3. Vis `-` i stedet for “Ingen”
+**Fil:**
+- `src/components/budget/FutureExpensesTab.tsx`
+
+**Ændringer:**
+- skift label i moms-select fra `Ingen` til `-`
+- brug samme visning både i opret-række, redigering og tabelens inline-momsfelt
+- behold lagring som `null` i databasen
+
+**Resultat:**
+UI matcher dit ønskede format uden at ændre datamodellen.
+
+### 4. Rebalancér feltbredderne i opret-rækken
+**Fil:**
+- `src/components/budget/FutureExpensesTab.tsx`
+
+**Ændringer:**
+- justér grid’en, så den matcher bordets visuelle behov bedre:
 ```text
-[smal dato] [fleksibel tekst] [beløb] [konto] [moms] [plus]
+[Dato lidt bredere] [Tekst mindre bred] [Beløb cirka som nu] [Konto bredere] [Moms bredere] [+]
 ```
+- konkret vil jeg:
+  - gøre **Dato** lidt bredere end nu
+  - gøre **Tekst** tydeligt mindre end nu
+  - lade **Beløb** være næsten uændret
+  - gøre **Konto** bredere, så nummer + navn passer bedre
+  - gøre **Moms** bredere, så select ikke klemmes
 
-Samt tilføj `min-w-0` på grid-items for dato, tekst og konto, så ingen controls kan “skubbe” sig ud over deres kolonne.
+### 5. Match inputbredder bedre med tabelens kolonner
+**Fil:**
+- `src/components/budget/FutureExpensesTab.tsx`
 
-### 3. Sørg for at popoveren lægger sig tydeligt over felterne
-Stram `DatePicker`-popoveren op med:
-- højere z-index end nu
-- eksplicit `side="bottom"`
-- `align="start"`
-- lidt `sideOffset`
+**Ændringer:**
+- justér både:
+  - add-row grid
+  - edit-mode controls
+  - evt. triggerbredder på `DatePicker`, `KontoPicker` og `Select`
+- sørg for at dato-, konto- og momsfelter har realistiske minimumsbredder og ikke bliver presset af lange tekstfelter
 
-Hvis nødvendigt sætter jeg også add-form wrapperen til `overflow-visible`, så kalenderen ikke visuelt bliver klemt.
-
-### 4. Ret også edit-mode
-Det samme problem findes i inline-redigering, hvor edit-date stadig bruger en for bred dato-control (`w-24`). Den skal gøres kompakt med samme DatePicker-styling som i “tilføj ny”.
-
-## Resultat
+## Forventet resultat
 Efter ændringen vil:
-- datofeltet blive synligt smallere
-- tekstfeltet få mere plads
-- datovælgeren ikke længere se ud til at overlappe beskrivelse-feltet
-- add-form og edit-form få samme kompakte dato-layout
 
-## Fil der ændres
+- momskoden automatisk blive sat ud fra valgt konto i kontoplanen
+- `-` blive vist i stedet for “Ingen”
+- datofeltet blive lidt bredere
+- tekstfeltet blive mindre bredt
+- konto-feltet blive bredere
+- moms-feltet blive bredere
+- opret-rækken føles mere afbalanceret og tættere på tabellens faktiske kolonnebredder
+
+## Filer der ændres
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/FutureExpensesTab.tsx` | Kompakt DatePicker-trigger, smallere datokolonne, bredere tekstkolonne, `min-w-0` på grid-items, stærkere popover-positionering, samme fix i edit-mode |
+| `supabase/migrations/...` | Tilføj `moms` til kontoplan-tabellen |
+| `src/data/budget-constants.ts` | Udvid `PLRow` med moms |
+| `src/hooks/use-db-state.ts` | Læs/skriv moms på kontoplan |
+| `src/components/budget/ImportTab.tsx` | Gem moms fra importeret kontoplan |
+| `src/components/budget/FutureExpensesTab.tsx` | Auto-moms ved kontovalg, `-` i stedet for “Ingen”, nye feltbredder |
