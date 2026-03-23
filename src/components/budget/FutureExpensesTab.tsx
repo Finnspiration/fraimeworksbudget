@@ -9,7 +9,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandG
 import { fmtDec } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, addMonths, parse } from 'date-fns';
 import { da } from 'date-fns/locale';
@@ -200,7 +200,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </p>
 
           {/* Add new row */}
-          <div className="grid grid-cols-[120px_1fr_100px_160px_70px_40px] gap-1 mb-4 items-end">
+          <div className="grid grid-cols-[90px_1fr_90px_180px_60px_40px] gap-1 mb-4 items-end">
             <div>
               <label className="text-[10px] text-muted-foreground">Dato</label>
               <DatePicker value={newRow.dato} onChange={v => setNewRow(p => ({ ...p, dato: v }))} />
@@ -250,10 +250,10 @@ export default function FutureExpensesTab({ activePL }: Props) {
                     return (
                       <tr key={exp.id} className={`border-b hover:bg-muted/50 ${exp.matched ? 'opacity-50 line-through' : ''}`}
                         onDoubleClick={() => !exp.matched && startEdit(exp)}>
-                        <td className="py-1.5 pr-2">
+                        <td className="py-1.5 pr-2 whitespace-nowrap">
                           {isEditing
-                            ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-28" />
-                            : exp.dato ? format(parse(exp.dato, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '—'}
+                            ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-24" />
+                            : exp.dato || '—'}
                         </td>
                         <td className="py-1.5 pr-2">
                           {isEditing ? <Input className="h-7 text-xs" value={editRow.tekst || ''} onChange={e => setEditRow(p => ({ ...p, tekst: e.target.value }))} />
@@ -264,8 +264,8 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             : fmtDec(exp.belob)}
                         </td>
                         <td className="py-1.5 pr-2" style={!kontoValid ? { color: 'hsl(var(--destructive))' } : {}}>
-                          {isEditing ? <KontoPicker value={editRow.konto ?? exp.konto} onChange={v => setEditRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-40" />
-                            : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto}</span>}
+                          {isEditing ? <KontoPicker value={editRow.konto ?? exp.konto} onChange={v => setEditRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-44" />
+                            : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto} {acctMap.get(exp.konto) || ''}</span>}
                         </td>
                         <td className="py-1.5 pr-2">
                           {isEditing ? <Input className="h-7 text-xs w-16" value={editRow.moms || ''} onChange={e => setEditRow(p => ({ ...p, moms: e.target.value || null }))} />
@@ -288,6 +288,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             </Button>
                           ) : (
                             <div className="flex gap-1 justify-end">
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => startEdit(exp)} title="Redigér">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
                               <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCopyDialog(exp); setCopyMonths(1); }} title="Kopiér frem">
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
