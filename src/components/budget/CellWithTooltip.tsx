@@ -156,6 +156,10 @@ export function CellWithTooltip({
     return null;
   }, [accountNr, monthIndex, realized, txns, pipelineJobs, futureExpenses, totalFormula, pl, plRows, budgetBase, value]);
 
+  if (value === 0 || value == null || isNaN(value)) {
+    return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : 'text-muted-foreground'}`}>–</td>;
+  }
+
   if (!tooltipContent) {
     return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${color}`}>{fmt(value)}</td>;
   }
