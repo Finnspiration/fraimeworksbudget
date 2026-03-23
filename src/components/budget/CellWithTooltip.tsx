@@ -30,16 +30,14 @@ export function CellWithTooltip({
   txns = [], pipelineJobs = [], futureExpenses = [],
   totalFormula, pl, plRows, isBudgetCell, budgetBase,
 }: CellWithTooltipProps) {
-  if (value === 0 || value == null || isNaN(value)) {
-    return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : 'text-muted-foreground'}`}>–</td>;
-  }
-
   const color = realized
     ? (value < 0 ? 'text-destructive' : 'text-primary')
     : (value < 0 ? 'text-foreground/50' : 'text-[hsl(142,40%,35%)]');
 
   // Build tooltip content
   const tooltipContent = useMemo(() => {
+    if (value === 0 || value == null || isNaN(value)) return null;
+
     // Account-level realized cell
     if (accountNr != null && realized && !totalFormula) {
       const month = monthIndex + 1;
