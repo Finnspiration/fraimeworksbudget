@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { MONTHS, MONTHS_FULL, type PLRow } from '@/data/budget-constants';
+import { MONTHS, MONTHS_FULL, type PLRow, type Transaction } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { CellWithTooltip } from '@/components/budget/CellWithTooltip';
+import type { FutureExpense } from '@/hooks/use-future-expenses';
 
 interface Props {
   pl: Record<string | number, PLValues>;
