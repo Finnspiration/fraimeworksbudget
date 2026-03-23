@@ -4,7 +4,7 @@ export const YEAR = 2026;
 export const COMPANY = "Visual Strategies v/Charlotte Rosenberg";
 
 export interface PLRow {
-  t: 'sec' | 'acct' | 'total' | 'res' | 'final' | 'sp';
+  t: 'sec' | 'acct' | 'bal' | 'total' | 'res' | 'final' | 'sp';
   lbl?: string;
   nr?: number;
   grp?: string;

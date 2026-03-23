@@ -39,7 +39,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const [kontoPlanStatus, setKontoPlanStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const activePL = customPL ?? PL;
-  const acctList = useMemo(() => activePL.filter(r => r.t === 'acct' && r.nr), [activePL]);
+  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
   const acctMap = useMemo(() => new Map(acctList.map(r => [r.nr!, r.lbl || ''])), [acctList]);
   const [kontoPopoverOpen, setKontoPopoverOpen] = useState<number | null>(null);
 
@@ -158,7 +158,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
     });
 
     // Check for account numbers not in the active chart of accounts
-    const acctNrs = new Set(activePL.filter(r => r.t === 'acct' && r.nr).map(r => r.nr!));
+    const acctNrs = new Set(activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr).map(r => r.nr!));
     const allImportedKonti = new Set([...withIds, ...updatedRows].map(t => t.konto));
     const missingKonti = [...allImportedKonti].filter(k => !acctNrs.has(k)).sort((a, b) => a - b);
     
@@ -280,8 +280,11 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
           previewMeta.push({ origType: type, moms: '', sumfra: '' });
           plRows.push({ t: 'sec', lbl: navn });
           addMeta();
-        } else if (type === 1 || type === 2 || (type === 0 && nr > 0)) {
+        } else if (type === 1 || (type === 0 && nr > 0)) {
           plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp });
+          addMeta();
+        } else if (type === 2) {
+          plRows.push({ t: 'bal', nr, lbl: navn, grp: currentGrp });
           addMeta();
         } else if (type === 3) {
           const id = `t${nr}`;
@@ -311,7 +314,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
         }
       }
 
-      if (plRows.filter(r => r.t === 'acct').length === 0) {
+      if (plRows.filter(r => r.t === 'acct' || r.t === 'bal').length === 0) {
         setKontoPlanStatus({ type: 'error', msg: 'Ingen konti (type 1 eller 2) fundet i filen' });
         return;
       }
@@ -328,7 +331,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const doImportKontoPlan = () => {
     if (!kontoPlanPreview) return;
     setCustomPL(kontoPlanPreview);
-    setKontoPlanStatus({ type: 'success', msg: `✓ Kontoplan importeret med ${kontoPlanPreview.filter(r => r.t === 'acct').length} konti` });
+    setKontoPlanStatus({ type: 'success', msg: `✓ Kontoplan importeret med ${kontoPlanPreview.filter(r => r.t === 'acct' || r.t === 'bal').length} konti` });
     setKontoPlanPreview(null);
   };
 
@@ -345,7 +348,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
             <div className="flex items-center justify-between rounded-lg border border-[hsl(var(--budget-positive))]/30 bg-[hsl(var(--budget-positive))]/5 p-3">
               <div className="text-sm">
                 <span className="font-medium">Brugerdefineret kontoplan aktiv</span>
-                <span className="text-muted-foreground ml-2">({customPL.filter(r => r.t === 'acct').length} konti)</span>
+                <span className="text-muted-foreground ml-2">({customPL.filter(r => r.t === 'acct' || r.t === 'bal').length} konti)</span>
               </div>
               <Button variant="outline" size="sm" onClick={() => { if (window.confirm('Nulstil til standard-kontoplanen?')) setCustomPL(null); }}>
                 <RotateCcw className="h-3.5 w-3.5 mr-1" />Nulstil
@@ -372,7 +375,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">
-                  Forhåndsvisning ({kontoPlanPreview.filter(r => r.t === 'acct').length} konti, {kontoPlanPreview.filter(r => r.t === 'total' || r.t === 'res').length} summer)
+                  Forhåndsvisning ({kontoPlanPreview.filter(r => r.t === 'acct' || r.t === 'bal').length} konti, {kontoPlanPreview.filter(r => r.t === 'total' || r.t === 'res').length} summer)
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => { setKontoPlanPreview(null); setKontoPlanStatus(null); }}>Annuller</Button>
