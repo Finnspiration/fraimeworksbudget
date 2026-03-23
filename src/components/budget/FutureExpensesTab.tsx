@@ -2,11 +2,17 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { fmtDec } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { format, addMonths, parse } from 'date-fns';
+import { da } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface Props {
   activePL: PLRow[];
@@ -16,11 +22,36 @@ const emptyRow = (): Omit<FutureExpense, 'id' | 'matched' | 'matched_txn_id' | '
   dato: '', tekst: '', belob: 0, konto: 0, moms: null, bilag: null, modkonto: null, faktura: null,
 });
 
+function DatePicker({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
+  const date = value ? parse(value, 'yyyy-MM-dd', new Date()) : undefined;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={cn("h-8 text-xs justify-start text-left font-normal", !value && "text-muted-foreground", className)}>
+          <CalendarIcon className="h-3 w-3 mr-1" />
+          {date ? format(date, 'dd/MM/yyyy') : 'Vælg dato'}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : '')}
+          locale={da}
+          className="p-3 pointer-events-auto"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function FutureExpensesTab({ activePL }: Props) {
-  const { expenses, addExpense, updateExpense, deleteExpense, isLoading } = useFutureExpenses();
+  const { expenses, addExpense, updateExpense, deleteExpense, unmatchExpense, isLoading } = useFutureExpenses();
   const [newRow, setNewRow] = useState(emptyRow());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Partial<FutureExpense>>({});
+  const [copyDialog, setCopyDialog] = useState<FutureExpense | null>(null);
+  const [copyMonths, setCopyMonths] = useState(1);
 
   const acctMap = useMemo(() => {
     const m = new Map<number, string>();
@@ -62,6 +93,40 @@ export default function FutureExpensesTab({ activePL }: Props) {
     }
   };
 
+  const handleUnmatch = async (id: string) => {
+    try {
+      await unmatchExpense(id);
+      toast.success('Match fortrudt');
+    } catch {
+      toast.error('Kunne ikke fortryde match');
+    }
+  };
+
+  const handleCopyForward = async () => {
+    if (!copyDialog || copyMonths < 1) return;
+    try {
+      for (let i = 1; i <= copyMonths; i++) {
+        const baseDate = copyDialog.dato ? parse(copyDialog.dato, 'yyyy-MM-dd', new Date()) : new Date();
+        const newDate = addMonths(baseDate, i);
+        await addExpense({
+          dato: format(newDate, 'yyyy-MM-dd'),
+          tekst: copyDialog.tekst,
+          belob: copyDialog.belob,
+          konto: copyDialog.konto,
+          moms: copyDialog.moms,
+          bilag: copyDialog.bilag,
+          modkonto: copyDialog.modkonto,
+          faktura: copyDialog.faktura,
+        });
+      }
+      toast.success(`Oprettet ${copyMonths} ${copyMonths === 1 ? 'kopi' : 'kopier'}`);
+      setCopyDialog(null);
+      setCopyMonths(1);
+    } catch {
+      toast.error('Kunne ikke kopiere');
+    }
+  };
+
   const startEdit = (exp: FutureExpense) => {
     setEditingId(exp.id);
     setEditRow({ dato: exp.dato, tekst: exp.tekst, belob: exp.belob, konto: exp.konto, moms: exp.moms });
@@ -91,10 +156,10 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </p>
 
           {/* Add new row */}
-          <div className="grid grid-cols-[100px_1fr_100px_80px_70px_40px] gap-1 mb-4 items-end">
+          <div className="grid grid-cols-[120px_1fr_100px_80px_70px_40px] gap-1 mb-4 items-end">
             <div>
               <label className="text-[10px] text-muted-foreground">Dato</label>
-              <Input type="date" className="h-8 text-xs" value={newRow.dato} onChange={e => setNewRow(p => ({ ...p, dato: e.target.value }))} />
+              <DatePicker value={newRow.dato} onChange={v => setNewRow(p => ({ ...p, dato: v }))} />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Tekst</label>
@@ -132,7 +197,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                     <th className="py-1 pr-2 font-medium">Konto</th>
                     <th className="py-1 pr-2 font-medium">Moms</th>
                     <th className="py-1 pr-2 font-medium">Status</th>
-                    <th className="py-1 font-medium w-16"></th>
+                    <th className="py-1 font-medium w-24"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -143,8 +208,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
                       <tr key={exp.id} className={`border-b hover:bg-muted/50 ${exp.matched ? 'opacity-50 line-through' : ''}`}
                         onDoubleClick={() => !exp.matched && startEdit(exp)}>
                         <td className="py-1.5 pr-2">
-                          {isEditing ? <Input type="date" className="h-7 text-xs w-28" value={editRow.dato || ''} onChange={e => setEditRow(p => ({ ...p, dato: e.target.value }))} />
-                            : exp.dato}
+                          {isEditing
+                            ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-28" />
+                            : exp.dato ? format(parse(exp.dato, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '—'}
                         </td>
                         <td className="py-1.5 pr-2">
                           {isEditing ? <Input className="h-7 text-xs" value={editRow.tekst || ''} onChange={e => setEditRow(p => ({ ...p, tekst: e.target.value }))} />
@@ -173,9 +239,20 @@ export default function FutureExpensesTab({ activePL }: Props) {
                               <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleSaveEdit(exp.id)}><Check className="h-3.5 w-3.5" /></Button>
                               <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingId(null)}>✕</Button>
                             </div>
-                          ) : !exp.matched ? (
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(exp.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                          ) : null}
+                          ) : exp.matched ? (
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleUnmatch(exp.id)} title="Fortryd match">
+                              <Undo2 className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <div className="flex gap-1 justify-end">
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCopyDialog(exp); setCopyMonths(1); }} title="Kopiér frem">
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(exp.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -186,6 +263,28 @@ export default function FutureExpensesTab({ activePL }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* Copy forward dialog */}
+      <Dialog open={!!copyDialog} onOpenChange={o => !o && setCopyDialog(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Kopiér udgift frem</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Kopiér "{copyDialog?.tekst}" ({fmtDec(copyDialog?.belob || 0)} kr, konto {copyDialog?.konto}) frem i tid.
+            </p>
+            <div>
+              <label className="text-xs font-medium">Antal måneder frem</label>
+              <Input type="number" min={1} max={36} className="h-8 text-xs w-24 mt-1" value={copyMonths} onChange={e => setCopyMonths(Math.max(1, Number(e.target.value)))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setCopyDialog(null)}>Annullér</Button>
+            <Button size="sm" onClick={handleCopyForward}>Opret {copyMonths} {copyMonths === 1 ? 'kopi' : 'kopier'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
