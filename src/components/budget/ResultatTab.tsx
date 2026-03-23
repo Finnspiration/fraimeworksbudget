@@ -69,6 +69,14 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
   const isDynamic = budgetMode === 'dynamic';
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
+
+  const plForDisplay = useMemo(() => {
+    const endIdx = activePL.findIndex(r => r.id === 't4990');
+    if (endIdx >= 0) return activePL.slice(0, endIdx + 1);
+    const finalIdx = activePL.findIndex(r => r.t === 'final');
+    if (finalIdx >= 0) return activePL.slice(0, finalIdx + 1);
+    return activePL;
+  }, [activePL]);
   const toggleSec = (lbl: string) => setCollapsedSecs(p => ({ ...p, [lbl]: !p[lbl] }));
 
   const updateBudget = (nr: number, monthIdx: number, value: number) => {
@@ -89,16 +97,16 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
     if (showZero) return null;
     const secs = new Set<string>();
     let curS: string | null = null;
-    for (const row of activePL) {
+    for (const row of plForDisplay) {
       if (row.t === 'sec') curS = row.lbl!;
       if (row.t === 'acct' && curS && hasAnyData(row.nr!)) secs.add(curS);
     }
     return secs;
-  }, [showZero, activePL, pl]);
+  }, [showZero, plForDisplay, pl]);
 
   const rows = useMemo(() => {
     let curSec: string | null = null;
-    return activePL.map((row, idx) => {
+    return plForDisplay.map((row, idx) => {
       if (row.t === 'sp') {
         if (!showZero && visibleSections && curSec && !visibleSections.has(curSec)) return null;
         return <tr key={`sp-${idx}`} className="h-3" />;
@@ -186,7 +194,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       }
       return null;
     });
-  }, [pl, nReal, showZero, collapsedSecs, budget, activePL, visibleSections]);
+  }, [pl, nReal, showZero, collapsedSecs, budget, plForDisplay, visibleSections]);
 
   return (
     <div className="space-y-4">
