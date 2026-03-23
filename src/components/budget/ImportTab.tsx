@@ -468,9 +468,12 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                   </thead>
                   <tbody>
                     {preview.slice(0, 50).map((t, i) => {
-                      const isDup = existingKeys.has(txnKey(t));
+                      const key = txnKey(t);
+                      const existing = existingMap.get(key);
+                      const isDup = !!existing && existing.tekst === t.tekst && existing.faktura === t.faktura && existing.moms === t.moms && existing.modkonto === t.modkonto;
+                      const isUpdated = !!existing && !isDup;
                       return (
-                        <tr key={i} className={`border-b border-border/30 ${isDup ? 'opacity-40 line-through' : ''}`}>
+                        <tr key={i} className={`border-b border-border/30 ${isDup ? 'opacity-40 line-through' : isUpdated ? 'bg-[hsl(var(--budget-positive))]/10' : ''}`}>
                           <td className="px-3 py-1.5 text-xs text-muted-foreground">{t.type}</td>
                           <td className="px-3 py-1.5 text-xs">{t.dato}</td>
                           <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
