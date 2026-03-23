@@ -1,47 +1,59 @@
 
 
-# Fix: Manglende konti ved kontoplan-import
+# Kassekladde-import: Overskriv ændrede posteringer
 
 ## Problem
 
-Kontoplan-importen håndterer kun type 1, 3, 4, 5, 6 og springer type 2 over. Rækker med **type 0** (tom type-kolonne eller eksplicit 0) droppes stille — de falder gennem alle if/else-grene uden at blive importeret. 
-
-Konto 1950 "Mellemregning med andre banker" har sandsynligvis type 0 (eller blank) i Excel-filen, og bliver derfor aldrig oprettet som `acct`-række.
+Nuværende duplikatlogik bruger nøglen `bilag_dato_konto_belob` til at finde dubletter. Hvis teksten er ændret i den nye fil (men bilag, dato, konto og beløb er ens), markeres rækken som dublet og springes over — den opdaterede tekst importeres aldrig.
 
 ## Løsning
 
-### 1. Behandl type 0 som driftskonto (`ImportTab.tsx`, linje 244)
+### Fil: `src/components/budget/ImportTab.tsx`
 
-Rækker med `type === 0` og et gyldigt `nr > 0` skal behandles som type 1 (driftskonto):
+1. **Udvid duplikat-kategorisering** (linje 121-126): Tilføj en tredje kategori `updatedRows` — rækker hvor nøglen matcher, men `tekst` er anderledes.
+
+2. **Ændr `txnKey`** — behold som den er (bilag+dato+konto+belob). Tilføj en `txnFullKey` der inkluderer tekst til sammenligning.
+
+3. **Ny logik i `useMemo`**:
+   - Byg et map fra `txnKey` → eksisterende transaktion (med alle felter inkl. tekst)
+   - For hver preview-række:
+     - Hvis nøglen ikke findes: `newRow`
+     - Hvis nøglen findes OG tekst er ens: `dupRow` (skip)
+     - Hvis nøglen findes OG tekst er anderledes: `updatedRow` (overskriv)
+
+4. **Opdatér `doImport`** (linje 128-144):
+   - Indsæt nye rækker som nu
+   - For `updatedRows`: find og erstat de eksisterende rækker i `txns` (match på `txnKey`, overskriv med nye værdier inkl. tekst, faktura, moms, modkonto)
+   - Opdatér statusbesked: `"✓ Importerede X nye, opdaterede Y posteringer (Z uændrede sprunget over)"`
+
+5. **Opdatér preview-visning** (linje 420-422):
+   - Vis antal nye + opdaterede i knapteksten
+   - Vis info om opdaterede rækker i preview-området
+
+### Teknisk detalje
 
 ```typescript
-// Ændr: } else if (type === 1) {
-// Til:
-} else if (type === 1 || (type === 0 && nr > 0)) {
+const existingMap = useMemo(() => {
+  const m = new Map<string, Transaction>();
+  txns.forEach(t => m.set(txnKey(t), t));
+  return m;
+}, [txns]);
+
+const { newRows, dupRows, updatedRows } = useMemo(() => {
+  if (!preview) return { newRows: [], dupRows: [], updatedRows: [] };
+  const n: Transaction[] = [], d: Transaction[] = [], u: Transaction[] = [];
+  preview.forEach(t => {
+    const key = txnKey(t);
+    const existing = existingMap.get(key);
+    if (!existing) n.push(t);
+    else if (existing.tekst !== t.tekst || existing.faktura !== t.faktura 
+             || existing.moms !== t.moms || existing.modkonto !== t.modkonto) 
+      u.push(t);
+    else d.push(t);
+  });
+  return { newRows: n, dupRows: d, updatedRows: u };
+}, [preview, existingMap]);
 ```
 
-Dette fanger konti hvor type-kolonnen er tom eller 0, men som har et gyldigt kontonummer.
-
-### 2. Vis advarsel om manglende konti efter kassekladde-import
-
-Efter import af kassekladde: find kontonumre i transaktionerne som ikke findes i den aktive kontoplan, og vis en advarsel med liste over manglende konti. Brugeren kan så genimportere kontoplanen.
-
-### 3. Ret eksisterende data i databasen (migration)
-
-Opdatér de tre placeholder-rækker der blev indsat med forkerte navne:
-
-| Nr | Nuværende label | Korrekt label |
-|---|---|---|
-| 1950 | "Konto 1950" | "Mellemregning med andre banker" |
-| 6135 | "Konto 6135" | (skal slås op — eller brugeren genimporterer) |
-| 6920 | "Konto 6920" | (skal slås op — eller brugeren genimporterer) |
-
-Da vi ikke kender de korrekte navne for 6135 og 6920, sætter vi en generisk besked og opfordrer brugeren til at genimportere kontoplanen.
-
-### Filer
-
-| Fil | Ændring |
-|---|---|
-| `src/components/budget/ImportTab.tsx` | Tilføj `type === 0 && nr > 0` til acct-betingelsen. Tilføj advarsel om manglende konti efter kassekladde-import. |
-| Database migration | Ret label for konto 1950 til "Mellemregning med andre banker" |
+I `doImport`: erstat matchende rækker og tilføj nye.
 
