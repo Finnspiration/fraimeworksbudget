@@ -97,16 +97,16 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
     if (showZero) return null;
     const secs = new Set<string>();
     let curS: string | null = null;
-    for (const row of activePL) {
+    for (const row of plForDisplay) {
       if (row.t === 'sec') curS = row.lbl!;
       if (row.t === 'acct' && curS && hasAnyData(row.nr!)) secs.add(curS);
     }
     return secs;
-  }, [showZero, activePL, pl]);
+  }, [showZero, plForDisplay, pl]);
 
   const rows = useMemo(() => {
     let curSec: string | null = null;
-    return activePL.map((row, idx) => {
+    return plForDisplay.map((row, idx) => {
       if (row.t === 'sp') {
         if (!showZero && visibleSections && curSec && !visibleSections.has(curSec)) return null;
         return <tr key={`sp-${idx}`} className="h-3" />;
