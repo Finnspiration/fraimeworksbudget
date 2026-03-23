@@ -158,7 +158,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
     });
 
     // Check for account numbers not in the active chart of accounts
-    const acctNrs = new Set(activePL.filter(r => r.t === 'acct' && r.nr).map(r => r.nr!));
+    const acctNrs = new Set(activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr).map(r => r.nr!));
     const allImportedKonti = new Set([...withIds, ...updatedRows].map(t => t.konto));
     const missingKonti = [...allImportedKonti].filter(k => !acctNrs.has(k)).sort((a, b) => a - b);
     
