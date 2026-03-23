@@ -252,18 +252,23 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
           plRows.push({ t: 'total', nr, lbl: navn, id, sum: formula });
           addMeta();
         } else if (type === 6) {
-          const id = `r${nr}`;
-          plRows.push({ t: 'res', lbl: navn, id, sum: totalIds.map(tid => `id:${tid}`).join('+') });
+          const id = `t${nr}`;
+          totalIds.push(id);
+          const sumfraNum = Number(sumfra);
+          const formula = sumfraNum > 0 
+            ? `range:${sumfraNum}-${nr}` 
+            : `grp:${currentGrp}`;
+          plRows.push({ t: 'total', nr, lbl: navn, id, sum: formula });
           addMeta();
         }
       }
 
       if (plRows.length > 0 && !plRows.some(r => r.t === 'final')) {
-        const allResIds = plRows.filter(r => r.t === 'res').map(r => `id:${r.id}`);
-        const allTotalIds = plRows.filter(r => r.t === 'total').map(r => `id:${r.id}`);
-        const sumParts = allResIds.length > 0 ? allResIds : allTotalIds;
-        if (sumParts.length > 0) {
-          plRows.push({ t: 'final', lbl: 'PERIODENS RESULTAT', id: 'res', sum: sumParts.join('+') });
+        // Find the last cumulative total (highest nr) to use as the final result
+        const allTotals = plRows.filter(r => r.t === 'total' && r.nr);
+        if (allTotals.length > 0) {
+          const lastTotal = allTotals[allTotals.length - 1];
+          plRows.push({ t: 'final', lbl: 'PERIODENS RESULTAT', id: 'res', sum: `id:${lastTotal.id}` });
         }
       }
 
