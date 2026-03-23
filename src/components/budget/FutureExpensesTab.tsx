@@ -77,7 +77,7 @@ function DatePicker({ value, onChange, className }: { value: string; onChange: (
           {date ? format(date, 'dd/MM/yyyy') : 'Vælg dato'}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 z-50" align="start">
         <Calendar
           mode="single"
           selected={date}
@@ -224,7 +224,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </div>
 
           {/* Add new row */}
-          <div className="grid grid-cols-[90px_1fr_90px_180px_60px_40px] gap-1 mb-4 items-end">
+          <div className="grid grid-cols-[75px_1fr_80px_160px_55px_36px] gap-1 mb-4 items-end">
             <div>
               <label className="text-[10px] text-muted-foreground">Dato</label>
               <DatePicker value={newRow.dato} onChange={v => setNewRow(p => ({ ...p, dato: v }))} />
