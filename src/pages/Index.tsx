@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import logo from '@/assets/logo.png';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useDbState } from '@/hooks/use-db-state';
 import { computePL } from '@/lib/budget-utils';
