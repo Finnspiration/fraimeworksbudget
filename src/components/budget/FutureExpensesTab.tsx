@@ -28,9 +28,11 @@ function KontoPicker({ value, onChange, acctList, acctMap, className }: {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className={cn("h-8 text-xs justify-between font-normal", !value && "text-muted-foreground", className)}>
-          {value ? `${value} ${acctMap.get(value) || ''}`.trim() : 'Vælg konto'}
-          <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" />
+        <Button variant="outline" className={cn("h-8 min-w-0 justify-between px-2 text-xs font-normal", !value && "text-muted-foreground", className)}>
+          <span className="min-w-0 flex-1 truncate text-left">
+            {value ? `${value} ${acctMap.get(value) || ''}`.trim() : 'Vælg konto'}
+          </span>
+          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
@@ -72,12 +74,12 @@ function DatePicker({ value, onChange, className }: { value: string; onChange: (
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className={cn("h-8 text-xs justify-start text-left font-normal", !value && "text-muted-foreground", className)}>
-          <CalendarIcon className="h-3 w-3 mr-1" />
-          {date ? format(date, 'dd/MM/yyyy') : 'Vælg dato'}
+        <Button variant="outline" className={cn("h-8 w-full min-w-0 justify-start px-2 text-left text-xs font-normal", !value && "text-muted-foreground", className)}>
+          <CalendarIcon className="mr-1 h-3 w-3 shrink-0" />
+          <span className="min-w-0 truncate">{date ? format(date, 'dd/MM/yy') : 'Dato'}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 z-50" align="start">
+      <PopoverContent className="z-[70] w-auto p-0" align="start" side="bottom" sideOffset={8}>
         <Calendar
           mode="single"
           selected={date}
@@ -224,12 +226,12 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </div>
 
           {/* Add new row */}
-          <div className="grid grid-cols-[75px_1fr_80px_160px_55px_36px] gap-1 mb-4 items-end">
-            <div>
+          <div className="grid grid-cols-[68px_minmax(0,1fr)_76px_148px_55px_36px] items-end gap-1 overflow-visible mb-4">
+            <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground">Dato</label>
               <DatePicker value={newRow.dato} onChange={v => setNewRow(p => ({ ...p, dato: v }))} />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground">Tekst</label>
               <Input className="h-8 text-xs" value={newRow.tekst} onChange={e => setNewRow(p => ({ ...p, tekst: e.target.value }))} placeholder="Beskrivelse" />
             </div>
@@ -237,7 +239,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
               <label className="text-[10px] text-muted-foreground">Beløb</label>
               <Input type="number" className="h-8 text-xs text-right" value={newRow.belob || ''} onChange={e => setNewRow(p => ({ ...p, belob: Number(e.target.value) }))} />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground">Konto</label>
               <KontoPicker value={newRow.konto} onChange={v => setNewRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-full" />
             </div>
@@ -281,9 +283,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
                     return (
                       <tr key={exp.id} className={`border-b hover:bg-muted/50 ${exp.matched ? 'opacity-50 line-through' : ''}`}
                         onDoubleClick={() => !exp.matched && startEdit(exp)}>
-                        <td className="py-1.5 pr-2 whitespace-nowrap">
+                        <td className="w-[68px] py-1.5 pr-2 whitespace-nowrap">
                           {isEditing
-                            ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-24" />
+                            ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-full" />
                             : exp.dato || '—'}
                         </td>
                         <td className="py-1.5 pr-2">
