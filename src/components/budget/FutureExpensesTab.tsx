@@ -5,14 +5,57 @@ import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { fmtDec } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, addMonths, parse } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+
+function KontoPicker({ value, onChange, acctList, acctMap, className }: {
+  value: number;
+  onChange: (v: number) => void;
+  acctList: { nr?: number; lbl?: string }[];
+  acctMap: Map<number, string>;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={cn("h-8 text-xs justify-between font-normal", !value && "text-muted-foreground", className)}>
+          {value ? `${value} ${acctMap.get(value) || ''}`.trim() : 'Vælg konto'}
+          <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Søg konto..." className="h-8 text-xs" />
+          <CommandList>
+            <CommandEmpty>Ingen konto fundet</CommandEmpty>
+            <CommandGroup>
+              {acctList.map(a => (
+                <CommandItem
+                  key={a.nr}
+                  value={`${a.nr} ${a.lbl}`}
+                  onSelect={() => { onChange(a.nr!); setOpen(false); }}
+                  className="text-xs"
+                >
+                  <Check className={`mr-2 h-3 w-3 ${value === a.nr ? 'opacity-100' : 'opacity-0'}`} />
+                  <span className="font-mono mr-2">{a.nr}</span>
+                  <span className="truncate">{a.lbl}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface Props {
   activePL: PLRow[];
