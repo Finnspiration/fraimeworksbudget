@@ -138,17 +138,34 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   }, [preview, existingMap]);
 
   const doImport = () => {
-    if (!newRows.length) return;
+    if (!newRows.length && !updatedRows.length) return;
     const maxId = Math.max(0, ...txns.map(t => t.id || 0));
     const withIds = newRows.map((t, i) => ({ ...t, id: maxId + i + 1 }));
-    setTxns(prev => [...prev, ...withIds]);
+    
+    // Build updated txns: replace matching rows, then add new
+    setTxns(prev => {
+      let result = [...prev];
+      // Overwrite updated rows
+      for (const u of updatedRows) {
+        const key = txnKey(u);
+        const idx = result.findIndex(t => txnKey(t) === key);
+        if (idx >= 0) {
+          result[idx] = { ...result[idx], tekst: u.tekst, faktura: u.faktura, moms: u.moms, modkonto: u.modkonto };
+        }
+      }
+      // Add new rows
+      return [...result, ...withIds];
+    });
 
     // Check for account numbers not in the active chart of accounts
     const acctNrs = new Set(activePL.filter(r => r.t === 'acct' && r.nr).map(r => r.nr!));
-    const allImportedKonti = new Set(withIds.map(t => t.konto));
+    const allImportedKonti = new Set([...withIds, ...updatedRows].map(t => t.konto));
     const missingKonti = [...allImportedKonti].filter(k => !acctNrs.has(k)).sort((a, b) => a - b);
     
-    let msg = `✓ Importerede ${withIds.length} nye posteringer${dupRows.length ? ` (${dupRows.length} duplikater sprunget over)` : ''}`;
+    const parts: string[] = [];
+    if (withIds.length) parts.push(`${withIds.length} nye`);
+    if (updatedRows.length) parts.push(`${updatedRows.length} opdaterede`);
+    let msg = `✓ Importerede ${parts.join(' og ')} posteringer${dupRows.length ? ` (${dupRows.length} uændrede sprunget over)` : ''}`;
     if (missingKonti.length > 0) {
       msg += ` ⚠️ Kontonumre ikke fundet i kontoplanen: ${missingKonti.join(', ')}. Genimportér kontoplanen for at inkludere disse.`;
     }
