@@ -188,8 +188,11 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               const vr = v.r[i], vb = v.b[i];
               const dimmed = i >= nReal;
               return [
-                <td key={`r-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${vr >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{vr ? fmt(vr) : '–'}</td>,
-                <td key={`b-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} text-foreground/60`}>{vb ? fmt(vb) : '–'}</td>,
+                <CellWithTooltip key={`r-${i}`} value={vr} realized dimmed={dimmed}
+                  monthIndex={i} totalFormula={row.sum} pl={pl} plRows={plForDisplay} txns={txns} />,
+                <CellWithTooltip key={`b-${i}`} value={vb} dimmed={dimmed}
+                  monthIndex={i} totalFormula={row.sum} pl={pl} plRows={plForDisplay}
+                  pipelineJobs={pipelineJobs} futureExpenses={futureExpenses} />,
               ];
             })}
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums ${ytdR >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(ytdR)}</td>
