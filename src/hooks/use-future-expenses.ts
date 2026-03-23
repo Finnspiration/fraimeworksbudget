@@ -131,6 +131,7 @@ export function useFutureExpenses() {
     addExpense,
     updateExpense,
     deleteExpense,
+    unmatchExpense,
     matchAgainstTransactions,
   };
 }
