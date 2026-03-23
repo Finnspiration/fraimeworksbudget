@@ -291,7 +291,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
           plRows.push({ t: 'sec', lbl: navn });
           addMeta();
         } else if (type === 1 || (type === 0 && nr > 0)) {
-          plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp });
+          plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp, moms: moms || null });
           addMeta();
         } else if (type === 2) {
           plRows.push({ t: 'bal', nr, lbl: navn, grp: currentGrp });
