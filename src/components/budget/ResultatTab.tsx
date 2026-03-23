@@ -1,8 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { MONTHS, MONTHS_FULL, type PLRow } from '@/data/budget-constants';
+import { MONTHS, MONTHS_FULL, type PLRow, type Transaction } from '@/data/budget-constants';
 import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { CellWithTooltip } from '@/components/budget/CellWithTooltip';
+import type { FutureExpense } from '@/hooks/use-future-expenses';
 
 interface Props {
   pl: Record<string | number, PLValues>;
@@ -13,6 +15,9 @@ interface Props {
   budgetMode: 'fixed' | 'dynamic';
   setBudgetMode: (m: 'fixed' | 'dynamic') => void;
   activePL: PLRow[];
+  txns?: Transaction[];
+  pipelineJobs?: { konto: number; amount: number; probability: number; expected_payment_date: string; description: string; status: string }[];
+  futureExpenses?: FutureExpense[];
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
@@ -65,7 +70,7 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   );
 }
 
-export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL }: Props) {
+export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL, txns = [], pipelineJobs = [], futureExpenses = [] }: Props) {
   const isDynamic = budgetMode === 'dynamic';
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
@@ -136,9 +141,12 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
             <td className="px-2 py-1 text-xs text-muted-foreground tabular-nums w-12">{row.nr}</td>
             <td className="px-2 py-1 text-xs truncate max-w-[180px]">{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => [
-              <Cell key={`r-${i}`} v={v?.r[i] || 0} realized dimmed={i >= nReal} />,
+              <CellWithTooltip key={`r-${i}`} value={v?.r[i] || 0} realized dimmed={i >= nReal}
+                accountNr={row.nr} monthIndex={i} txns={txns} />,
               isDynamic ? (
-                <Cell key={`b-${i}`} v={v?.b[i] || 0} dimmed={i >= nReal} />
+                <CellWithTooltip key={`b-${i}`} value={v?.b[i] || 0} dimmed={i >= nReal}
+                  accountNr={row.nr} monthIndex={i} pipelineJobs={pipelineJobs} futureExpenses={futureExpenses}
+                  budgetBase={budget[row.nr!]?.[i] || 0} />
               ) : (
                 <EditableBudgetCell
                   key={`b-${i}`}
@@ -180,8 +188,11 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               const vr = v.r[i], vb = v.b[i];
               const dimmed = i >= nReal;
               return [
-                <td key={`r-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${vr >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{vr ? fmt(vr) : '–'}</td>,
-                <td key={`b-${i}`} className={`px-2 py-1.5 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} text-foreground/60`}>{vb ? fmt(vb) : '–'}</td>,
+                <CellWithTooltip key={`r-${i}`} value={vr} realized dimmed={dimmed}
+                  monthIndex={i} totalFormula={row.sum} pl={pl} plRows={plForDisplay} txns={txns} />,
+                <CellWithTooltip key={`b-${i}`} value={vb} dimmed={dimmed}
+                  monthIndex={i} totalFormula={row.sum} pl={pl} plRows={plForDisplay}
+                  pipelineJobs={pipelineJobs} futureExpenses={futureExpenses} />,
               ];
             })}
             <td className={`px-2 py-1.5 text-right text-xs tabular-nums ${ytdR >= 0 ? 'text-[hsl(var(--budget-positive))]' : 'text-destructive'}`}>{fmt(ytdR)}</td>

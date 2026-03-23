@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Transaction, PLRow } from '@/data/budget-constants';
 import { PL } from '@/data/budget-constants';
-import { Upload, Trash2, FileSpreadsheet, Check, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Search, BookOpen, RotateCcw, ChevronsUpDown } from 'lucide-react';
+import { Upload, Trash2, FileSpreadsheet, Check, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Search, BookOpen, RotateCcw, ChevronsUpDown, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Props {
   txns: Transaction[];
@@ -346,10 +347,14 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
 
   return (
     <div className="space-y-6">
+      <Collapsible defaultOpen={false}>
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2"><BookOpen className="h-4 w-4" />Kontoplan</CardTitle>
-        </CardHeader>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2"><BookOpen className="h-4 w-4" />Kontoplan</CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Importér kontoplan fra Excel. Format: Nr, Navn, Type (1=Drift, 2=Balance, 3=SumFra, 4=Overskrift, 5=Overskrift Start, 6=SumInterval), Sumfra.</p>
 
@@ -426,12 +431,18 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
             </div>
           )}
         </CardContent>
+        </CollapsibleContent>
       </Card>
+      </Collapsible>
 
+      <Collapsible defaultOpen={false}>
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2"><Upload className="h-4 w-4" />Importér kassekladde</CardTitle>
+        <CollapsibleTrigger asChild>
+        <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2"><Upload className="h-4 w-4" />Importér kassekladde <ChevronDown className="h-3.5 w-3.5 ml-auto text-muted-foreground" /></CardTitle>
         </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Eksportér kassekladden fra dit regnskabsprogram som Excel eller CSV. Format: Type, Dato, Bilag, Faktura, Tekst, Beløb, Konto, Moms, Modkonto.</p>
           <div onDrop={handleDrop} onDragOver={e => e.preventDefault()} onClick={() => fileRef.current?.click()}
@@ -504,7 +515,9 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
             </div>
           )}
         </CardContent>
+        </CollapsibleContent>
       </Card>
+      </Collapsible>
 
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">

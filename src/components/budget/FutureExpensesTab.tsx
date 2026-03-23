@@ -5,14 +5,57 @@ import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { fmtDec } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, addMonths, parse } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+
+function KontoPicker({ value, onChange, acctList, acctMap, className }: {
+  value: number;
+  onChange: (v: number) => void;
+  acctList: { nr?: number; lbl?: string }[];
+  acctMap: Map<number, string>;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={cn("h-8 text-xs justify-between font-normal", !value && "text-muted-foreground", className)}>
+          {value ? `${value} ${acctMap.get(value) || ''}`.trim() : 'Vælg konto'}
+          <ChevronsUpDown className="ml-1 h-3 w-3 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Søg konto..." className="h-8 text-xs" />
+          <CommandList>
+            <CommandEmpty>Ingen konto fundet</CommandEmpty>
+            <CommandGroup>
+              {acctList.map(a => (
+                <CommandItem
+                  key={a.nr}
+                  value={`${a.nr} ${a.lbl}`}
+                  onSelect={() => { onChange(a.nr!); setOpen(false); }}
+                  className="text-xs"
+                >
+                  <Check className={`mr-2 h-3 w-3 ${value === a.nr ? 'opacity-100' : 'opacity-0'}`} />
+                  <span className="font-mono mr-2">{a.nr}</span>
+                  <span className="truncate">{a.lbl}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 interface Props {
   activePL: PLRow[];
@@ -53,11 +96,12 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const [copyDialog, setCopyDialog] = useState<FutureExpense | null>(null);
   const [copyMonths, setCopyMonths] = useState(1);
 
+  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
   const acctMap = useMemo(() => {
     const m = new Map<number, string>();
-    activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr).forEach(r => m.set(r.nr!, r.lbl || ''));
+    acctList.forEach(r => m.set(r.nr!, r.lbl || ''));
     return m;
-  }, [activePL]);
+  }, [acctList]);
 
   const handleAdd = async () => {
     if (!newRow.konto || !newRow.tekst) {
@@ -156,7 +200,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </p>
 
           {/* Add new row */}
-          <div className="grid grid-cols-[120px_1fr_100px_80px_70px_40px] gap-1 mb-4 items-end">
+          <div className="grid grid-cols-[120px_1fr_100px_160px_70px_40px] gap-1 mb-4 items-end">
             <div>
               <label className="text-[10px] text-muted-foreground">Dato</label>
               <DatePicker value={newRow.dato} onChange={v => setNewRow(p => ({ ...p, dato: v }))} />
@@ -171,8 +215,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Konto</label>
-              <Input type="number" className="h-8 text-xs" value={newRow.konto || ''} onChange={e => setNewRow(p => ({ ...p, konto: Number(e.target.value) }))}
-                style={newRow.konto && !acctMap.has(newRow.konto) ? { color: 'hsl(var(--destructive))' } : {}} />
+              <KontoPicker value={newRow.konto} onChange={v => setNewRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-full" />
             </div>
             <div>
               <label className="text-[10px] text-muted-foreground">Moms</label>
@@ -221,7 +264,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                             : fmtDec(exp.belob)}
                         </td>
                         <td className="py-1.5 pr-2" style={!kontoValid ? { color: 'hsl(var(--destructive))' } : {}}>
-                          {isEditing ? <Input type="number" className="h-7 text-xs w-20" value={editRow.konto ?? ''} onChange={e => setEditRow(p => ({ ...p, konto: Number(e.target.value) }))} />
+                          {isEditing ? <KontoPicker value={editRow.konto ?? exp.konto} onChange={v => setEditRow(p => ({ ...p, konto: v }))} acctList={acctList} acctMap={acctMap} className="w-40" />
                             : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto}</span>}
                         </td>
                         <td className="py-1.5 pr-2">

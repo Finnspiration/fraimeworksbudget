@@ -98,7 +98,8 @@ export default function Index() {
               virksomhedstype={state.virksomhedstype} />
           </TabsContent>
           <TabsContent value="resultat">
-            <ResultatTab pl={mergedPL} nReal={state.nReal} setNReal={state.setNReal} budget={mergedBudget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL} />
+            <ResultatTab pl={mergedPL} nReal={state.nReal} setNReal={state.setNReal} budget={mergedBudget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL}
+              txns={state.txns} pipelineJobs={pipelineJobs} futureExpenses={activeExpenses} />
           </TabsContent>
           <TabsContent value="pipeline">
             <PipelineTab activePL={state.activePL} />
