@@ -13,7 +13,7 @@ import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
 import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, addMonths, parse } from 'date-fns';
+import { format, addMonths, addDays, parse, isBefore, isAfter, startOfDay } from 'date-fns';
 import { da } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
