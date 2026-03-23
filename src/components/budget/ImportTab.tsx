@@ -116,27 +116,56 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
 
   const txnKey = (t: Transaction) => `${t.bilag}_${t.dato}_${t.konto}_${t.belob}`;
 
-  const existingKeys = useMemo(() => new Set(txns.map(txnKey)), [txns]);
+  const existingMap = useMemo(() => {
+    const m = new Map<string, Transaction>();
+    txns.forEach(t => m.set(txnKey(t), t));
+    return m;
+  }, [txns]);
 
-  const { newRows, dupRows } = useMemo(() => {
-    if (!preview) return { newRows: [] as Transaction[], dupRows: [] as Transaction[] };
-    const n: Transaction[] = [], d: Transaction[] = [];
-    preview.forEach(t => (existingKeys.has(txnKey(t)) ? d : n).push(t));
-    return { newRows: n, dupRows: d };
-  }, [preview, existingKeys]);
+  const { newRows, dupRows, updatedRows } = useMemo(() => {
+    if (!preview) return { newRows: [] as Transaction[], dupRows: [] as Transaction[], updatedRows: [] as Transaction[] };
+    const n: Transaction[] = [], d: Transaction[] = [], u: Transaction[] = [];
+    preview.forEach(t => {
+      const key = txnKey(t);
+      const existing = existingMap.get(key);
+      if (!existing) n.push(t);
+      else if (existing.tekst !== t.tekst || existing.faktura !== t.faktura
+               || existing.moms !== t.moms || existing.modkonto !== t.modkonto)
+        u.push(t);
+      else d.push(t);
+    });
+    return { newRows: n, dupRows: d, updatedRows: u };
+  }, [preview, existingMap]);
 
   const doImport = () => {
-    if (!newRows.length) return;
+    if (!newRows.length && !updatedRows.length) return;
     const maxId = Math.max(0, ...txns.map(t => t.id || 0));
     const withIds = newRows.map((t, i) => ({ ...t, id: maxId + i + 1 }));
-    setTxns(prev => [...prev, ...withIds]);
+    
+    // Build updated txns: replace matching rows, then add new
+    setTxns(prev => {
+      let result = [...prev];
+      // Overwrite updated rows
+      for (const u of updatedRows) {
+        const key = txnKey(u);
+        const idx = result.findIndex(t => txnKey(t) === key);
+        if (idx >= 0) {
+          result[idx] = { ...result[idx], tekst: u.tekst, faktura: u.faktura, moms: u.moms, modkonto: u.modkonto };
+        }
+      }
+      // Add new rows
+      return [...result, ...withIds];
+    });
 
     // Check for account numbers not in the active chart of accounts
     const acctNrs = new Set(activePL.filter(r => r.t === 'acct' && r.nr).map(r => r.nr!));
-    const allImportedKonti = new Set(withIds.map(t => t.konto));
+    const allImportedKonti = new Set([...withIds, ...updatedRows].map(t => t.konto));
     const missingKonti = [...allImportedKonti].filter(k => !acctNrs.has(k)).sort((a, b) => a - b);
     
-    let msg = `✓ Importerede ${withIds.length} nye posteringer${dupRows.length ? ` (${dupRows.length} duplikater sprunget over)` : ''}`;
+    const parts: string[] = [];
+    if (withIds.length) parts.push(`${withIds.length} nye`);
+    if (updatedRows.length) parts.push(`${updatedRows.length} opdaterede`);
+    let msg = `✓ Importerede ${parts.join(' og ')} posteringer${dupRows.length ? ` (${dupRows.length} uændrede sprunget over)` : ''}`;
     if (missingKonti.length > 0) {
       msg += ` ⚠️ Kontonumre ikke fundet i kontoplanen: ${missingKonti.join(', ')}. Genimportér kontoplanen for at inkludere disse.`;
     }
@@ -414,12 +443,12 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                 <div>
                   <p className="text-sm font-semibold">Forhåndsvisning ({preview.length} rækker)</p>
                   <p className="text-xs text-muted-foreground">
-                    {newRows.length} nye posteringer{dupRows.length > 0 && <span className="text-destructive/70"> · {dupRows.length} duplikater</span>}
+                    {newRows.length} nye{updatedRows.length > 0 && <span className="text-[hsl(var(--budget-positive))]"> · {updatedRows.length} opdaterede</span>}{dupRows.length > 0 && <span className="text-destructive/70"> · {dupRows.length} uændrede</span>}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => { setPreview(null); setStatus(null); }}>Annuller</Button>
-                  <Button size="sm" onClick={doImport} disabled={newRows.length === 0}>Importér {newRows.length} nye posteringer</Button>
+                  <Button size="sm" onClick={doImport} disabled={newRows.length === 0 && updatedRows.length === 0}>Importér {newRows.length + updatedRows.length} posteringer</Button>
                 </div>
               </div>
               <div className="overflow-auto max-h-80 rounded-lg border">
@@ -439,9 +468,12 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
                   </thead>
                   <tbody>
                     {preview.slice(0, 50).map((t, i) => {
-                      const isDup = existingKeys.has(txnKey(t));
+                      const key = txnKey(t);
+                      const existing = existingMap.get(key);
+                      const isDup = !!existing && existing.tekst === t.tekst && existing.faktura === t.faktura && existing.moms === t.moms && existing.modkonto === t.modkonto;
+                      const isUpdated = !!existing && !isDup;
                       return (
-                        <tr key={i} className={`border-b border-border/30 ${isDup ? 'opacity-40 line-through' : ''}`}>
+                        <tr key={i} className={`border-b border-border/30 ${isDup ? 'opacity-40 line-through' : isUpdated ? 'bg-[hsl(var(--budget-positive))]/10' : ''}`}>
                           <td className="px-3 py-1.5 text-xs text-muted-foreground">{t.type}</td>
                           <td className="px-3 py-1.5 text-xs">{t.dato}</td>
                           <td className="px-3 py-1.5 text-xs">{t.bilag}</td>
