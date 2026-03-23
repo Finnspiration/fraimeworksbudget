@@ -197,8 +197,42 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const matchedCount = expenses.filter(e => e.matched).length;
   const activeTotal = expenses.filter(e => !e.matched).reduce((s, e) => s + e.belob, 0);
 
+  const { sum7, count7, sum30, count30 } = useMemo(() => {
+    const today = startOfDay(new Date());
+    const in7 = addDays(today, 7);
+    const in30 = addDays(today, 30);
+    let s7 = 0, c7 = 0, s30 = 0, c30 = 0;
+    for (const e of expenses) {
+      if (e.matched || !e.dato) continue;
+      const d = parse(e.dato, 'yyyy-MM-dd', new Date());
+      if (!isBefore(d, today)) {
+        if (isBefore(d, in30) || d.getTime() === in30.getTime()) { s30 += e.belob; c30++; }
+        if (isBefore(d, in7) || d.getTime() === in7.getTime()) { s7 += e.belob; c7++; }
+      }
+    }
+    return { sum7: s7, count7: c7, sum30: s30, count30: c30 };
+  }, [expenses]);
+
   return (
     <div className="space-y-6">
+      {/* Opsummeringskort */}
+      <div className="flex gap-3">
+        <Card className="flex-1">
+          <CardContent className="p-4">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Næste 7 dage</p>
+            <p className="text-lg font-bold tabular-nums">{fmtDec(sum7)} kr</p>
+            <p className="text-[10px] text-muted-foreground">{count7} {count7 === 1 ? 'udgift' : 'udgifter'}</p>
+          </CardContent>
+        </Card>
+        <Card className="flex-1">
+          <CardContent className="p-4">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Næste 30 dage</p>
+            <p className="text-lg font-bold tabular-nums">{fmtDec(sum30)} kr</p>
+            <p className="text-[10px] text-muted-foreground">{count30} {count30 === 1 ? 'udgift' : 'udgifter'}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
