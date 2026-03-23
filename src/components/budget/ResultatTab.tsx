@@ -69,6 +69,14 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
   const isDynamic = budgetMode === 'dynamic';
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
+
+  const plForDisplay = useMemo(() => {
+    const endIdx = activePL.findIndex(r => r.id === 't4990');
+    if (endIdx >= 0) return activePL.slice(0, endIdx + 1);
+    const finalIdx = activePL.findIndex(r => r.t === 'final');
+    if (finalIdx >= 0) return activePL.slice(0, finalIdx + 1);
+    return activePL;
+  }, [activePL]);
   const toggleSec = (lbl: string) => setCollapsedSecs(p => ({ ...p, [lbl]: !p[lbl] }));
 
   const updateBudget = (nr: number, monthIdx: number, value: number) => {
