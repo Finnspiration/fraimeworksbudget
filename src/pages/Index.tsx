@@ -17,11 +17,11 @@ export default function Index() {
   const state = useDbState();
   const [tab, setTab] = useState('overblik');
   const { data: pipelineJobs = [] } = usePipelineJobs();
+  const { activeExpenses, matchAgainstTransactions } = useFutureExpenses();
 
-  // Merge weighted pipeline into budget for PL calculation
+  // Merge weighted pipeline + future expenses into budget for PL calculation
   const mergedBudget = useMemo(() => {
     const base = { ...state.activeBudget };
-    // Deep-copy existing arrays
     for (const k of Object.keys(base)) {
       base[Number(k)] = [...base[Number(k)]];
     }
@@ -33,13 +33,19 @@ export default function Index() {
       const month = d.getMonth();
       const weighted = Number(job.amount) * job.probability / 100;
       const konto = job.konto;
-      if (!base[konto]) {
-        base[konto] = new Array(12).fill(0);
-      }
+      if (!base[konto]) base[konto] = new Array(12).fill(0);
       base[konto][month] += weighted;
     });
+    // Add future expenses (100% weight)
+    activeExpenses.forEach(exp => {
+      const d = new Date(exp.dato);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      const month = d.getMonth();
+      if (!base[exp.konto]) base[exp.konto] = new Array(12).fill(0);
+      base[exp.konto][month] += exp.belob;
+    });
     return base;
-  }, [state.activeBudget, pipelineJobs]);
+  }, [state.activeBudget, pipelineJobs, activeExpenses]);
 
   // Recompute PL with merged budget
   const mergedPL = useMemo(() => {
