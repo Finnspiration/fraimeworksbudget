@@ -130,7 +130,17 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
     const maxId = Math.max(0, ...txns.map(t => t.id || 0));
     const withIds = newRows.map((t, i) => ({ ...t, id: maxId + i + 1 }));
     setTxns(prev => [...prev, ...withIds]);
-    setStatus({ type: 'success', msg: `✓ Importerede ${withIds.length} nye posteringer${dupRows.length ? ` (${dupRows.length} duplikater sprunget over)` : ''}` });
+
+    // Check for account numbers not in the active chart of accounts
+    const acctNrs = new Set(activePL.filter(r => r.t === 'acct' && r.nr).map(r => r.nr!));
+    const allImportedKonti = new Set(withIds.map(t => t.konto));
+    const missingKonti = [...allImportedKonti].filter(k => !acctNrs.has(k)).sort((a, b) => a - b);
+    
+    let msg = `✓ Importerede ${withIds.length} nye posteringer${dupRows.length ? ` (${dupRows.length} duplikater sprunget over)` : ''}`;
+    if (missingKonti.length > 0) {
+      msg += ` ⚠️ Kontonumre ikke fundet i kontoplanen: ${missingKonti.join(', ')}. Genimportér kontoplanen for at inkludere disse.`;
+    }
+    setStatus({ type: missingKonti.length > 0 ? 'error' : 'success', msg });
     setPreview(null);
   };
 
@@ -241,7 +251,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
           previewMeta.push({ origType: type, moms: '', sumfra: '' });
           plRows.push({ t: 'sec', lbl: navn });
           addMeta();
-        } else if (type === 1) {
+        } else if (type === 1 || (type === 0 && nr > 0)) {
           plRows.push({ t: 'acct', nr, lbl: navn, grp: currentGrp });
           addMeta();
         } else if (type === 3) {
