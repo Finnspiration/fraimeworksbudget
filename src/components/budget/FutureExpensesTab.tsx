@@ -77,7 +77,7 @@ function DatePicker({ value, onChange, className }: { value: string; onChange: (
           {date ? format(date, 'dd/MM/yyyy') : 'Vælg dato'}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 z-50" align="start">
         <Calendar
           mode="single"
           selected={date}
