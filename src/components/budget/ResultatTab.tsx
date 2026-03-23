@@ -91,7 +91,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
     let curS: string | null = null;
     for (const row of activePL) {
       if (row.t === 'sec') curS = row.lbl!;
-      if (row.t === 'acct' && curS && hasAnyData(row.nr!)) secs.add(curS);
+      if ((row.t === 'acct' || row.t === 'bal') && curS && hasAnyData(row.nr!)) secs.add(curS);
     }
     return secs;
   }, [showZero, activePL, pl]);

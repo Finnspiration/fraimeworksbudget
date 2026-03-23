@@ -375,7 +375,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">
-                  Forhåndsvisning ({kontoPlanPreview.filter(r => r.t === 'acct').length} konti, {kontoPlanPreview.filter(r => r.t === 'total' || r.t === 'res').length} summer)
+                  Forhåndsvisning ({kontoPlanPreview.filter(r => r.t === 'acct' || r.t === 'bal').length} konti, {kontoPlanPreview.filter(r => r.t === 'total' || r.t === 'res').length} summer)
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => { setKontoPlanPreview(null); setKontoPlanStatus(null); }}>Annuller</Button>
