@@ -114,6 +114,11 @@ export default function FutureExpensesTab({ activePL }: Props) {
     acctList.forEach(r => m.set(r.nr!, r.lbl || ''));
     return m;
   }, [acctList]);
+  const acctMomsMap = useMemo(() => {
+    const m = new Map<number, string | null>();
+    acctList.forEach(r => m.set(r.nr!, r.moms ?? null));
+    return m;
+  }, [acctList]);
 
   const handleAdd = async () => {
     if (!newRow.konto || !newRow.tekst) {
