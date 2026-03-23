@@ -28,6 +28,7 @@ function dbToPlRow(r: any): PLRow {
   if (r.grp) row.grp = r.grp;
   if (r.row_id) row.id = r.row_id;
   if (r.sum_formula) row.sum = r.sum_formula;
+  if (r.moms) row.moms = r.moms;
   return row;
 }
 

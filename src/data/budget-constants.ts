@@ -10,6 +10,7 @@ export interface PLRow {
   grp?: string;
   id?: string;
   sum?: string;
+  moms?: string | null;
 }
 
 export const PL: PLRow[] = [
