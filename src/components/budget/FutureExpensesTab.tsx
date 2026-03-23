@@ -96,11 +96,12 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const [copyDialog, setCopyDialog] = useState<FutureExpense | null>(null);
   const [copyMonths, setCopyMonths] = useState(1);
 
+  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
   const acctMap = useMemo(() => {
     const m = new Map<number, string>();
-    activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr).forEach(r => m.set(r.nr!, r.lbl || ''));
+    acctList.forEach(r => m.set(r.nr!, r.lbl || ''));
     return m;
-  }, [activePL]);
+  }, [acctList]);
 
   const handleAdd = async () => {
     if (!newRow.konto || !newRow.tekst) {
