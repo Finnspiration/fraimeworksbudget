@@ -432,12 +432,18 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
             </div>
           )}
         </CardContent>
+        </CollapsibleContent>
       </Card>
+      </Collapsible>
 
+      <Collapsible defaultOpen={false}>
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2"><Upload className="h-4 w-4" />Importér kassekladde</CardTitle>
+        <CollapsibleTrigger asChild>
+        <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2"><Upload className="h-4 w-4" />Importér kassekladde <ChevronDown className="h-3.5 w-3.5 ml-auto text-muted-foreground" /></CardTitle>
         </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Eksportér kassekladden fra dit regnskabsprogram som Excel eller CSV. Format: Type, Dato, Bilag, Faktura, Tekst, Beløb, Konto, Moms, Modkonto.</p>
           <div onDrop={handleDrop} onDragOver={e => e.preventDefault()} onClick={() => fileRef.current?.click()}
