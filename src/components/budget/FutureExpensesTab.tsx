@@ -250,10 +250,10 @@ export default function FutureExpensesTab({ activePL }: Props) {
                     return (
                       <tr key={exp.id} className={`border-b hover:bg-muted/50 ${exp.matched ? 'opacity-50 line-through' : ''}`}
                         onDoubleClick={() => !exp.matched && startEdit(exp)}>
-                        <td className="py-1.5 pr-2">
+                        <td className="py-1.5 pr-2 whitespace-nowrap">
                           {isEditing
-                            ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-28" />
-                            : exp.dato ? format(parse(exp.dato, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy') : '—'}
+                            ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-24" />
+                            : exp.dato || '—'}
                         </td>
                         <td className="py-1.5 pr-2">
                           {isEditing ? <Input className="h-7 text-xs" value={editRow.tekst || ''} onChange={e => setEditRow(p => ({ ...p, tekst: e.target.value }))} />
