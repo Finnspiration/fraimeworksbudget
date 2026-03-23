@@ -32,7 +32,7 @@ export function CellWithTooltip({
 }: CellWithTooltipProps) {
   const color = realized
     ? (value < 0 ? 'text-destructive' : 'text-primary')
-    : (value < 0 ? 'text-foreground/50' : 'text-[hsl(142,40%,35%)]');
+    : (value < 0 ? 'text-destructive/70' : 'text-[hsl(142,35%,30%)]');
 
   // Build tooltip content
   const tooltipContent = useMemo(() => {
@@ -168,7 +168,7 @@ export function CellWithTooltip({
     <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${color}`}>
       <HoverCard openDelay={200} closeDelay={100}>
         <HoverCardTrigger asChild>
-          <span className="cursor-help border-b border-dotted border-current">{fmt(value)}</span>
+          <span className="cursor-help border-b border-dotted border-foreground/40">{fmt(value)}</span>
         </HoverCardTrigger>
         <HoverCardContent className="w-80 p-3" side="bottom" align="end">
           {tooltipContent}

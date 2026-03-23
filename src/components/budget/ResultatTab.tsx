@@ -24,7 +24,7 @@ function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?:
   if (v === 0 || v == null || isNaN(v)) return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : 'text-muted-foreground'}`}>–</td>;
   const color = realized
     ? (v < 0 ? 'text-destructive' : 'text-primary')
-    : (v < 0 ? 'text-foreground/50' : 'text-[hsl(142,40%,35%)]');
+    : (v < 0 ? 'text-destructive/70' : 'text-[hsl(142,35%,30%)]');
   return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${color}`}>{fmt(v)}</td>;
 }
 
