@@ -172,6 +172,14 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
     }
     setStatus({ type: missingKonti.length > 0 ? 'error' : 'success', msg });
     setPreview(null);
+    // Trigger future expenses matching
+    if (onImportComplete) {
+      // Use timeout to ensure txns state is updated first
+      setTimeout(() => {
+        const allTxns = [...txns, ...withIds];
+        onImportComplete(allTxns);
+      }, 500);
+    }
   };
 
   // Unique types for filter dropdown

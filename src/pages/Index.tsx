@@ -111,8 +111,18 @@ export default function Index() {
               skatPct={state.skatPct} setSkatPct={state.setSkatPct}
               virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype} />
           </TabsContent>
+          <TabsContent value="udgifter">
+            <FutureExpensesTab activePL={state.activePL} />
+          </TabsContent>
           <TabsContent value="import">
-            <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL} />
+            <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL}
+              onImportComplete={async (allTxns) => {
+                const count = await matchAgainstTransactions(allTxns);
+                if (count > 0) {
+                  const { toast } = await import('sonner');
+                  toast.success(`✓ ${count} fremtidige udgifter blev matchet`);
+                }
+              }} />
           </TabsContent>
         </Tabs>
       </main>
