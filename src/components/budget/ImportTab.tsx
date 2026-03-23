@@ -39,7 +39,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL }: Prop
   const [kontoPlanStatus, setKontoPlanStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const activePL = customPL ?? PL;
-  const acctList = useMemo(() => activePL.filter(r => r.t === 'acct' && r.nr), [activePL]);
+  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
   const acctMap = useMemo(() => new Map(acctList.map(r => [r.nr!, r.lbl || ''])), [acctList]);
   const [kontoPopoverOpen, setKontoPopoverOpen] = useState<number | null>(null);
 
