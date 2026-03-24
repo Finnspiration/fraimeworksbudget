@@ -105,25 +105,30 @@ export default function Chat() {
 
   const createChannel = async () => {
     if (!newChannelName.trim() || !user) return;
-    const { data, error } = await supabase.from('chat_channels').insert({ name: newChannelName.trim() }).select().single();
+    const channelId = crypto.randomUUID();
+    const { error } = await supabase.from('chat_channels').insert({ id: channelId, name: newChannelName.trim(), is_direct: false });
     if (error) {
       console.error('createChannel error:', error);
       toast.error('Kunne ikke oprette kanal: ' + error.message);
       return;
     }
-    if (data) {
-      await supabase.from('chat_channel_members').insert({ channel_id: data.id, user_id: user.id });
-      // Add all approved users
-      const { data: approved } = await supabase.from('profiles').select('id').eq('approved', true);
-      if (approved) {
-        const inserts = approved.filter(p => p.id !== user.id).map(p => ({ channel_id: data.id, user_id: p.id }));
-        if (inserts.length) await supabase.from('chat_channel_members').insert(inserts);
-      }
-      setShowNewChannel(false);
-      setNewChannelName('');
-      loadChannels();
-      setActiveChannel(data.id);
+    // Insert creator membership first
+    const { error: memErr } = await supabase.from('chat_channel_members').insert({ channel_id: channelId, user_id: user.id });
+    if (memErr) {
+      console.error('membership error:', memErr);
+      toast.error('Kanal oprettet, men kunne ikke tilføje dig som medlem');
+      return;
     }
+    // Add all approved users
+    const { data: approved } = await supabase.from('profiles').select('id').eq('approved', true);
+    if (approved) {
+      const inserts = approved.filter(p => p.id !== user.id).map(p => ({ channel_id: channelId, user_id: p.id }));
+      if (inserts.length) await supabase.from('chat_channel_members').insert(inserts);
+    }
+    setShowNewChannel(false);
+    setNewChannelName('');
+    loadChannels();
+    setActiveChannel(channelId);
   };
 
   const createDm = async () => {
@@ -149,22 +154,26 @@ export default function Chat() {
         }
       }
     }
-    const { data, error } = await supabase.from('chat_channels').insert({ is_direct: true }).select().single();
+    const channelId = crypto.randomUUID();
+    const { error } = await supabase.from('chat_channels').insert({ id: channelId, is_direct: true });
     if (error) {
       console.error('createDm error:', error);
       toast.error('Kunne ikke oprette samtale: ' + error.message);
       return;
     }
-    if (data) {
-      await supabase.from('chat_channel_members').insert([
-        { channel_id: data.id, user_id: user.id },
-        { channel_id: data.id, user_id: dmUserId },
-      ]);
-      setShowNewDm(false);
-      setDmUserId('');
-      loadChannels();
-      setActiveChannel(data.id);
+    const { error: memErr } = await supabase.from('chat_channel_members').insert([
+      { channel_id: channelId, user_id: user.id },
+      { channel_id: channelId, user_id: dmUserId },
+    ]);
+    if (memErr) {
+      console.error('dm membership error:', memErr);
+      toast.error('Samtale oprettet, men kunne ikke tilføje medlemmer');
+      return;
     }
+    setShowNewDm(false);
+    setDmUserId('');
+    loadChannels();
+    setActiveChannel(channelId);
   };
 
   const getChannelLabel = (ch: Channel) => {
