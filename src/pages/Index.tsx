@@ -76,10 +76,16 @@ export default function Index() {
             <img src={logo} alt="FraimeWorks" className="h-8" />
             <p className="text-xs text-muted-foreground">Budget & regnskab {YEAR}</p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="hidden sm:inline">{state.txns.length} posteringer</span>
+          <div className="flex items-center gap-2">
+            <Link to="/chat"><Button variant="ghost" size="sm" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" />Chat</Button></Link>
+            <Link to="/todo"><Button variant="ghost" size="sm" className="gap-1.5"><CheckSquare className="h-3.5 w-3.5" />Opgaver</Button></Link>
+            {isAdmin && <Link to="/admin"><Button variant="ghost" size="sm" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Admin</Button></Link>}
+            <span className="text-xs text-muted-foreground hidden sm:inline">{profile?.name}</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">·</span>
+            <span className="hidden sm:inline text-xs text-muted-foreground">{state.txns.length} posteringer</span>
             <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--budget-positive))]" />
-            <span className="hidden sm:inline">{state.nReal} mdr. realiseret</span>
+            <span className="hidden sm:inline text-xs text-muted-foreground">{state.nReal} mdr.</span>
+            <Button variant="ghost" size="sm" onClick={signOut} className="gap-1.5"><LogOut className="h-3.5 w-3.5" /></Button>
           </div>
         </div>
       </header>
