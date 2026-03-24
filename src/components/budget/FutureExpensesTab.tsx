@@ -284,6 +284,11 @@ export default function FutureExpensesTab({ activePL }: Props) {
               <KontoPicker value={filterKonto || 0} onChange={v => setFilterKonto(v)} acctList={acctList} acctMap={acctMap} className="w-48" />
               {filterKonto && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setFilterKonto(null)}>✕</Button>}
             </div>
+            {selected.size > 0 && (
+              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkDelete}>
+                <Trash2 className="h-3 w-3" />Slet {selected.size} valgte
+              </Button>
+            )}
             <span className="text-xs text-muted-foreground ml-auto">{filtered.length} af {expenses.length} vist</span>
           </div>
 
