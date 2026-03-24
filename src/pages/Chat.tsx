@@ -90,17 +90,27 @@ export default function Chat() {
 
   const sendMessage = async () => {
     if (!input.trim() || !activeChannel || !user) return;
-    await supabase.from('chat_messages').insert({
+    const { error } = await supabase.from('chat_messages').insert({
       channel_id: activeChannel,
       user_id: user.id,
       content: input.trim(),
     });
+    if (error) {
+      console.error('sendMessage error:', error);
+      toast.error('Kunne ikke sende besked: ' + error.message);
+      return;
+    }
     setInput('');
   };
 
   const createChannel = async () => {
     if (!newChannelName.trim() || !user) return;
-    const { data } = await supabase.from('chat_channels').insert({ name: newChannelName.trim() }).select().single();
+    const { data, error } = await supabase.from('chat_channels').insert({ name: newChannelName.trim() }).select().single();
+    if (error) {
+      console.error('createChannel error:', error);
+      toast.error('Kunne ikke oprette kanal: ' + error.message);
+      return;
+    }
     if (data) {
       await supabase.from('chat_channel_members').insert({ channel_id: data.id, user_id: user.id });
       // Add all approved users
@@ -139,7 +149,12 @@ export default function Chat() {
         }
       }
     }
-    const { data } = await supabase.from('chat_channels').insert({ is_direct: true }).select().single();
+    const { data, error } = await supabase.from('chat_channels').insert({ is_direct: true }).select().single();
+    if (error) {
+      console.error('createDm error:', error);
+      toast.error('Kunne ikke oprette samtale: ' + error.message);
+      return;
+    }
     if (data) {
       await supabase.from('chat_channel_members').insert([
         { channel_id: data.id, user_id: user.id },

@@ -139,8 +139,24 @@ export default function Admin() {
   };
 
   const copyLink = async () => {
-    await navigator.clipboard.writeText(magicLink);
-    toast.success('Link kopieret til udklipsholder');
+    try {
+      await navigator.clipboard.writeText(magicLink);
+      toast.success('Link kopieret til udklipsholder');
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = magicLink;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast.success('Link kopieret til udklipsholder');
+      } catch {
+        toast.error('Kunne ikke kopiere linket');
+      }
+    }
   };
 
   return (
