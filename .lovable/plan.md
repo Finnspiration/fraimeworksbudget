@@ -1,32 +1,40 @@
 
 
-# Fix: Magic link kopi + chat-kanaloprettelse
+# Persistente magic links med visning, kopiering og sletning
 
-## Problem 1: Kopier magic link fungerer ikke
+## Problem
+Magic links genereres og vises i en dialog, men gemmes ikke. Når dialogen lukkes, er linket væk. Der er ingen indikation på brugerlisten om et link eksisterer.
 
-`navigator.clipboard.writeText()` kræver en sikker kontekst (HTTPS) og brugerens tilladelse. I preview-miljøet eller iframes kan dette fejle stille. Løsningen er at bruge en fallback-metode.
+## Løsning
 
-### Fil: `src/pages/Admin.tsx`
+### 1. Database: Tilføj `magic_link` kolonne på `profiles`
+**Migration:** Tilføj `magic_link text` (nullable) på `profiles`-tabellen. Når et link genereres, gemmes det. Når det fjernes, sættes det til `NULL`.
 
-Erstat `copyLink`-funktionen med en robust kopi-metode der bruger `navigator.clipboard.writeText()` med fallback til den ældre `document.execCommand('copy')` teknik (opret et midlertidigt textarea-element). Wrap i try/catch så fejl fanges og vises som toast.
+### 2. Edge function: Gem linket i databasen
+**Fil:** `supabase/functions/admin-generate-magic-link/index.ts`
+- Efter generering, gem linket på `profiles.magic_link` via adminClient
+- Returnér linket som nu
 
-## Problem 2: Kan ikke oprette tråd/kanal i chat
+### 3. Admin UI: Vis, kopiér og fjern magic links
+**Fil:** `src/pages/Admin.tsx`
 
-`createChannel` inserter i `chat_channels`, men RLS-politikken for INSERT kræver `is_approved(auth.uid())`. Hvis det fejler stille (ingen error-handling), ser det ud som om intet sker.
+- Udvid `UserRow` med `magic_link: string | null`
+- Læs `magic_link` fra profiles i `load()`
+- **På brugerlisten:** Vis en `Link2`-ikon/badge ved brugere der har et aktivt magic link
+- **Generér-knap:** Når der klikkes, genereres link og gemmes — UI opdateres
+- **Vis link:** Når bruger har et link, vis det i en sektion (readonly input + kopiér-knap)
+- **Fjern link:** Knap til at slette magic_link fra profilen (`UPDATE profiles SET magic_link = NULL`)
+- Kopiér-funktionen bruger den eksisterende fallback-metode
 
-### Fil: `src/pages/Chat.tsx`
-
-- Tilføj error-handling på `createChannel`: tjek `error` fra insert-kaldet og vis toast ved fejl
-- Tilføj error-handling på `createDm`: samme
-- Tilføj error-handling på `sendMessage`: samme
-- Log fejl så vi kan se hvad der sker
-
-Derudover: `createChannel` inserter uden `is_direct: false` eksplicit — det er OK (default er false), men der mangler fejlhåndtering der kan afsløre RLS-problemer.
-
-## Filer
+### Resultat
+- Admin kan se hvem der har et magic link (badge/ikon på listen)
+- Admin kan klikke for at se og kopiere linket
+- Admin kan fjerne linket
+- Linket persists mellem sideindlæsninger
 
 | Fil | Ændring |
 |---|---|
-| `src/pages/Admin.tsx` | Robust clipboard-kopi med fallback |
-| `src/pages/Chat.tsx` | Tilføj error-handling + toast på alle mutationer |
+| `supabase/migrations/...` | Tilføj `magic_link text` på profiles |
+| `supabase/functions/admin-generate-magic-link/index.ts` | Gem link i DB efter generering |
+| `src/pages/Admin.tsx` | Vis/kopiér/fjern magic links, badge-indikator |
 
