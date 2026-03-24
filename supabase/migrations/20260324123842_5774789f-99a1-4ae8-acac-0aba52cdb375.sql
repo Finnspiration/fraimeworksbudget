@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN magic_token uuid DEFAULT NULL;
