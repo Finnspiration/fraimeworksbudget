@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
-import { fmtDec } from '@/lib/budget-utils';
+import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
 import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil } from 'lucide-react';
@@ -281,8 +281,8 @@ export default function FutureExpensesTab({ activePL }: Props) {
             <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground">Konto</label>
               <KontoPicker value={newRow.konto} onChange={v => {
-                const momsFromAcct = acctMomsMap.get(v);
-                setNewRow(p => ({ ...p, konto: v, moms: momsFromAcct || null }));
+                const resolved = resolveEffectiveMoms(null, v, activePL);
+                setNewRow(p => ({ ...p, konto: v, moms: resolved }));
               }} acctList={acctList} acctMap={acctMap} className="w-full" />
             </div>
             <div>
@@ -340,8 +340,8 @@ export default function FutureExpensesTab({ activePL }: Props) {
                         </td>
                         <td className="py-1.5 pr-2" style={!kontoValid ? { color: 'hsl(var(--destructive))' } : {}}>
                           {isEditing ? <KontoPicker value={editRow.konto ?? exp.konto} onChange={v => {
-                              const momsFromAcct = acctMomsMap.get(v);
-                              setEditRow(p => ({ ...p, konto: v, moms: momsFromAcct || null }));
+                              const resolved = resolveEffectiveMoms(null, v, activePL);
+                              setEditRow(p => ({ ...p, konto: v, moms: resolved }));
                             }} acctList={acctList} acctMap={acctMap} className="w-44" />
                             : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto} {acctMap.get(exp.konto) || ''}</span>}
                         </td>
@@ -417,7 +417,17 @@ export default function FutureExpensesTab({ activePL }: Props) {
             </p>
             <div>
               <label className="text-xs font-medium">Antal måneder frem</label>
-              <Input type="number" min={1} max={36} className="h-8 text-xs w-24 mt-1" value={copyMonths} onChange={e => setCopyMonths(Math.max(1, Number(e.target.value)))} />
+              <div className="flex items-center gap-2 mt-1">
+                <Input type="number" min={1} max={36} className="h-8 text-xs w-24" value={copyMonths} onChange={e => setCopyMonths(Math.max(1, Number(e.target.value)))} />
+                {copyDialog?.dato && (() => {
+                  const remaining = 12 - parse(copyDialog.dato, 'yyyy-MM-dd', new Date()).getMonth() - 1;
+                  return remaining > 0 ? (
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCopyMonths(remaining)}>
+                      Resten af året ({remaining} mdr)
+                    </Button>
+                  ) : null;
+                })()}
+              </div>
             </div>
           </div>
           <DialogFooter>
