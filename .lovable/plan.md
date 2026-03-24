@@ -1,35 +1,51 @@
 
 
-# Fix: Fremtidige udgifter — matching og fortegn
+# Fix: Budget-fortegn for udgiftskonti i fast budget
 
-## Problem 1: Forkert matching
-Matching-logikken i `use-future-expenses.ts` bruger et 30-dages vindue, som er for bredt. En Dropbox-udgift på 2025-04-04 kan matche mod en transaktion fra en helt anden måned. Derudover tjekker den ikke, om transaktionen faktisk ligger **før eller på** udgiftsdatoen — den matcher bare inden for ±30 dage.
+## Problem
+Konti 2216 ("Lønninger - Charlotte") og 2217 ("Lønninger - Finn") har budgetværdier på **+25.000** og **+5.000** pr. måned i databasen. Men det er udgiftskonti — de burde være **negative** (som fx konto 2210 der korrekt er -25.000).
 
-**Fix:** Stram matchingen:
-- Reducer vinduet til ±7 dage
-- Kræv at transaktionsdatoen er ≤ udgiftsdatoen (transaktionen skal allerede være sket)
-- Tilføj tjek på `tekst`-feltet hvis muligt (fuzzy match på beskrivelse)
+Når `computePL` summerer alle lønkonti, bliver de positive værdier lagt **til** resultatet i stedet for trukket **fra**. Det giver det oppustede resultat på 772.904 i fast budget.
 
-## Problem 2: Fremtidige udgifter har forkert fortegn i resultatopgørelsen
-I `Index.tsx` linje 52 tilføjes fremtidige udgifter som `+= exp.belob`. Men `computeRealized()` negerer alle beløb (`r[key] = ... - net`), så kassekladde-udgifter ender som negative tal i PL.
+I dynamisk budget er der ingen transaktioner på disse konti, så dynamic budget beregner 0 — derfor ser dynamisk korrekt ud (74.933).
 
-Fremtidige udgifter skal følge samme konvention: de skal negeres når de lægges ind i budgettet, da de repræsenterer udgifter (positive beløb i input → negative i PL).
+## Grundårsag
+`updateBudget` i `ResultatTab.tsx` (linje 87-93) gemmer brugerens input direkte uden fortegnskorrektion. Brugeren skriver naturligt "25000" for en lønudgift, men systemet kræver "-25000".
 
-**Fix i `src/pages/Index.tsx` linje 52:**
-```typescript
-// Før:
-base[exp.konto][month] += exp.belob;
+## Løsning
 
-// Efter:
-base[exp.konto][month] -= exp.belob;
+### 1. Auto-neger udgiftskonti i `updateBudget`
+**Fil:** `src/components/budget/ResultatTab.tsx`
+
+Tilføj logik i `updateBudget` der tjekker om kontoen er en udgiftskonto (dvs. ikke i en omsætningsgruppe). Hvis brugeren indtaster et positivt tal for en udgiftskonto, gem det automatisk som negativt.
+
+Konvention: omsætningskonti er dem med `grp` svarende til den gruppe der bruges i den første `total`-række (typisk 'oms' eller 'grp2'). Alle andre `acct`-rækker er udgifter.
+
+Konkret: find kontoens PLRow, tjek om dens `grp` matcher omsætningsgruppen. Hvis ikke, og værdien er positiv, neger den.
+
+### 2. Vis absolutte værdier i redigeringscellen
+**Fil:** `src/components/budget/ResultatTab.tsx`
+
+I `EditableBudgetCell`, vis `Math.abs(value)` for udgiftskonti (men gem som negativt). Tilføj en lille visuel indikator (fx rød farve eller minus-ikon) så brugeren kan se at det er en udgift.
+
+### 3. Ret eksisterende forkerte data i databasen
+**Migration:** Opdatér konto 2216 og 2217 budget-entries til negative værdier.
+
+```sql
+UPDATE budget_entries 
+SET amount = -ABS(amount) 
+WHERE konto IN (2216, 2217) AND amount > 0;
 ```
 
-Dette matcher præcis hvad `computeRealized` gør med kassekladde-posteringer.
+### 4. Identificer omsætningsgruppen dynamisk
+For at vide hvilke konti der er "omsætning" (positive) vs "udgifter" (negative), find den første `total`-række i `activePL` og dens `sum`-formel. Konti i den refererede gruppe er omsætning, alle andre er udgifter.
+
+Alternativt, enklere heuristik: konti med `nr < 1300` er omsætning, resten er udgifter. Dette matcher kontoplanens nummersystem.
 
 ## Berørte filer
 
 | Fil | Ændring |
 |---|---|
-| `src/pages/Index.tsx` | Negér fremtidige udgifter ved merge ind i budget |
-| `src/hooks/use-future-expenses.ts` | Stram matching: ±7 dage, kræv txn-dato ≤ udgiftsdato |
+| `src/components/budget/ResultatTab.tsx` | Auto-neger udgiftskonti, vis absolutte værdier |
+| Database migration | Ret eksisterende positive udgiftsbudgetter |
 
