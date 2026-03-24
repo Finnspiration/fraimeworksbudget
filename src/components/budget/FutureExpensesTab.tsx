@@ -147,10 +147,13 @@ export default function FutureExpensesTab({ activePL }: Props) {
     }
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Slet denne fremtidige udgift?')) return;
     try {
       await deleteExpense(id);
+      setDeleteConfirmId(null);
       toast.success('Slettet');
     } catch {
       toast.error('Kunne ikke slette');
