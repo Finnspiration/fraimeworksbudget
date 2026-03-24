@@ -337,6 +337,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
+                    <th className="py-1 pr-1 font-medium w-8">
+                      <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} className="h-3.5 w-3.5" />
+                    </th>
                     <th className="py-1 pr-2 font-medium">Dato</th>
                     <th className="py-1 pr-2 font-medium">Tekst</th>
                     <th className="py-1 pr-2 font-medium text-right">Beløb</th>
