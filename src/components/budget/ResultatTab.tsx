@@ -273,7 +273,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               <th className="px-2 py-2 text-center text-xs font-semibold">Budget</th>
             </tr>
             <tr className="border-b text-[10px] text-muted-foreground">
-              <th colSpan={2} />
+              <th className="sticky left-0 z-30 bg-card" />
+              <th className="sticky left-[48px] z-30 bg-card border-r border-border/30" />
               {MONTHS.map(m => [
                 <th key={`${m}-r`} className="px-1 py-0.5 text-center">Real</th>,
                 <th key={`${m}-b`} className="px-1 py-0.5 text-center">Bud</th>,
