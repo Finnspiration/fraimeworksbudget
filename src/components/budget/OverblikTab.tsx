@@ -123,9 +123,8 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     // Tilføj kassekladde-indbetalinger eks. moms
     for (const txn of revenueTxns) {
       if (!txn.customer_id || !txn.customers?.name) continue;
-      const effectiveMoms = resolveEffectiveMoms(txn.moms, txn.konto, activePL);
-      const exMoms = effectiveMoms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
-      map[txn.customers.name] = (map[txn.customers.name] || 0) + exMoms;
+      const amounts = getTxnAmounts(txn.belob, txn.moms, txn.konto, activePL);
+      map[txn.customers.name] = (map[txn.customers.name] || 0) + amounts.netto;
     }
     return Object.entries(map)
       .map(([name, amount]) => ({ name, amount }))
