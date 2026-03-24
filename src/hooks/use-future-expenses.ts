@@ -102,11 +102,13 @@ export function useFutureExpenses() {
       const match = txns.find(txn => {
         if (txn.konto !== exp.konto) return false;
         if (Math.abs(txn.belob - exp.belob) > 1) return false;
-        if (!exp.dato || !txn.dato) return true; // If no date, match on konto+beløb only
+        if (!exp.dato || !txn.dato) return false;
         const expDate = new Date(exp.dato);
         const txnDate = new Date(txn.dato);
-        const diffDays = Math.abs((expDate.getTime() - txnDate.getTime()) / (1000 * 60 * 60 * 24));
-        return diffDays <= 30;
+        // Transaction must have occurred on or before the planned expense date
+        if (txnDate > expDate) return false;
+        const diffDays = (expDate.getTime() - txnDate.getTime()) / (1000 * 60 * 60 * 24);
+        return diffDays <= 7;
       });
       if (match) {
         await supabase.from('future_expenses').update({

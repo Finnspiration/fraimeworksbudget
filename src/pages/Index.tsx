@@ -49,7 +49,7 @@ export default function Index() {
       if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
       const month = d.getMonth();
       if (!base[exp.konto]) base[exp.konto] = new Array(12).fill(0);
-      base[exp.konto][month] += exp.belob;
+      base[exp.konto][month] -= exp.belob;
     });
     return base;
   }, [state.activeBudget, state.budgetMode, pipelineJobs, activeExpenses]);
