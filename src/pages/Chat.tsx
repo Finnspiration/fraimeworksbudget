@@ -90,11 +90,16 @@ export default function Chat() {
 
   const sendMessage = async () => {
     if (!input.trim() || !activeChannel || !user) return;
-    await supabase.from('chat_messages').insert({
+    const { error } = await supabase.from('chat_messages').insert({
       channel_id: activeChannel,
       user_id: user.id,
       content: input.trim(),
     });
+    if (error) {
+      console.error('sendMessage error:', error);
+      toast.error('Kunne ikke sende besked: ' + error.message);
+      return;
+    }
     setInput('');
   };
 
