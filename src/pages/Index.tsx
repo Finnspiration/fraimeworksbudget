@@ -12,7 +12,10 @@ import PipelineTab from '@/components/budget/PipelineTab';
 import { usePipelineJobs } from '@/hooks/use-pipeline';
 import { useFutureExpenses } from '@/hooks/use-future-expenses';
 import FutureExpensesTab from '@/components/budget/FutureExpensesTab';
-import { BarChart3, Table, Receipt, FileSpreadsheet, Target, CalendarClock, Loader2 } from 'lucide-react';
+import { BarChart3, Table, Receipt, FileSpreadsheet, Target, CalendarClock, Loader2, MessageCircle, CheckSquare, Shield, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 export default function Index() {
   const state = useDbState();
