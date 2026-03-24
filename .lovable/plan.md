@@ -1,36 +1,38 @@
 
 
-# Fix: Kanaloprettelse fejler pga. SELECT-policy timing
+# Fix: Vis indbetalinger i pipeline uden moms
 
 ## Problem
-`createChannel` og `createDm` i `Chat.tsx` bruger `.insert(...).select().single()`. Supabase kører SELECT-policyen som del af RETURNING, men SELECT-policyen kræver `is_channel_member(id, auth.uid())` — og membership-rækken er endnu ikke oprettet.
-
-FraimeWorks_Project undgår dette fordi deres SELECT-policy er scopet til projekt-adgang, ikke til thread-deltagelse.
+Indbetalinger fra kassekladden vises i pipeline-tabellen med bruttobeløb (inkl. moms), men bør vises ekskl. moms for at matche resultatopgørelsen. Manuelt indtastede pipeline-jobs er allerede korrekte (indtastet uden moms).
 
 ## Løsning
 
-### Fil: `src/pages/Chat.tsx`
+### Fil: `src/components/budget/PipelineTab.tsx`
 
-**`createChannel` (ca. linje 106-127):**
-- Generér `channelId` med `crypto.randomUUID()` før insert
-- Insert kanal med eksplicit id **uden** `.select().single()`
-- Tjek for fejl, vis toast ved fejl
-- Insert skaberens membership med det kendte id
-- Insert øvrige godkendte brugere
-- Reload kanaler, sæt aktiv kanal
+I sektionen der viser revenue-transaktioner (ca. linje 229-233):
 
-**`createDm` (ca. linje 150-168):**
-- Samme mønster: generér id, insert uden `.select()`, insert begge memberships, reload
+- Beregn nettobeløb for hver transaktion: hvis `txn.moms === 'U25'`, divider `Math.abs(txn.belob)` med 1.25
+- Brug nettobeløbet i stedet for `Math.abs(txn.belob)` i både "Beløb"- og "Vægtet"-kolonnen
 
-```text
-Før:  insert → .select().single() → RLS kræver membership → fejl
-Efter: insert (uden select) → insert membership → reload → OK
+Før:
+```tsx
+fmt(Math.abs(txn.belob))  // inkl. moms
 ```
 
-### Ingen databaseændringer
-RLS-policies er korrekte. Fejlen er i klient-koden.
+Efter:
+```tsx
+const netAmount = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+fmt(netAmount)  // ekskl. moms
+```
+
+Samme mønster som allerede bruges i `OverblikTab.tsx` linje 126.
+
+### Ingen andre ændringer nødvendige
+- Resultatopgørelsen bruger allerede `netBelob()` i `computeRealized()` — korrekt
+- OverblikTab bruger allerede ex-moms beregning — korrekt
+- Pipeline-jobs (manuelt indtastet) er allerede uden moms — korrekt
 
 | Fil | Ændring |
 |---|---|
-| `src/pages/Chat.tsx` | Fjern `.select().single()`, brug client-side UUID |
+| `src/components/budget/PipelineTab.tsx` | Vis indbetalinger ekskl. moms |
 
