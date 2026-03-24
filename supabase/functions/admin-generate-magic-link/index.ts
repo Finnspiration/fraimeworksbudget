@@ -28,19 +28,18 @@ Deno.serve(async (req) => {
     const { email } = await req.json();
     if (!email) throw new Error("Missing email");
 
-    const { data, error } = await adminClient.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-      options: {
-        redirectTo: "https://fraimeworksbudget.lovable.app/auth/callback",
-      },
-    });
-    if (error) throw error;
+    // Generate a permanent UUID token
+    const token = crypto.randomUUID();
 
-    const link = data.properties.action_link;
+    // Build the permanent link
+    const link = `https://fraimeworksbudget.lovable.app/auth/magic?token=${token}`;
 
-    // Persist magic link to profile
-    await adminClient.from("profiles").update({ magic_link: link }).eq("email", email);
+    // Store token and link on profile
+    const { error: updateError } = await adminClient
+      .from("profiles")
+      .update({ magic_token: token, magic_link: link })
+      .eq("email", email);
+    if (updateError) throw updateError;
 
     return new Response(JSON.stringify({ link }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
