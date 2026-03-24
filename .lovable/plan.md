@@ -1,51 +1,34 @@
 
 
-# Fix: Budget-fortegn for udgiftskonti i fast budget
+# Sticky kolonner + padding i resultatopgørelsen
 
-## Problem
-Konti 2216 ("Lønninger - Charlotte") og 2217 ("Lønninger - Finn") har budgetværdier på **+25.000** og **+5.000** pr. måned i databasen. Men det er udgiftskonti — de burde være **negative** (som fx konto 2210 der korrekt er -25.000).
+## Ændringer
 
-Når `computePL` summerer alle lønkonti, bliver de positive værdier lagt **til** resultatet i stedet for trukket **fra**. Det giver det oppustede resultat på 772.904 i fast budget.
+### Fil: `src/components/budget/ResultatTab.tsx`
 
-I dynamisk budget er der ingen transaktioner på disse konti, så dynamic budget beregner 0 — derfor ser dynamisk korrekt ud (74.933).
+**1. Gør Nr. og Navn-kolonnerne sticky (vandret scroll)**
 
-## Grundårsag
-`updateBudget` i `ResultatTab.tsx` (linje 87-93) gemmer brugerens input direkte uden fortegnskorrektion. Brugeren skriver naturligt "25000" for en lønudgift, men systemet kræver "-25000".
+Tilføj `sticky left-0` på den første kolonne (Nr.) og `sticky left-[48px]` på den anden kolonne (Navn) — både i `thead` og alle `tbody`-rækker. Begge skal have `bg-card z-20` for at dække indholdet bag dem ved scroll.
 
-## Løsning
+Berørte steder:
+- Thead: linje 263-264 (header-rækken), linje 276 (sub-header)
+- Account rows: linje 162-163
+- Total/res/final rows: linje 207-208
+- Section rows: linje 143 (colSpan-cellen)
 
-### 1. Auto-neger udgiftskonti i `updateBudget`
-**Fil:** `src/components/budget/ResultatTab.tsx`
+Hver sticky-kolonne får:
+- Kolonne 1 (Nr.): `sticky left-0 z-20 bg-card`
+- Kolonne 2 (Navn): `sticky left-[48px] z-20 bg-card`
 
-Tilføj logik i `updateBudget` der tjekker om kontoen er en udgiftskonto (dvs. ikke i en omsætningsgruppe). Hvis brugeren indtaster et positivt tal for en udgiftskonto, gem det automatisk som negativt.
+For total/res/final-rækker tilpasses `bg-card` til den relevante baggrund (fx `bg-primary/10`, `bg-secondary/50`).
 
-Konvention: omsætningskonti er dem med `grp` svarende til den gruppe der bruges i den første `total`-række (typisk 'oms' eller 'grp2'). Alle andre `acct`-rækker er udgifter.
+**2. Tilføj padding til højre**
 
-Konkret: find kontoens PLRow, tjek om dens `grp` matcher omsætningsgruppen. Hvis ikke, og værdien er positiv, neger den.
+Tilføj `pr-8` (eller `pr-12`) på tabellens wrapper-div (linje 259) eller på den sidste kolonne i hver række, så den sidste kolonne ikke overskygges af navigationsbar.
 
-### 2. Vis absolutte værdier i redigeringscellen
-**Fil:** `src/components/budget/ResultatTab.tsx`
-
-I `EditableBudgetCell`, vis `Math.abs(value)` for udgiftskonti (men gem som negativt). Tilføj en lille visuel indikator (fx rød farve eller minus-ikon) så brugeren kan se at det er en udgift.
-
-### 3. Ret eksisterende forkerte data i databasen
-**Migration:** Opdatér konto 2216 og 2217 budget-entries til negative værdier.
-
-```sql
-UPDATE budget_entries 
-SET amount = -ABS(amount) 
-WHERE konto IN (2216, 2217) AND amount > 0;
-```
-
-### 4. Identificer omsætningsgruppen dynamisk
-For at vide hvilke konti der er "omsætning" (positive) vs "udgifter" (negative), find den første `total`-række i `activePL` og dens `sum`-formel. Konti i den refererede gruppe er omsætning, alle andre er udgifter.
-
-Alternativt, enklere heuristik: konti med `nr < 1300` er omsætning, resten er udgifter. Dette matcher kontoplanens nummersystem.
-
-## Berørte filer
+Simpelste løsning: tilføj `pr-8` på `<table>` eller en ekstra tom kolonne til sidst.
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/ResultatTab.tsx` | Auto-neger udgiftskonti, vis absolutte værdier |
-| Database migration | Ret eksisterende positive udgiftsbudgetter |
+| `src/components/budget/ResultatTab.tsx` | Sticky left på de to første kolonner + right padding |
 
