@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
 export default function Index() {
+  const { profile, isAdmin, signOut } = useAuth();
   const state = useDbState();
   const [tab, setTab] = useState('overblik');
   const { data: pipelineJobs = [] } = usePipelineJobs();
