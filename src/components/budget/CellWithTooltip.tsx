@@ -63,7 +63,7 @@ export function CellWithTooltip({
                   <tr key={i} className="border-b border-border/20">
                     <td className="pr-2 py-0.5 text-muted-foreground whitespace-nowrap">{t.dato}</td>
                     <td className="pr-2 py-0.5 truncate max-w-[150px]">{t.tekst}</td>
-                    <td className="py-0.5 text-right tabular-nums whitespace-nowrap">{fmtDec(-netBelob(t.belob, t.moms))}</td>
+                    <td className="py-0.5 text-right tabular-nums whitespace-nowrap">{fmtDec(-netBelobResolved(t, plRows))}</td>
                   </tr>
                 ))}
               </tbody>

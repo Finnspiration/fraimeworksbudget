@@ -213,7 +213,8 @@ export default function PipelineTab({ activePL }: Props) {
                     </tr>
                   ))}
                   {revenueTxns.map(txn => {
-                    const netAmount = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+                    const effectiveMoms = resolveEffectiveMoms(txn.moms, txn.konto, activePL);
+                    const netAmount = effectiveMoms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
                     return (
                     <tr key={`txn-${txn.id}`} className="border-b border-border/30 bg-[hsl(var(--budget-positive))]/5">
                       <td className="px-3 py-2">
