@@ -1,52 +1,44 @@
 
 
-# Adoptér FraimeWorks_Project magic link-løsning
+# Fix: Infinite recursion i chat_channel_members RLS
 
 ## Problem
-Den nuværende løsning bruger en redirect-kæde (`window.location.href` → Supabase auth URL → `/auth/callback`) som fejler i Safari og på mobil. FraimeWorks_Project har en bedre løsning der bruger `verifyOtp()` direkte på klienten.
+RLS SELECT-politikken på `chat_channel_members` refererer til sig selv — den tjekker om brugeren er medlem ved at query `chat_channel_members`, hvilket skaber uendelig rekursion.
 
-## Ændringer
+Når en kanal oprettes og medlemmer indsættes, trigges SELECT-politikken som en del af INSERT-flowet, og det fejler.
 
-### 1. Opdatér `verify-magic-token` edge function
-**Fil:** `supabase/functions/verify-magic-token/index.ts`
+## Løsning
 
-I stedet for at returnere `authLink` (som browseren redirectes til), returnér `token_hash` og `type` fra det genererede link — præcis som FraimeWorks_Project gør:
+### 1. Database-migration
 
-```typescript
-const generatedUrl = new URL(data.properties.action_link);
-const hashedToken = generatedUrl.searchParams.get("token");
-const type = generatedUrl.searchParams.get("type");
+1. Opret en `SECURITY DEFINER` funktion `is_channel_member(channel_id uuid, user_id uuid)` der tjekker membership uden at gå igennem RLS
+2. Drop den eksisterende rekursive SELECT-policy på `chat_channel_members`
+3. Opret ny SELECT-policy der bruger `is_channel_member()` funktionen
 
-return { token_hash: hashedToken, type };
+```sql
+CREATE OR REPLACE FUNCTION public.is_channel_member(_channel_id uuid, _user_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.chat_channel_members
+    WHERE channel_id = _channel_id AND user_id = _user_id
+  )
+$$;
 ```
 
-### 2. Opdatér `MagicRedirect.tsx`
-**Fil:** `src/pages/MagicRedirect.tsx`
-
-I stedet for `window.location.href = result.authLink`, brug `supabase.auth.verifyOtp()`:
-
-```typescript
-const { error } = await supabase.auth.verifyOtp({
-  token_hash: result.token_hash,
-  type: result.type || "magiclink",
-});
-if (error) throw error;
-navigate("/", { replace: true });
+Ny policy:
+```sql
+CREATE POLICY "Members can read channel members"
+ON public.chat_channel_members FOR SELECT
+TO authenticated
+USING (is_channel_member(channel_id, auth.uid()));
 ```
 
-Ingen browser-redirect. Sessionen etableres direkte i klienten, og brugeren navigeres internt i appen.
-
-### 3. Ingen databaseændringer nødvendige
-Den eksisterende `magic_token`-kolonne på `profiles` fungerer fint. FraimeWorks_Project bruger en separat tabel, men det er ikke strengt nødvendigt for dette projekts behov.
-
-## Resultat
-- Ingen redirect-kæde → virker i Safari og på mobil
-- Session etableres direkte via `verifyOtp()` i klienten
-- Permanent token-system bevares (genbrugeligt, udløber aldrig)
-- Simplere og mere robust flow
+### Filer
 
 | Fil | Ændring |
 |---|---|
-| `supabase/functions/verify-magic-token/index.ts` | Returnér `token_hash` + `type` i stedet for `authLink` |
-| `src/pages/MagicRedirect.tsx` | Brug `verifyOtp()` i stedet for `window.location.href` redirect |
+| `supabase/migrations/...` | Ny funktion + erstat rekursiv RLS-policy |
 
