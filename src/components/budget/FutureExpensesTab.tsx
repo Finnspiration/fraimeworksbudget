@@ -212,13 +212,13 @@ export default function FutureExpensesTab({ activePL }: Props) {
     if (selected.size === filtered.length) setSelected(new Set());
     else setSelected(new Set(filtered.map(e => e.id)));
   };
-  const handleBulkDelete = async () => {
-    if (selected.size === 0) return;
-    if (!confirm(`Slet ${selected.size} udgift${selected.size > 1 ? 'er' : ''}?`)) return;
+  const executeBulkDelete = async () => {
+    const count = selected.size;
     try {
       await Promise.all([...selected].map(id => deleteExpense(id)));
       setSelected(new Set());
-      toast.success(`${selected.size} udgift${selected.size > 1 ? 'er' : ''} slettet`);
+      setShowBulkDeleteConfirm(false);
+      toast.success(`${count} udgift${count > 1 ? 'er' : ''} slettet`);
     } catch {
       toast.error('Kunne ikke slette alle');
     }
