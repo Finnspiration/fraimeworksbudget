@@ -257,11 +257,11 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       </div>
 
       <div className="overflow-auto max-h-[calc(100vh-220px)] rounded-lg border bg-card">
-        <table className="w-full text-sm border-collapse min-w-[1800px]">
-          <thead className="sticky top-0 z-10 bg-card">
+        <table className="w-full text-sm border-collapse min-w-[1800px] mr-12">
+          <thead className="sticky top-0 z-30 bg-card">
             <tr className="border-b-2">
-              <th className="px-2 py-2 text-left text-xs font-semibold w-12">Nr.</th>
-              <th className="px-2 py-2 text-left text-xs font-semibold">Navn</th>
+              <th className="px-2 py-2 text-left text-xs font-semibold w-12 sticky left-0 z-30 bg-card">Nr.</th>
+              <th className="px-2 py-2 text-left text-xs font-semibold sticky left-[48px] z-30 bg-card min-w-[180px] border-r border-border/30">Navn</th>
               {MONTHS.map((m, i) => (
                 <th key={m} colSpan={2} className={`px-1 py-2 text-center text-xs font-semibold ${i < nReal ? 'text-primary' : 'text-muted-foreground'}`}>
                   {m}{i < nReal ? ' ✓' : ''}
