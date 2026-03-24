@@ -1,14 +1,15 @@
 import { YEAR, MONTHS } from '@/data/budget-constants';
-import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
+import { fmt, sumArr, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import type { Transaction, BskatRate } from '@/data/budget-constants';
+import type { Transaction, BskatRate, PLRow } from '@/data/budget-constants';
 
 interface Props {
   pl: Record<string | number, PLValues>;
   txns: Transaction[];
   nReal: number;
+  activePL: PLRow[];
   momsBetalt: number[];
   setMomsBetalt: React.Dispatch<React.SetStateAction<number[]>>;
   bskat: BskatRate[];
@@ -28,7 +29,7 @@ const quarters = [
   { id: 4, label: 'Q4 Okt-Dec', months: [9, 10, 11], forfald: '01-04-2027' },
 ];
 
-export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype }: Props) {
+export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype }: Props) {
   const updateBskat = (i: number, field: keyof BskatRate, val: string | number) =>
     setBskat(prev => prev.map((r, j) => j === i ? { ...r, [field]: val } : r));
 
@@ -36,14 +37,16 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
     txns.filter(tx => {
       if (!tx.dato) return false;
       const d = new Date(tx.dato);
-      return d.getFullYear() === YEAR && months.includes(d.getMonth()) && tx.moms === 'I25';
+      const effectiveMoms = resolveEffectiveMoms(tx.moms, tx.konto, activePL);
+      return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'I25';
     }).reduce((s, tx) => s + tx.belob / 5, 0);
 
   const computeSalgsmoms = (months: number[]) =>
     txns.filter(tx => {
       if (!tx.dato) return false;
       const d = new Date(tx.dato);
-      return d.getFullYear() === YEAR && months.includes(d.getMonth()) && tx.moms === 'U25';
+      const effectiveMoms = resolveEffectiveMoms(tx.moms, tx.konto, activePL);
+      return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'U25';
     }).reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
 
   const omsRow = pl['oms'] as PLValues | undefined;
@@ -125,7 +128,7 @@ export default function SkatTab({ pl, txns, nReal, momsBetalt, setMomsBetalt, bs
               </tbody>
             </table>
           </div>
-          {!txns.some(tx => tx.moms === 'U25') && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 — tilføj momskode U25 på salgsfakturaer i kassekladden.</p>}
+          {!txns.some(tx => resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'U25') && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 — tilføj momskode U25 på salgsfakturaer i kassekladden.</p>}
         </CardContent>
       </Card>
 

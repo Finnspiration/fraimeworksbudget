@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
-import { fmt, fmtDec } from '@/lib/budget-utils';
+import { fmt, fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { Transaction, PLRow } from '@/data/budget-constants';
 import type { FutureExpense } from '@/hooks/use-future-expenses';
 
@@ -23,6 +23,11 @@ interface CellWithTooltipProps {
 
 function netBelob(belob: number, moms: string | null): number {
   return moms === 'I25' || moms === 'U25' ? belob / 1.25 : Number(belob);
+}
+
+function netBelobResolved(t: Transaction, plRows?: PLRow[]): number {
+  const effectiveMoms = plRows ? resolveEffectiveMoms(t.moms, t.konto, plRows) : t.moms;
+  return netBelob(t.belob, effectiveMoms);
 }
 
 export function CellWithTooltip({
@@ -58,7 +63,7 @@ export function CellWithTooltip({
                   <tr key={i} className="border-b border-border/20">
                     <td className="pr-2 py-0.5 text-muted-foreground whitespace-nowrap">{t.dato}</td>
                     <td className="pr-2 py-0.5 truncate max-w-[150px]">{t.tekst}</td>
-                    <td className="py-0.5 text-right tabular-nums whitespace-nowrap">{fmtDec(-netBelob(t.belob, t.moms))}</td>
+                    <td className="py-0.5 text-right tabular-nums whitespace-nowrap">{fmtDec(-netBelobResolved(t, plRows))}</td>
                   </tr>
                 ))}
               </tbody>

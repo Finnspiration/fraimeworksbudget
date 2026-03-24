@@ -353,7 +353,7 @@ export function useDbState() {
 
   // ── Computed values ──
   const activePL = customPL ?? PL;
-  const realized = useMemo(() => computeRealized(txns), [txns]);
+  const realized = useMemo(() => computeRealized(txns, YEAR, activePL), [txns, activePL]);
   const dynamicBudget = useMemo(() => computeDynamicBudget(realized, nReal, activePL), [realized, nReal, activePL]);
   const activeBudget = budgetMode === 'dynamic' ? dynamicBudget : budget;
   const pl = useMemo(() => computePL(realized, activeBudget, activePL), [realized, activeBudget, activePL]);

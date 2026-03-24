@@ -9,14 +9,44 @@ function netBelob(belob: number, moms: string | null): number {
   return moms === 'I25' || moms === 'U25' ? belob / 1.25 : Number(belob);
 }
 
-export function computeRealized(txns: { dato: string; konto: number; belob: number; moms: string | null }[], year: number = YEAR): Record<string, number> {
+/**
+ * Resolve effective moms code for a transaction.
+ * Priority: 1) tx.moms  2) account PLRow.moms  3) infer from account label
+ */
+export function resolveEffectiveMoms(
+  txMoms: string | null | undefined,
+  konto: number,
+  plRows: PLRow[]
+): string | null {
+  if (txMoms) return txMoms;
+  const acct = plRows.find(r => (r.t === 'acct' || r.t === 'bal') && r.nr === konto);
+  if (acct?.moms) return acct.moms;
+  if (acct?.lbl) {
+    const lbl = acct.lbl.toLowerCase();
+    if (lbl.includes('m/moms') || lbl.includes('m. moms')) {
+      // Revenue accounts (1xxx) use U25 (udgående moms), expense accounts use I25 (indgående moms)
+      return konto < 2000 ? 'U25' : 'I25';
+    }
+    if (lbl.includes('u/moms') || lbl.includes('u.moms') || lbl.includes('uden moms')) {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function computeRealized(
+  txns: { dato: string; konto: number; belob: number; moms: string | null }[],
+  year: number = YEAR,
+  plRows: PLRow[] = PL
+): Record<string, number> {
   const r: Record<string, number> = {};
   txns.forEach(tx => {
     if (!tx.dato) return;
     const d = new Date(tx.dato);
     if (isNaN(d.getTime()) || d.getFullYear() !== year) return;
     const m = d.getMonth() + 1;
-    const net = netBelob(tx.belob, tx.moms);
+    const effectiveMoms = resolveEffectiveMoms(tx.moms, tx.konto, plRows);
+    const net = netBelob(tx.belob, effectiveMoms);
     const key = `${tx.konto}-${m}`;
     r[key] = (r[key] || 0) - net;
   });

@@ -116,7 +116,7 @@ export default function Index() {
             <PipelineTab activePL={state.activePL} />
           </TabsContent>
           <TabsContent value="skat">
-            <SkatTab pl={mergedPL} txns={state.txns} nReal={state.nReal}
+            <SkatTab pl={mergedPL} txns={state.txns} nReal={state.nReal} activePL={state.activePL}
               momsBetalt={state.momsBetalt} setMomsBetalt={state.setMomsBetalt}
               bskat={state.bskat} setBskat={state.setBskat}
               andenGeld={state.andenGeld} setAndenGeld={state.setAndenGeld}

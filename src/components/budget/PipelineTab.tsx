@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Users, Target, TrendingUp, Pencil } from 'lucide-react';
-import { fmt } from '@/lib/budget-utils';
+import { fmt, resolveEffectiveMoms } from '@/lib/budget-utils';
 import { useCustomers, usePipelineJobs, useCreateCustomer, useDeleteCustomer, useCreateJob, useUpdateJob, useDeleteJob, useRevenueTransactions, useAssignCustomerToTxn, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { PLRow } from '@/data/budget-constants';
 import { toast } from 'sonner';
@@ -213,7 +213,8 @@ export default function PipelineTab({ activePL }: Props) {
                     </tr>
                   ))}
                   {revenueTxns.map(txn => {
-                    const netAmount = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+                    const effectiveMoms = resolveEffectiveMoms(txn.moms, txn.konto, activePL);
+                    const netAmount = effectiveMoms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
                     return (
                     <tr key={`txn-${txn.id}`} className="border-b border-border/30 bg-[hsl(var(--budget-positive))]/5">
                       <td className="px-3 py-2">

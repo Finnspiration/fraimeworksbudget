@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
 import { MONTHS, YEAR, type PLRow, type BskatRate } from '@/data/budget-constants';
-import { fmt, sumArr, type PLValues } from '@/lib/budget-utils';
+import { fmt, sumArr, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Crosshair, Users, AlertTriangle } from 'lucide-react';
@@ -123,7 +123,8 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     // Tilføj kassekladde-indbetalinger eks. moms
     for (const txn of revenueTxns) {
       if (!txn.customer_id || !txn.customers?.name) continue;
-      const exMoms = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+      const effectiveMoms = resolveEffectiveMoms(txn.moms, txn.konto, activePL);
+      const exMoms = effectiveMoms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
       map[txn.customers.name] = (map[txn.customers.name] || 0) + exMoms;
     }
     return Object.entries(map)
@@ -146,10 +147,10 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     ];
     qDefs.forEach((q, qi) => {
       const salgsmoms = txns
-        .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && tx.moms === 'U25')
+        .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'U25')
         .reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
       const kobsmoms = txns
-        .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && tx.moms === 'I25')
+        .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'I25')
         .reduce((s, tx) => s + tx.belob / 5, 0);
       const netto = salgsmoms + kobsmoms; // kobsmoms is negative
       const betalt = momsBetalt[qi] || 0;
