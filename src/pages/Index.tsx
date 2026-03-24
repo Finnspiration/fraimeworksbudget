@@ -52,7 +52,7 @@ export default function Index() {
       base[exp.konto][month] += exp.belob;
     });
     return base;
-  }, [state.activeBudget, pipelineJobs, activeExpenses]);
+  }, [state.activeBudget, state.budgetMode, pipelineJobs, activeExpenses]);
 
   // Recompute PL with merged budget
   const mergedPL = useMemo(() => {
