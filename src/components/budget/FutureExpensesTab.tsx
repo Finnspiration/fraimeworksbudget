@@ -427,7 +427,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                               <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCopyDialog(exp); setCopyMonths(1); }} title="Kopiér frem">
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(exp.id)}>
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => setDeleteConfirmId(exp.id)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
