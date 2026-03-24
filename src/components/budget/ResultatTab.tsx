@@ -204,8 +204,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
         const bgClass = isFinal ? 'bg-primary/10 font-bold' : isRes ? 'bg-[hsl(var(--budget-positive))]/5 font-semibold' : 'bg-secondary/50 font-medium';
         return (
           <tr key={`${row.t}-${row.id}`} className={`${bgClass} border-b border-border/50`}>
-            <td className="px-2 py-1.5" />
-            <td className={`px-2 py-1.5 text-xs ${isFinal ? 'text-sm' : ''}`}>{row.lbl}</td>
+            <td className={`px-2 py-1.5 sticky left-0 z-20 ${isFinal ? 'bg-primary/10' : isRes ? 'bg-[hsl(var(--budget-positive))]/5' : 'bg-secondary/50'}`} />
+            <td className={`px-2 py-1.5 text-xs ${isFinal ? 'text-sm' : ''} sticky left-[48px] z-20 border-r border-border/30 ${isFinal ? 'bg-primary/10' : isRes ? 'bg-[hsl(var(--budget-positive))]/5' : 'bg-secondary/50'}`}>{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => {
               const vr = v.r[i], vb = v.b[i];
               const dimmed = i >= nReal;
