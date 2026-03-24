@@ -142,9 +142,11 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
         if (!showZero && visibleSections && !visibleSections.has(curSec)) return null;
         return (
           <tr key={`sec-${idx}`} className="cursor-pointer hover:bg-secondary/50" onClick={() => toggleSec(row.lbl!)}>
-            <td colSpan={28} className="px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
+            <td className="sticky left-0 z-20 bg-card px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground" />
+            <td className="sticky left-[48px] z-20 bg-card px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground border-r border-border/30">
               {collapsedSecs[row.lbl!] ? '▶' : '▼'} {row.lbl}
             </td>
+            <td colSpan={29} />
           </tr>
         );
       }
@@ -159,8 +161,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
         const proj = nReal > 0 ? ytdR * 12 / nReal : yrB;
         return (
           <tr key={row.nr} className="hover:bg-secondary/30 border-b border-border/30">
-            <td className="px-2 py-1 text-xs text-muted-foreground tabular-nums w-12">{row.nr}</td>
-            <td className="px-2 py-1 text-xs truncate max-w-[180px]">{row.lbl}</td>
+            <td className="px-2 py-1 text-xs text-muted-foreground tabular-nums w-12 sticky left-0 z-20 bg-card">{row.nr}</td>
+            <td className="px-2 py-1 text-xs truncate max-w-[180px] sticky left-[48px] z-20 bg-card border-r border-border/30">{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => [
               <CellWithTooltip key={`r-${i}`} value={v?.r[i] || 0} realized dimmed={i >= nReal}
                 accountNr={row.nr} monthIndex={i} txns={txns} plRows={activePL} />,
@@ -204,8 +206,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
         const bgClass = isFinal ? 'bg-primary/10 font-bold' : isRes ? 'bg-[hsl(var(--budget-positive))]/5 font-semibold' : 'bg-secondary/50 font-medium';
         return (
           <tr key={`${row.t}-${row.id}`} className={`${bgClass} border-b border-border/50`}>
-            <td className="px-2 py-1.5" />
-            <td className={`px-2 py-1.5 text-xs ${isFinal ? 'text-sm' : ''}`}>{row.lbl}</td>
+            <td className={`px-2 py-1.5 sticky left-0 z-20 ${isFinal ? 'bg-primary/10' : isRes ? 'bg-[hsl(var(--budget-positive))]/5' : 'bg-secondary/50'}`} />
+            <td className={`px-2 py-1.5 text-xs ${isFinal ? 'text-sm' : ''} sticky left-[48px] z-20 border-r border-border/30 ${isFinal ? 'bg-primary/10' : isRes ? 'bg-[hsl(var(--budget-positive))]/5' : 'bg-secondary/50'}`}>{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => {
               const vr = v.r[i], vb = v.b[i];
               const dimmed = i >= nReal;
@@ -257,11 +259,11 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       </div>
 
       <div className="overflow-auto max-h-[calc(100vh-220px)] rounded-lg border bg-card">
-        <table className="w-full text-sm border-collapse min-w-[1800px]">
-          <thead className="sticky top-0 z-10 bg-card">
+        <table className="w-full text-sm border-collapse min-w-[1800px] mr-12">
+          <thead className="sticky top-0 z-30 bg-card">
             <tr className="border-b-2">
-              <th className="px-2 py-2 text-left text-xs font-semibold w-12">Nr.</th>
-              <th className="px-2 py-2 text-left text-xs font-semibold">Navn</th>
+              <th className="px-2 py-2 text-left text-xs font-semibold w-12 sticky left-0 z-30 bg-card">Nr.</th>
+              <th className="px-2 py-2 text-left text-xs font-semibold sticky left-[48px] z-30 bg-card min-w-[180px] border-r border-border/30">Navn</th>
               {MONTHS.map((m, i) => (
                 <th key={m} colSpan={2} className={`px-1 py-2 text-center text-xs font-semibold ${i < nReal ? 'text-primary' : 'text-muted-foreground'}`}>
                   {m}{i < nReal ? ' ✓' : ''}
@@ -273,7 +275,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               <th className="px-2 py-2 text-center text-xs font-semibold">Budget</th>
             </tr>
             <tr className="border-b text-[10px] text-muted-foreground">
-              <th colSpan={2} />
+              <th className="sticky left-0 z-30 bg-card" />
+              <th className="sticky left-[48px] z-30 bg-card border-r border-border/30" />
               {MONTHS.map(m => [
                 <th key={`${m}-r`} className="px-1 py-0.5 text-center">Real</th>,
                 <th key={`${m}-b`} className="px-1 py-0.5 text-center">Bud</th>,
