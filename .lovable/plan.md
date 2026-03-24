@@ -1,66 +1,52 @@
 
 
-# Permanente magic links (udløber aldrig)
+# Adoptér FraimeWorks_Project magic link-løsning
 
 ## Problem
-Supabase's built-in magic link tokens udløber efter kort tid (typisk 1 time). Det kan ikke ændres. Derfor skal vi bygge vores eget permanente token-system.
+Den nuværende løsning bruger en redirect-kæde (`window.location.href` → Supabase auth URL → `/auth/callback`) som fejler i Safari og på mobil. FraimeWorks_Project har en bedre løsning der bruger `verifyOtp()` direkte på klienten.
 
-## Løsning
+## Ændringer
 
-Erstat Supabase's `generateLink` med et custom token-system:
-
-### 1. Database: Tilføj `magic_token` på `profiles`
-**Migration:**
-- Tilføj `magic_token uuid DEFAULT NULL` kolonne på `profiles`
-- Brug dette token som den permanente identifikator i linket
-
-### 2. Edge function: `admin-generate-magic-link` → generér permanent token
-**Fil:** `supabase/functions/admin-generate-magic-link/index.ts`
-
-- I stedet for `admin.generateLink()`, generér et tilfældigt UUID token
-- Gem token i `profiles.magic_token`
-- Returnér et link i formatet: `https://fraimeworksbudget.lovable.app/auth/magic?token=<uuid>`
-- Gem dette link i `profiles.magic_link` som før
-
-### 3. Ny edge function: `verify-magic-token`
+### 1. Opdatér `verify-magic-token` edge function
 **Fil:** `supabase/functions/verify-magic-token/index.ts`
 
-- Modtag `token` fra request
-- Slå op i `profiles` hvor `magic_token = token`
-- Hvis fundet: brug `adminClient.auth.admin.generateLink({ type: 'magiclink', email })` til at lave et **kortvarigt** Supabase-link og redirect browseren dertil (med `/auth/callback` som redirect)
-- Hvis ikke fundet: returnér fejl
+I stedet for at returnere `authLink` (som browseren redirectes til), returnér `token_hash` og `type` fra det genererede link — præcis som FraimeWorks_Project gør:
 
-Flowet bliver:
-```text
-Permanent link → verify-magic-token → generér frisk Supabase-link → redirect → /auth/callback → logget ind
+```typescript
+const generatedUrl = new URL(data.properties.action_link);
+const hashedToken = generatedUrl.searchParams.get("token");
+const type = generatedUrl.searchParams.get("type");
+
+return { token_hash: hashedToken, type };
 ```
 
-### 4. Ny route: `/auth/magic`
-**Fil:** `src/pages/AuthCallback.tsx` (udvid) eller ny `src/pages/MagicRedirect.tsx`
+### 2. Opdatér `MagicRedirect.tsx`
+**Fil:** `src/pages/MagicRedirect.tsx`
 
-- Læs `token` fra URL query parameter
-- Kald `verify-magic-token` edge function
-- Vis spinner mens token verificeres
-- Redirect til det returnerede Supabase-link (som håndterer selve login)
+I stedet for `window.location.href = result.authLink`, brug `supabase.auth.verifyOtp()`:
 
-### 5. Opdatér routing
-**Fil:** `src/App.tsx`
-- Tilføj `/auth/magic` route
+```typescript
+const { error } = await supabase.auth.verifyOtp({
+  token_hash: result.token_hash,
+  type: result.type || "magiclink",
+});
+if (error) throw error;
+navigate("/", { replace: true });
+```
 
-### 6. Admin UI: Ingen ændringer nødvendige
-`magic_link` i `profiles` vil nu indeholde det permanente link. Kopiér/fjern fungerer som før.
+Ingen browser-redirect. Sessionen etableres direkte i klienten, og brugeren navigeres internt i appen.
+
+### 3. Ingen databaseændringer nødvendige
+Den eksisterende `magic_token`-kolonne på `profiles` fungerer fint. FraimeWorks_Project bruger en separat tabel, men det er ikke strengt nødvendigt for dette projekts behov.
 
 ## Resultat
-- Magic links udløber aldrig — tokenet i databasen er permanent
-- Hver gang linket bruges, genereres et friskt Supabase-login on-the-fly
-- Linket kan genbruges ubegrænset
-- Admin kan stadig se, kopiere og fjerne links
+- Ingen redirect-kæde → virker i Safari og på mobil
+- Session etableres direkte via `verifyOtp()` i klienten
+- Permanent token-system bevares (genbrugeligt, udløber aldrig)
+- Simplere og mere robust flow
 
 | Fil | Ændring |
 |---|---|
-| `supabase/migrations/...` | Tilføj `magic_token uuid` på profiles |
-| `supabase/functions/admin-generate-magic-link/index.ts` | Generér permanent token i stedet for Supabase magic link |
-| `supabase/functions/verify-magic-token/index.ts` | Ny: verificér token og generér frisk login-link |
-| `src/pages/MagicRedirect.tsx` | Ny: håndtér permanent magic link token |
-| `src/App.tsx` | Tilføj `/auth/magic` route |
+| `supabase/functions/verify-magic-token/index.ts` | Returnér `token_hash` + `type` i stedet for `authLink` |
+| `src/pages/MagicRedirect.tsx` | Brug `verifyOtp()` i stedet for `window.location.href` redirect |
 
