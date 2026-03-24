@@ -142,7 +142,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
             <td className="px-2 py-1 text-xs truncate max-w-[180px]">{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => [
               <CellWithTooltip key={`r-${i}`} value={v?.r[i] || 0} realized dimmed={i >= nReal}
-                accountNr={row.nr} monthIndex={i} txns={txns} />,
+                accountNr={row.nr} monthIndex={i} txns={txns} plRows={activePL} />,
               isDynamic ? (
                 <CellWithTooltip key={`b-${i}`} value={v?.b[i] || 0} dimmed={i >= nReal}
                   accountNr={row.nr} monthIndex={i} pipelineJobs={pipelineJobs} futureExpenses={futureExpenses}
