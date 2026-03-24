@@ -83,6 +83,16 @@ function EditableBudgetCell({ value, dimmed, onSave, isExpense }: { value: numbe
 
 export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL, txns = [], pipelineJobs = [], futureExpenses = [] }: Props) {
   const isDynamic = budgetMode === 'dynamic';
+
+  // Determine which accounts are revenue (positive convention) vs expense (negative convention)
+  const revenueAccounts = useMemo(() => {
+    const revSet = new Set<number>();
+    for (const row of activePL) {
+      if (row.t === 'acct' && row.grp === 'oms' && row.nr) revSet.add(row.nr);
+    }
+    return revSet;
+  }, [activePL]);
+  const isExpenseAccount = (nr: number) => !revenueAccounts.has(nr);
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
 
