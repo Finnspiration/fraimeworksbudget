@@ -356,6 +356,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
                     return (
                       <tr key={exp.id} className={`border-b hover:bg-muted/50 ${exp.matched ? 'opacity-50 line-through' : ''}`}
                         onDoubleClick={() => !exp.matched && startEdit(exp)}>
+                        <td className="py-1.5 pr-1 w-8">
+                          <Checkbox checked={selected.has(exp.id)} onCheckedChange={() => toggleSelect(exp.id)} className="h-3.5 w-3.5" />
+                        </td>
                         <td className="w-[68px] py-1.5 pr-2 whitespace-nowrap">
                           {isEditing
                             ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-full" />
