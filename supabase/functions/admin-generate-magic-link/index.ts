@@ -31,6 +31,9 @@ Deno.serve(async (req) => {
     const { data, error } = await adminClient.auth.admin.generateLink({
       type: "magiclink",
       email,
+      options: {
+        redirectTo: "https://fraimeworksbudget.lovable.app/auth/callback",
+      },
     });
     if (error) throw error;
 
