@@ -281,8 +281,8 @@ export default function FutureExpensesTab({ activePL }: Props) {
             <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground">Konto</label>
               <KontoPicker value={newRow.konto} onChange={v => {
-                const momsFromAcct = acctMomsMap.get(v);
-                setNewRow(p => ({ ...p, konto: v, moms: momsFromAcct || null }));
+                const resolved = resolveEffectiveMoms(null, v, activePL);
+                setNewRow(p => ({ ...p, konto: v, moms: resolved }));
               }} acctList={acctList} acctMap={acctMap} className="w-full" />
             </div>
             <div>
