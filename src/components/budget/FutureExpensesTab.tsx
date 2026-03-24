@@ -102,6 +102,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const [copyMonths, setCopyMonths] = useState(1);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'matched'>('all');
   const [filterKonto, setFilterKonto] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => expenses.filter(e => {
     if (filterStatus === 'active' && e.matched) return false;
