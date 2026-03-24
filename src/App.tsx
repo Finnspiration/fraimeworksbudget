@@ -29,6 +29,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/awaiting-approval" element={<AwaitingApproval />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/auth/magic" element={<MagicRedirect />} />
             <Route path="/" element={<ProtectedRoute><AppLayout><Index /></AppLayout></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><AppLayout><Chat /></AppLayout></ProtectedRoute>} />
             <Route path="/todo" element={<ProtectedRoute><AppLayout><Todo /></AppLayout></ProtectedRoute>} />
