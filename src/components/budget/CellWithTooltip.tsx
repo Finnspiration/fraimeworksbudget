@@ -25,6 +25,11 @@ function netBelob(belob: number, moms: string | null): number {
   return moms === 'I25' || moms === 'U25' ? belob / 1.25 : Number(belob);
 }
 
+function netBelobResolved(t: Transaction, plRows?: PLRow[]): number {
+  const effectiveMoms = plRows ? resolveEffectiveMoms(t.moms, t.konto, plRows) : t.moms;
+  return netBelob(t.belob, effectiveMoms);
+}
+
 export function CellWithTooltip({
   value, realized, dimmed, accountNr, monthIndex,
   txns = [], pipelineJobs = [], futureExpenses = [],
