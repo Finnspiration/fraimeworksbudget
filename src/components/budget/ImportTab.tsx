@@ -97,13 +97,18 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
         const konto = belob < 0 && kontoFromFile >= 2000 ? 1010 : kontoFromFile;
         const modkonto = cModkonto >= 0 && r[cModkonto] ? Number(r[cModkonto]) : undefined;
         const faktura = cFaktura >= 0 && r[cFaktura] ? String(r[cFaktura]) : undefined;
+        // Auto-resolve moms from chart of accounts if not in file
+        let momsFromFile = cMoms >= 0 && r[cMoms] ? String(r[cMoms]) : null;
+        if (!momsFromFile) {
+          momsFromFile = resolveEffectiveMoms(null, konto, activePL);
+        }
         parsed.push({
           id: 0, dato,
           type: cType >= 0 && r[cType] ? String(r[cType]) : 'Import',
           bilag: cBilag >= 0 ? String(r[cBilag] || '') : '',
           tekst: cTekst >= 0 ? String(r[cTekst] || '') : '',
           belob, konto,
-          moms: cMoms >= 0 && r[cMoms] ? String(r[cMoms]) : null,
+          moms: momsFromFile,
           modkonto, faktura,
         });
       }
