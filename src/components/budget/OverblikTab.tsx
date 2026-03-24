@@ -146,7 +146,7 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     ];
     qDefs.forEach((q, qi) => {
       const salgsmoms = txns
-        .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && resolveEffectiveMomsLocal(tx.moms, tx.konto, activePL) === 'U25')
+        .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'U25')
         .reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
       const kobsmoms = txns
         .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'I25')
