@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function MagicRedirect() {
   const [searchParams] = useSearchParams();
@@ -27,8 +28,14 @@ export default function MagicRedirect() {
         const result = await res.json();
         if (result.error) throw new Error(result.error);
 
-        // Redirect browser to the fresh Supabase auth link
-        window.location.href = result.authLink;
+        // Use verifyOtp to establish session directly — no redirect needed
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: result.token_hash,
+          type: result.type || 'magiclink',
+        });
+        if (otpError) throw otpError;
+
+        navigate('/', { replace: true });
       } catch (e: any) {
         setError(e.message || 'Linket er ugyldigt eller udløbet.');
       }

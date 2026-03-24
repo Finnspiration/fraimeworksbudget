@@ -39,9 +39,11 @@ Deno.serve(async (req) => {
     });
     if (error) throw error;
 
-    const authLink = data.properties.action_link;
+    const generatedUrl = new URL(data.properties.action_link);
+    const hashedToken = generatedUrl.searchParams.get("token");
+    const type = generatedUrl.searchParams.get("type");
 
-    return new Response(JSON.stringify({ authLink }), {
+    return new Response(JSON.stringify({ token_hash: hashedToken, type }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
