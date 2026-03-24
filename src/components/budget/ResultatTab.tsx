@@ -28,7 +28,7 @@ function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?:
   return <td className={`px-2 py-1 text-right text-xs tabular-nums ${dimmed ? 'opacity-30' : ''} ${color}`}>{fmt(v)}</td>;
 }
 
-function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?: boolean; onSave: (v: number) => void }) {
+function EditableBudgetCell({ value, dimmed, onSave, isExpense }: { value: number; dimmed?: boolean; onSave: (v: number) => void; isExpense?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +36,15 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
   useEffect(() => {
     if (editing) inputRef.current?.focus();
   }, [editing]);
+
+  const handleSave = (raw: number) => {
+    if (raw === 0) { onSave(0); return; }
+    // Expense accounts: always store as negative
+    if (isExpense && raw > 0) raw = -raw;
+    // Revenue accounts: always store as positive
+    if (!isExpense && raw < 0) raw = -raw;
+    onSave(raw);
+  };
 
   if (editing) {
     return (
@@ -45,9 +54,9 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
           type="number"
           value={draft}
           onChange={e => setDraft(e.target.value)}
-          onBlur={() => { onSave(Number(draft) || 0); setEditing(false); }}
+          onBlur={() => { handleSave(Number(draft) || 0); setEditing(false); }}
           onKeyDown={e => {
-            if (e.key === 'Enter') { onSave(Number(draft) || 0); setEditing(false); }
+            if (e.key === 'Enter') { handleSave(Number(draft) || 0); setEditing(false); }
             if (e.key === 'Escape') setEditing(false);
           }}
           className="w-full text-right text-xs tabular-nums border border-primary rounded px-1 py-0.5 bg-primary/5 text-primary outline-none"
@@ -56,14 +65,16 @@ function EditableBudgetCell({ value, dimmed, onSave }: { value: number; dimmed?:
     );
   }
 
-  const display = value === 0 || isNaN(value) ? '–' : fmt(value);
-  const color = value < 0 ? 'text-foreground/50' : value > 0 ? 'text-[hsl(142,40%,35%)]' : 'text-muted-foreground';
+  // Show absolute value for expense accounts so users see "25000" not "-25000"
+  const displayValue = isExpense ? -value : value;
+  const display = displayValue === 0 || isNaN(displayValue) ? '–' : fmt(displayValue);
+  const color = displayValue < 0 ? 'text-foreground/50' : displayValue > 0 ? 'text-[hsl(142,40%,35%)]' : 'text-muted-foreground';
 
   return (
     <td
       className={`px-2 py-1 text-right text-xs tabular-nums cursor-pointer hover:bg-primary/10 rounded transition-colors ${dimmed ? 'opacity-30' : ''} ${color}`}
-      onClick={() => { setDraft(String(value || '')); setEditing(true); }}
-      title="Klik for at redigere budget"
+      onClick={() => { setDraft(String(Math.abs(value) || '')); setEditing(true); }}
+      title={isExpense ? 'Udgiftskonto – gemmes som negativt' : 'Klik for at redigere budget'}
     >
       {display}
     </td>
