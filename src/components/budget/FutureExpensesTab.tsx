@@ -11,7 +11,8 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandG
 import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil, CheckSquare } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format, addMonths, addDays, parse, isBefore, isAfter, startOfDay } from 'date-fns';
 import { da } from 'date-fns/locale';
@@ -101,6 +102,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const [copyMonths, setCopyMonths] = useState(1);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'matched'>('all');
   const [filterKonto, setFilterKonto] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => expenses.filter(e => {
     if (filterStatus === 'active' && e.matched) return false;
@@ -197,6 +199,27 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const matchedCount = expenses.filter(e => e.matched).length;
   const activeTotal = expenses.filter(e => !e.matched).reduce((s, e) => s + e.belob, 0);
 
+  const toggleSelect = (id: string) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const toggleAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map(e => e.id)));
+  };
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Slet ${selected.size} udgift${selected.size > 1 ? 'er' : ''}?`)) return;
+    try {
+      await Promise.all([...selected].map(id => deleteExpense(id)));
+      setSelected(new Set());
+      toast.success(`${selected.size} udgift${selected.size > 1 ? 'er' : ''} slettet`);
+    } catch {
+      toast.error('Kunne ikke slette alle');
+    }
+  };
+
   const { sum7, count7, sum30, count30 } = useMemo(() => {
     const today = startOfDay(new Date());
     const in7 = addDays(today, 7);
@@ -261,6 +284,11 @@ export default function FutureExpensesTab({ activePL }: Props) {
               <KontoPicker value={filterKonto || 0} onChange={v => setFilterKonto(v)} acctList={acctList} acctMap={acctMap} className="w-48" />
               {filterKonto && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setFilterKonto(null)}>✕</Button>}
             </div>
+            {selected.size > 0 && (
+              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkDelete}>
+                <Trash2 className="h-3 w-3" />Slet {selected.size} valgte
+              </Button>
+            )}
             <span className="text-xs text-muted-foreground ml-auto">{filtered.length} af {expenses.length} vist</span>
           </div>
 
@@ -309,6 +337,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
+                    <th className="py-1 pr-1 font-medium w-8">
+                      <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} className="h-3.5 w-3.5" />
+                    </th>
                     <th className="py-1 pr-2 font-medium">Dato</th>
                     <th className="py-1 pr-2 font-medium">Tekst</th>
                     <th className="py-1 pr-2 font-medium text-right">Beløb</th>
@@ -325,6 +356,9 @@ export default function FutureExpensesTab({ activePL }: Props) {
                     return (
                       <tr key={exp.id} className={`border-b hover:bg-muted/50 ${exp.matched ? 'opacity-50 line-through' : ''}`}
                         onDoubleClick={() => !exp.matched && startEdit(exp)}>
+                        <td className="py-1.5 pr-1 w-8">
+                          <Checkbox checked={selected.has(exp.id)} onCheckedChange={() => toggleSelect(exp.id)} className="h-3.5 w-3.5" />
+                        </td>
                         <td className="w-[68px] py-1.5 pr-2 whitespace-nowrap">
                           {isEditing
                             ? <DatePicker value={editRow.dato || ''} onChange={v => setEditRow(p => ({ ...p, dato: v }))} className="w-full" />
