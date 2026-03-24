@@ -34,7 +34,12 @@ Deno.serve(async (req) => {
     });
     if (error) throw error;
 
-    return new Response(JSON.stringify({ link: data.properties.action_link }), {
+    const link = data.properties.action_link;
+
+    // Persist magic link to profile
+    await adminClient.from("profiles").update({ magic_link: link }).eq("email", email);
+
+    return new Response(JSON.stringify({ link }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
