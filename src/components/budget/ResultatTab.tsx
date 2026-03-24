@@ -159,8 +159,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
         const proj = nReal > 0 ? ytdR * 12 / nReal : yrB;
         return (
           <tr key={row.nr} className="hover:bg-secondary/30 border-b border-border/30">
-            <td className="px-2 py-1 text-xs text-muted-foreground tabular-nums w-12">{row.nr}</td>
-            <td className="px-2 py-1 text-xs truncate max-w-[180px]">{row.lbl}</td>
+            <td className="px-2 py-1 text-xs text-muted-foreground tabular-nums w-12 sticky left-0 z-20 bg-card">{row.nr}</td>
+            <td className="px-2 py-1 text-xs truncate max-w-[180px] sticky left-[48px] z-20 bg-card border-r border-border/30">{row.lbl}</td>
             {Array.from({ length: 12 }, (_, i) => [
               <CellWithTooltip key={`r-${i}`} value={v?.r[i] || 0} realized dimmed={i >= nReal}
                 accountNr={row.nr} monthIndex={i} txns={txns} plRows={activePL} />,
