@@ -199,6 +199,27 @@ export default function FutureExpensesTab({ activePL }: Props) {
   const matchedCount = expenses.filter(e => e.matched).length;
   const activeTotal = expenses.filter(e => !e.matched).reduce((s, e) => s + e.belob, 0);
 
+  const toggleSelect = (id: string) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const toggleAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map(e => e.id)));
+  };
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Slet ${selected.size} udgift${selected.size > 1 ? 'er' : ''}?`)) return;
+    try {
+      await Promise.all([...selected].map(id => deleteExpense(id)));
+      setSelected(new Set());
+      toast.success(`${selected.size} udgift${selected.size > 1 ? 'er' : ''} slettet`);
+    } catch {
+      toast.error('Kunne ikke slette alle');
+    }
+  };
+
   const { sum7, count7, sum30, count30 } = useMemo(() => {
     const today = startOfDay(new Date());
     const in7 = addDays(today, 7);
