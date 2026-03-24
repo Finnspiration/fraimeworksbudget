@@ -1,44 +1,32 @@
 
 
-# Generér magic links til brugere fra admin-panelet
+# Fix: Magic link kopi + chat-kanaloprettelse
 
-## Overblik
+## Problem 1: Kopier magic link fungerer ikke
 
-Tilføj en "Magic link"-knap på hver bruger i admin-panelet. Når admin klikker, genereres et magic link via en ny edge function (som bruger `admin.generateLink`), og linket vises i en dialog så admin kan kopiere det og sende det til brugeren.
+`navigator.clipboard.writeText()` kræver en sikker kontekst (HTTPS) og brugerens tilladelse. I preview-miljøet eller iframes kan dette fejle stille. Løsningen er at bruge en fallback-metode.
 
-## Ændringer
+### Fil: `src/pages/Admin.tsx`
 
-### 1. Ny edge function: `admin-generate-magic-link`
-**Fil:** `supabase/functions/admin-generate-magic-link/index.ts`
+Erstat `copyLink`-funktionen med en robust kopi-metode der bruger `navigator.clipboard.writeText()` med fallback til den ældre `document.execCommand('copy')` teknik (opret et midlertidigt textarea-element). Wrap i try/catch så fejl fanges og vises som toast.
 
-- Verificér at kalderen er admin (samme mønster som `admin-create-user`)
-- Modtag `email` i request body
-- Kald `adminClient.auth.admin.generateLink({ type: 'magiclink', email })` 
-- Returnér det genererede link (`properties.action_link`)
+## Problem 2: Kan ikke oprette tråd/kanal i chat
 
-### 2. Magic link-knap + kopiér-dialog i admin-panelet
-**Fil:** `src/pages/Admin.tsx`
+`createChannel` inserter i `chat_channels`, men RLS-politikken for INSERT kræver `is_approved(auth.uid())`. Hvis det fejler stille (ingen error-handling), ser det ud som om intet sker.
 
-- Tilføj `Link`-ikon-knap på hver brugerræk
-- Ved klik: kald edge function med brugerens email (hentes via et lookup eller gemmes i UserRow)
-- Vis resultatet i en dialog med linket + "Kopiér"-knap
-- Toast ved succesfuld kopiering
+### Fil: `src/pages/Chat.tsx`
 
-### 3. Gem email på UserRow
-**Fil:** `src/pages/Admin.tsx`
+- Tilføj error-handling på `createChannel`: tjek `error` fra insert-kaldet og vis toast ved fejl
+- Tilføj error-handling på `createDm`: samme
+- Tilføj error-handling på `sendMessage`: samme
+- Log fejl så vi kan se hvad der sker
 
-- Udvid `load()` til også at hente brugerens email. Da email ikke er på `profiles`, hentes den via edge function eller tilføjes som kolonne.
-- Simplere løsning: Tilføj `email` kolonne på `profiles`-tabellen og populér den i `handle_new_user`-triggeren.
-
-### 4. Database-migration
-- Tilføj `email text` kolonne på `profiles`
-- Opdatér `handle_new_user` triggeren til også at gemme `NEW.email`
+Derudover: `createChannel` inserter uden `is_direct: false` eksplicit — det er OK (default er false), men der mangler fejlhåndtering der kan afsløre RLS-problemer.
 
 ## Filer
 
 | Fil | Ændring |
 |---|---|
-| `supabase/migrations/...` | Tilføj `email` på profiles, opdatér trigger |
-| `supabase/functions/admin-generate-magic-link/index.ts` | Ny: generér magic link via admin API |
-| `src/pages/Admin.tsx` | Magic link-knap, kopiér-dialog, vis email |
+| `src/pages/Admin.tsx` | Robust clipboard-kopi med fallback |
+| `src/pages/Chat.tsx` | Tilføj error-handling + toast på alle mutationer |
 
