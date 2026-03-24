@@ -128,7 +128,7 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
               </tbody>
             </table>
           </div>
-          {!txns.some(tx => tx.moms === 'U25') && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 — tilføj momskode U25 på salgsfakturaer i kassekladden.</p>}
+          {!txns.some(tx => resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'U25') && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 — tilføj momskode U25 på salgsfakturaer i kassekladden.</p>}
         </CardContent>
       </Card>
 
