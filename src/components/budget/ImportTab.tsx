@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { fmtDec } from '@/lib/budget-utils';
+import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
