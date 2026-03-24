@@ -107,6 +107,41 @@ export function fmt(n: number | null | undefined): string {
   return new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
+/**
+ * Shared helper: compute netto, moms, and brutto for a transaction.
+ * For imported txns (belob is brutto when moms applies): returns netto = belob/1.25
+ * For manual pipeline jobs (belob is already netto): use getJobAmounts instead
+ */
+export function getTxnAmounts(
+  belob: number,
+  txMoms: string | null | undefined,
+  konto: number,
+  plRows: PLRow[]
+): { netto: number; momsBeloeb: number; brutto: number; momsCode: string | null } {
+  const momsCode = resolveEffectiveMoms(txMoms, konto, plRows);
+  const hasMoms = momsCode === 'U25' || momsCode === 'I25';
+  const absBelob = Math.abs(belob);
+  const netto = hasMoms ? absBelob / 1.25 : absBelob;
+  const momsBeloeb = hasMoms ? absBelob - netto : 0;
+  return { netto, momsBeloeb, brutto: absBelob, momsCode };
+}
+
+/**
+ * For manual pipeline jobs where amount is already ekskl. moms
+ */
+export function getJobAmounts(
+  amount: number,
+  konto: number,
+  plRows: PLRow[]
+): { netto: number; momsBeloeb: number; brutto: number; momsCode: string | null } {
+  const momsCode = resolveEffectiveMoms(null, konto, plRows);
+  const hasMoms = momsCode === 'U25' || momsCode === 'I25';
+  const netto = Math.abs(amount);
+  const momsBeloeb = hasMoms ? netto * 0.25 : 0;
+  const brutto = netto + momsBeloeb;
+  return { netto, momsBeloeb, brutto, momsCode };
+}
+
 export function fmtDec(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return '–';
   return new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);

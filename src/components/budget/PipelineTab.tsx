@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Users, Target, TrendingUp, Pencil } from 'lucide-react';
-import { fmt, resolveEffectiveMoms } from '@/lib/budget-utils';
+import { fmt, getTxnAmounts, getJobAmounts } from '@/lib/budget-utils';
 import { useCustomers, usePipelineJobs, useCreateCustomer, useDeleteCustomer, useCreateJob, useUpdateJob, useDeleteJob, useRevenueTransactions, useAssignCustomerToTxn, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { PLRow } from '@/data/budget-constants';
 import { toast } from 'sonner';
@@ -45,7 +45,6 @@ export default function PipelineTab({ activePL }: Props) {
   const [custName, setCustName] = useState('');
   const [custEmail, setCustEmail] = useState('');
 
-  // Create/Edit job form state
   const [jobOpen, setJobOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<PipelineJobWithCustomer | null>(null);
   const [jobCustomerId, setJobCustomerId] = useState('');
@@ -56,12 +55,11 @@ export default function PipelineTab({ activePL }: Props) {
   const [jobStatus, setJobStatus] = useState('lead');
   const [jobKonto, setJobKonto] = useState('1010');
 
-  // Show ALL account rows, not just revenue
   const allAccts = activePL.filter(r => r.t === 'acct');
 
   const activeJobs = jobs.filter(j => j.status !== 'tabt');
-  const totalPipeline = activeJobs.reduce((s, j) => s + Number(j.amount), 0);
-  const weightedPipeline = activeJobs.reduce((s, j) => s + Number(j.amount) * j.probability / 100, 0);
+  const totalPipelineExMoms = activeJobs.reduce((s, j) => s + Number(j.amount), 0);
+  const weightedPipelineExMoms = activeJobs.reduce((s, j) => s + Number(j.amount) * j.probability / 100, 0);
 
   const resetForm = () => {
     setEditingJob(null);
@@ -74,11 +72,7 @@ export default function PipelineTab({ activePL }: Props) {
     setJobKonto('1010');
   };
 
-  const openCreateDialog = () => {
-    resetForm();
-    setJobOpen(true);
-  };
-
+  const openCreateDialog = () => { resetForm(); setJobOpen(true); };
   const openEditDialog = (job: PipelineJobWithCustomer) => {
     setEditingJob(job);
     setJobCustomerId(job.customer_id);
@@ -116,19 +110,11 @@ export default function PipelineTab({ activePL }: Props) {
 
     if (editingJob) {
       updateJob.mutate({ id: editingJob.id, ...payload }, {
-        onSuccess: () => {
-          setJobOpen(false);
-          resetForm();
-          toast.success('Job opdateret');
-        },
+        onSuccess: () => { setJobOpen(false); resetForm(); toast.success('Job opdateret'); },
       });
     } else {
       createJob.mutate(payload, {
-        onSuccess: () => {
-          setJobOpen(false);
-          resetForm();
-          toast.success('Job tilføjet');
-        },
+        onSuccess: () => { setJobOpen(false); resetForm(); toast.success('Job tilføjet'); },
       });
     }
   };
@@ -143,14 +129,14 @@ export default function PipelineTab({ activePL }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="border-l-4 border-l-primary">
           <CardContent className="pt-5 pb-4 px-5">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1"><Target className="h-3.5 w-3.5" />Total pipeline</div>
-            <p className="text-2xl font-bold tracking-tight">{fmt(totalPipeline)} kr</p>
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1"><Target className="h-3.5 w-3.5" />Total pipeline (ekskl. moms)</div>
+            <p className="text-2xl font-bold tracking-tight">{fmt(totalPipelineExMoms)} kr</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-[hsl(var(--budget-positive))]">
           <CardContent className="pt-5 pb-4 px-5">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1"><TrendingUp className="h-3.5 w-3.5" />Vægtet pipeline</div>
-            <p className="text-2xl font-bold tracking-tight">{fmt(weightedPipeline)} kr</p>
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1"><TrendingUp className="h-3.5 w-3.5" />Vægtet pipeline (ekskl. moms)</div>
+            <p className="text-2xl font-bold tracking-tight">{fmt(weightedPipelineExMoms)} kr</p>
             <p className="text-xs text-muted-foreground mt-1">Beløb × sandsynlighed</p>
           </CardContent>
         </Card>
@@ -177,71 +163,83 @@ export default function PipelineTab({ activePL }: Props) {
                   <tr className="border-b text-xs text-muted-foreground">
                     <th className="text-left px-3 py-2">Kunde</th>
                     <th className="text-left px-3 py-2">Beskrivelse</th>
-                    <th className="text-right px-3 py-2">Beløb</th>
+                    <th className="text-center px-3 py-2 text-[10px]">Kilde</th>
+                    <th className="text-right px-3 py-2">Ekskl. moms</th>
+                    <th className="text-right px-3 py-2">Moms</th>
+                    <th className="text-right px-3 py-2">Inkl. moms</th>
                     <th className="text-center px-3 py-2">Sandsynlighed</th>
-                    <th className="text-right px-3 py-2">Vægtet</th>
+                    <th className="text-right px-3 py-2">Vægtet (ekskl.)</th>
                     <th className="text-center px-3 py-2">Dato</th>
                     <th className="text-center px-3 py-2">Status</th>
                     <th className="text-center px-3 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {jobs.map(j => (
-                    <tr key={j.id} className={`border-b border-border/30 ${j.status === 'tabt' ? 'opacity-50' : ''}`}>
-                      <td className="px-3 py-2 font-medium">{j.customers?.name || '–'}</td>
-                      <td className="px-3 py-2">{j.description}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{fmt(Number(j.amount))}</td>
-                      <td className="px-3 py-2 text-center tabular-nums">{j.probability}%</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(Number(j.amount) * j.probability / 100)}</td>
-                      <td className="px-3 py-2 text-center text-muted-foreground text-xs">{j.expected_payment_date}</td>
-                      <td className="px-3 py-2 text-center">
-                        <Select value={j.status} onValueChange={(v) => handleStatusChange(j, v)}>
-                          <SelectTrigger className="h-7 w-28 text-xs border-none">{statusBadge(j.status)}</SelectTrigger>
-                          <SelectContent>
-                            {STATUS_OPTIONS.filter(o => o.value !== 'betalt').map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-3 py-2 text-center flex gap-1 justify-center">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(j)}>
-                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteJob.mutate(j.id)}>
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                  {revenueTxns.map(txn => {
-                    const effectiveMoms = resolveEffectiveMoms(txn.moms, txn.konto, activePL);
-                    const netAmount = effectiveMoms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+                  {jobs.map(j => {
+                    const amounts = getJobAmounts(Number(j.amount), j.konto, activePL);
+                    const weighted = amounts.netto * j.probability / 100;
                     return (
-                    <tr key={`txn-${txn.id}`} className="border-b border-border/30 bg-[hsl(var(--budget-positive))]/5">
-                      <td className="px-3 py-2">
-                        <Select
-                          value={txn.customer_id || ''}
-                          onValueChange={(v) => assignCustomerToTxn.mutate({ id: txn.id, customer_id: v || null })}
-                        >
-                          <SelectTrigger className="h-7 w-32 text-xs">
-                            <SelectValue placeholder="Vælg kunde...">{txn.customers?.name || 'Vælg kunde...'}</SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">{txn.tekst || '–'}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{fmt(netAmount)}</td>
-                      <td className="px-3 py-2 text-center tabular-nums">100%</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(netAmount)}</td>
-                      <td className="px-3 py-2 text-center text-muted-foreground text-xs">{txn.dato || '–'}</td>
-                      <td className="px-3 py-2 text-center">{statusBadge('betalt')}</td>
-                      <td className="px-3 py-2"></td>
-                    </tr>
+                      <tr key={j.id} className={`border-b border-border/30 ${j.status === 'tabt' ? 'opacity-50' : ''}`}>
+                        <td className="px-3 py-2 font-medium">{j.customers?.name || '–'}</td>
+                        <td className="px-3 py-2">{j.description}</td>
+                        <td className="px-3 py-2 text-center"><Badge variant="outline" className="text-[10px] px-1.5">Manuel</Badge></td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(amounts.netto)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(amounts.momsBeloeb)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(amounts.brutto)}</td>
+                        <td className="px-3 py-2 text-center tabular-nums">{j.probability}%</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(weighted)}</td>
+                        <td className="px-3 py-2 text-center text-muted-foreground text-xs">{j.expected_payment_date}</td>
+                        <td className="px-3 py-2 text-center">
+                          <Select value={j.status} onValueChange={(v) => handleStatusChange(j, v)}>
+                            <SelectTrigger className="h-7 w-28 text-xs border-none">{statusBadge(j.status)}</SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS.filter(o => o.value !== 'betalt').map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-3 py-2 text-center flex gap-1 justify-center">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(j)}>
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteJob.mutate(j.id)}>
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {revenueTxns.map(txn => {
+                    const amounts = getTxnAmounts(txn.belob, txn.moms, txn.konto, activePL);
+                    return (
+                      <tr key={`txn-${txn.id}`} className="border-b border-border/30 bg-[hsl(var(--budget-positive))]/5">
+                        <td className="px-3 py-2">
+                          <Select
+                            value={txn.customer_id || ''}
+                            onValueChange={(v) => assignCustomerToTxn.mutate({ id: txn.id, customer_id: v || null })}
+                          >
+                            <SelectTrigger className="h-7 w-32 text-xs">
+                              <SelectValue placeholder="Vælg kunde...">{txn.customers?.name || 'Vælg kunde...'}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{txn.tekst || '–'}</td>
+                        <td className="px-3 py-2 text-center"><Badge variant="outline" className="text-[10px] px-1.5 border-[hsl(var(--budget-positive))]/50 text-[hsl(var(--budget-positive))]">Import</Badge></td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(amounts.netto)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(amounts.momsBeloeb)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{fmt(amounts.brutto)}</td>
+                        <td className="px-3 py-2 text-center tabular-nums">100%</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(amounts.netto)}</td>
+                        <td className="px-3 py-2 text-center text-muted-foreground text-xs">{txn.dato || '–'}</td>
+                        <td className="px-3 py-2 text-center">{statusBadge('betalt')}</td>
+                        <td className="px-3 py-2"></td>
+                      </tr>
                     );
                   })}
                   {jobs.length === 0 && revenueTxns.length === 0 && (
-                    <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Ingen jobs endnu — tilføj dit første pipeline-job ovenfor</td></tr>
+                    <tr><td colSpan={11} className="px-3 py-6 text-center text-muted-foreground">Ingen jobs endnu — tilføj dit første pipeline-job ovenfor</td></tr>
                   )}
                 </tbody>
               </table>

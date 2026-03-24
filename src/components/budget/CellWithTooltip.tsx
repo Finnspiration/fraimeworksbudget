@@ -13,7 +13,6 @@ interface CellWithTooltipProps {
   txns?: Transaction[];
   pipelineJobs?: { konto: number; amount: number; probability: number; expected_payment_date: string; description: string; status: string }[];
   futureExpenses?: FutureExpense[];
-  // For total rows
   totalFormula?: string;
   pl?: Record<string | number, { r: number[]; b: number[] }>;
   plRows?: PLRow[];
@@ -21,13 +20,13 @@ interface CellWithTooltipProps {
   budgetBase?: number;
 }
 
-function netBelob(belob: number, moms: string | null): number {
+function netBelobResolved(belob: number, moms: string | null): number {
   return moms === 'I25' || moms === 'U25' ? belob / 1.25 : Number(belob);
 }
 
-function netBelobResolved(t: Transaction, plRows?: PLRow[]): number {
+function resolvedNetForTx(t: Transaction, plRows?: PLRow[]): number {
   const effectiveMoms = plRows ? resolveEffectiveMoms(t.moms, t.konto, plRows) : t.moms;
-  return netBelob(t.belob, effectiveMoms);
+  return netBelobResolved(t.belob, effectiveMoms);
 }
 
 export function CellWithTooltip({
@@ -39,13 +38,11 @@ export function CellWithTooltip({
     ? (value < 0 ? 'text-destructive' : 'text-primary')
     : (value < 0 ? 'text-destructive/70' : 'text-[hsl(142,35%,30%)]');
 
-  // Build tooltip content
   const tooltipContent = useMemo(() => {
     if (value === 0 || value == null || isNaN(value)) return null;
 
     // Account-level realized cell
     if (accountNr != null && realized && !totalFormula) {
-      const month = monthIndex + 1;
       const matching = txns.filter(t => {
         if (t.konto !== accountNr) return false;
         if (!t.dato) return false;
@@ -55,7 +52,7 @@ export function CellWithTooltip({
       if (matching.length === 0) return null;
       return (
         <div className="space-y-1">
-          <p className="text-xs font-semibold text-muted-foreground mb-1">Konto {accountNr} — {matching.length} posteringer</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">Konto {accountNr} — {matching.length} posteringer (ekskl. moms)</p>
           <div className="max-h-48 overflow-auto">
             <table className="w-full text-[11px]">
               <tbody>
@@ -63,7 +60,7 @@ export function CellWithTooltip({
                   <tr key={i} className="border-b border-border/20">
                     <td className="pr-2 py-0.5 text-muted-foreground whitespace-nowrap">{t.dato}</td>
                     <td className="pr-2 py-0.5 truncate max-w-[150px]">{t.tekst}</td>
-                    <td className="py-0.5 text-right tabular-nums whitespace-nowrap">{fmtDec(-netBelobResolved(t, plRows))}</td>
+                    <td className="py-0.5 text-right tabular-nums whitespace-nowrap">{fmtDec(-resolvedNetForTx(t, plRows))}</td>
                   </tr>
                 ))}
               </tbody>
