@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
-import { fmt, fmtDec } from '@/lib/budget-utils';
+import { fmt, fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { Transaction, PLRow } from '@/data/budget-constants';
 import type { FutureExpense } from '@/hooks/use-future-expenses';
 
