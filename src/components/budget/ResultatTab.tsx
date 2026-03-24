@@ -173,6 +173,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
                   key={`b-${i}`}
                   value={v?.b[i] || 0}
                   dimmed={i >= nReal}
+                  isExpense={isExpenseAccount(row.nr!)}
                   onSave={(val) => updateBudget(row.nr!, i, val)}
                 />
               ),
