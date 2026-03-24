@@ -1,71 +1,52 @@
 
-Fixen skal laves ved kilden, ikke kun i pipeline-visningen.
 
-## Hvad der faktisk er galt
-Jeg har gennemgået beregningsflowet, og problemet er nu tydeligt:
+# Fix: Budget-beregning er forkert i fast budget-tilstand
 
-- `Resultatopgørelse` bruger `computeRealized()` i `src/lib/budget-utils.ts`
-- Den funktion fjerner kun moms, hvis `transaction.moms` er `U25` eller `I25`
-- De importerede indbetalinger i databasen har `moms = NULL` på fx konto `1010`
-- Derfor bliver de stadig regnet med bruttobeløb i resultatopgørelsen
-- Den tidligere rettelse i `PipelineTab.tsx` ændrede kun visningen i én tabel og løste ikke selve PL-beregningen
+## Problem
+I `Index.tsx` (linje 28-53) bliver pipeline-jobs og fremtidige udgifter **altid** lagt oven i budgettet via `mergedBudget`, uanset om brugeren er i fast eller dynamisk tilstand. Det betyder at fx konto 1010 med fast budget på 50.000/md får pipeline-omsætning lagt oveni, så budget-kolonnen viser 50.000 + pipeline-vægtede beløb = oppustede tal. Det akkumulerer til et resultat på 1.130.929 kr., som er helt urealistisk.
 
-Jeg kan også se, at kontoplanen i databasen pt. heller ikke har udfyldt `moms`-metadata på de relevante konti, så vi kan ikke stole på kun `tx.moms`.
+## Årsag
+```typescript
+// Index.tsx linje 28-53 — kører ALTID, uanset budgetMode
+const mergedBudget = useMemo(() => {
+  const base = { ...state.activeBudget };
+  // pipeline tilføjes ALTID
+  pipelineJobs.forEach(job => { ... base[konto][month] += weighted; });
+  // future expenses tilføjes ALTID
+  activeExpenses.forEach(exp => { ... base[exp.konto][month] += exp.belob; });
+  return base;
+}, [...]);
+```
 
-## Plan
-### 1. Lav én fælles moms-resolver
-Opret en delt helper, som afgør effektiv moms-kode for en postering ud fra denne prioritet:
+## Løsning
+Pipeline og fremtidige udgifter skal **kun** merges ind i budgettet i **dynamisk** tilstand. I fast budget-tilstand skal budgettet udelukkende bestå af de manuelt indtastede værdier.
 
-1. `tx.moms`, hvis den findes
-2. kontoens `moms` fra aktiv kontoplan
-3. fallback-inferens fra kontonavn/retning, fx:
-   - `m/moms` + negativ indbetaling => `U25`
-   - `m/moms` + positiv udgift => `I25`
-   - `u/moms` => ingen moms
+### Fil: `src/pages/Index.tsx`
 
-Det gør løsningen robust også for eksisterende data med tom `moms`.
+Wrap pipeline/future-expense-tilføjelsen i en check på `state.budgetMode === 'dynamic'`:
 
-### 2. Ret selve resultatopgørelsens beregning
-Opdatér `computeRealized()` i `src/lib/budget-utils.ts`, så den bruger den nye helper i stedet for kun `tx.moms`.
+```typescript
+const mergedBudget = useMemo(() => {
+  const base = { ...state.activeBudget };
+  for (const k of Object.keys(base)) {
+    base[Number(k)] = [...base[Number(k)]];
+  }
+  
+  // Kun i dynamisk tilstand: tilføj pipeline og fremtidige udgifter
+  if (state.budgetMode === 'dynamic') {
+    pipelineJobs.forEach(job => { ... });
+    activeExpenses.forEach(exp => { ... });
+  }
+  
+  return base;
+}, [state.activeBudget, state.budgetMode, pipelineJobs, activeExpenses]);
+```
 
-Opdatér derefter `src/hooks/use-db-state.ts`, så den sender aktiv kontoplan med ind i realiseringsberegningen.
+### Ingen andre ændringer nødvendige
+- `computePL`, `computeRealized` og visningskomponenter er korrekte
+- Problemet er udelukkende i datamerge-steget i `Index.tsx`
 
-Det er dette trin, der reelt fikser tallene i resultatopgørelsen.
+| Fil | Ændring |
+|---|---|
+| `src/pages/Index.tsx` | Betinget merge af pipeline/future expenses (kun dynamisk tilstand) |
 
-### 3. Brug samme logik alle steder hvor beløb vises
-For at undgå flere inkonsistenser skal samme helper også bruges i:
-
-- `src/components/budget/PipelineTab.tsx`
-- `src/components/budget/OverblikTab.tsx`
-- `src/components/budget/CellWithTooltip.tsx`
-- `src/components/budget/SkatTab.tsx`
-
-Så samme transaktion altid vises og beregnes ens på tværs af appen.
-
-### 4. Ret importen, så nye posteringer gemmes korrekt fremover
-Opdatér `src/components/budget/ImportTab.tsx`, så import sætter moms automatisk, når filen ikke indeholder den, baseret på konto/kontoplan.
-
-Så vi både:
-- retter eksisterende data i runtime
-- og forhindrer at nye importer igen bliver forkerte
-
-### 5. Verificering
-Jeg vil validere mod de konkrete indbetalinger, der allerede ligger i data på konto `1010`, så vi sikrer at:
-
-- resultatopgørelsen viser nettobeløb
-- pipeline viser samme nettobeløb
-- tooltips matcher
-- momsberegningen bliver konsistent
-
-## Tekniske detaljer
-Berørte filer:
-
-- `src/lib/budget-utils.ts`
-- `src/hooks/use-db-state.ts`
-- `src/components/budget/PipelineTab.tsx`
-- `src/components/budget/OverblikTab.tsx`
-- `src/components/budget/CellWithTooltip.tsx`
-- `src/components/budget/SkatTab.tsx`
-- `src/components/budget/ImportTab.tsx`
-
-Ingen databaseændring er nødvendig for at få den nuværende visning korrekt. Løsningen bliver lavet i beregningslaget og importlaget, så eksisterende poster med tom `moms` også bliver håndteret rigtigt.
