@@ -105,7 +105,12 @@ export default function Chat() {
 
   const createChannel = async () => {
     if (!newChannelName.trim() || !user) return;
-    const { data } = await supabase.from('chat_channels').insert({ name: newChannelName.trim() }).select().single();
+    const { data, error } = await supabase.from('chat_channels').insert({ name: newChannelName.trim() }).select().single();
+    if (error) {
+      console.error('createChannel error:', error);
+      toast.error('Kunne ikke oprette kanal: ' + error.message);
+      return;
+    }
     if (data) {
       await supabase.from('chat_channel_members').insert({ channel_id: data.id, user_id: user.id });
       // Add all approved users
