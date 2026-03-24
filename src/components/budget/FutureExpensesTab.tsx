@@ -340,8 +340,8 @@ export default function FutureExpensesTab({ activePL }: Props) {
                         </td>
                         <td className="py-1.5 pr-2" style={!kontoValid ? { color: 'hsl(var(--destructive))' } : {}}>
                           {isEditing ? <KontoPicker value={editRow.konto ?? exp.konto} onChange={v => {
-                              const momsFromAcct = acctMomsMap.get(v);
-                              setEditRow(p => ({ ...p, konto: v, moms: momsFromAcct || null }));
+                              const resolved = resolveEffectiveMoms(null, v, activePL);
+                              setEditRow(p => ({ ...p, konto: v, moms: resolved }));
                             }} acctList={acctList} acctMap={acctMap} className="w-44" />
                             : <span title={acctMap.get(exp.konto) || 'Ukendt konto'}>{exp.konto} {acctMap.get(exp.konto) || ''}</span>}
                         </td>
