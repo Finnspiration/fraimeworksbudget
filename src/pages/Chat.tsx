@@ -154,22 +154,26 @@ export default function Chat() {
         }
       }
     }
-    const { data, error } = await supabase.from('chat_channels').insert({ is_direct: true }).select().single();
+    const channelId = crypto.randomUUID();
+    const { error } = await supabase.from('chat_channels').insert({ id: channelId, is_direct: true });
     if (error) {
       console.error('createDm error:', error);
       toast.error('Kunne ikke oprette samtale: ' + error.message);
       return;
     }
-    if (data) {
-      await supabase.from('chat_channel_members').insert([
-        { channel_id: data.id, user_id: user.id },
-        { channel_id: data.id, user_id: dmUserId },
-      ]);
-      setShowNewDm(false);
-      setDmUserId('');
-      loadChannels();
-      setActiveChannel(data.id);
+    const { error: memErr } = await supabase.from('chat_channel_members').insert([
+      { channel_id: channelId, user_id: user.id },
+      { channel_id: channelId, user_id: dmUserId },
+    ]);
+    if (memErr) {
+      console.error('dm membership error:', memErr);
+      toast.error('Samtale oprettet, men kunne ikke tilføje medlemmer');
+      return;
     }
+    setShowNewDm(false);
+    setDmUserId('');
+    loadChannels();
+    setActiveChannel(channelId);
   };
 
   const getChannelLabel = (ch: Channel) => {
