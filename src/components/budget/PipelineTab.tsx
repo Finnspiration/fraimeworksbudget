@@ -212,7 +212,9 @@ export default function PipelineTab({ activePL }: Props) {
                       </td>
                     </tr>
                   ))}
-                  {revenueTxns.map(txn => (
+                  {revenueTxns.map(txn => {
+                    const netAmount = txn.moms === 'U25' ? Math.abs(txn.belob) / 1.25 : Math.abs(txn.belob);
+                    return (
                     <tr key={`txn-${txn.id}`} className="border-b border-border/30 bg-[hsl(var(--budget-positive))]/5">
                       <td className="px-3 py-2">
                         <Select
@@ -228,14 +230,15 @@ export default function PipelineTab({ activePL }: Props) {
                         </Select>
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">{txn.tekst || '–'}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{fmt(Math.abs(txn.belob))}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{fmt(netAmount)}</td>
                       <td className="px-3 py-2 text-center tabular-nums">100%</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(Math.abs(txn.belob))}</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(netAmount)}</td>
                       <td className="px-3 py-2 text-center text-muted-foreground text-xs">{txn.dato || '–'}</td>
                       <td className="px-3 py-2 text-center">{statusBadge('betalt')}</td>
                       <td className="px-3 py-2"></td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {jobs.length === 0 && revenueTxns.length === 0 && (
                     <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Ingen jobs endnu — tilføj dit første pipeline-job ovenfor</td></tr>
                   )}
