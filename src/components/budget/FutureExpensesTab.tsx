@@ -11,7 +11,8 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandG
 import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil, CheckSquare } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format, addMonths, addDays, parse, isBefore, isAfter, startOfDay } from 'date-fns';
 import { da } from 'date-fns/locale';
