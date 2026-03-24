@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
@@ -146,10 +147,13 @@ export default function FutureExpensesTab({ activePL }: Props) {
     }
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Slet denne fremtidige udgift?')) return;
     try {
       await deleteExpense(id);
+      setDeleteConfirmId(null);
       toast.success('Slettet');
     } catch {
       toast.error('Kunne ikke slette');
@@ -208,13 +212,13 @@ export default function FutureExpensesTab({ activePL }: Props) {
     if (selected.size === filtered.length) setSelected(new Set());
     else setSelected(new Set(filtered.map(e => e.id)));
   };
-  const handleBulkDelete = async () => {
-    if (selected.size === 0) return;
-    if (!confirm(`Slet ${selected.size} udgift${selected.size > 1 ? 'er' : ''}?`)) return;
+  const executeBulkDelete = async () => {
+    const count = selected.size;
     try {
       await Promise.all([...selected].map(id => deleteExpense(id)));
       setSelected(new Set());
-      toast.success(`${selected.size} udgift${selected.size > 1 ? 'er' : ''} slettet`);
+      setShowBulkDeleteConfirm(false);
+      toast.success(`${count} udgift${count > 1 ? 'er' : ''} slettet`);
     } catch {
       toast.error('Kunne ikke slette alle');
     }
@@ -285,7 +289,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
               {filterKonto && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setFilterKonto(null)}>✕</Button>}
             </div>
             {selected.size > 0 && (
-              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkDelete}>
+              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowBulkDeleteConfirm(true)}>
                 <Trash2 className="h-3 w-3" />Slet {selected.size} valgte
               </Button>
             )}
@@ -423,7 +427,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
                               <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCopyDialog(exp); setCopyMonths(1); }} title="Kopiér frem">
                                 <Copy className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(exp.id)}>
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => setDeleteConfirmId(exp.id)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -470,6 +474,34 @@ export default function FutureExpensesTab({ activePL }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Single delete confirm */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={open => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slet udgift?</AlertDialogTitle>
+            <AlertDialogDescription>Denne handling kan ikke fortrydes.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}>Slet</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete confirm */}
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Slet {selected.size} udgift{selected.size > 1 ? 'er' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>Denne handling kan ikke fortrydes.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuller</AlertDialogCancel>
+            <AlertDialogAction onClick={executeBulkDelete}>Slet</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
