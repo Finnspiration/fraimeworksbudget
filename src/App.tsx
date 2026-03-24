@@ -12,6 +12,7 @@ import AwaitingApproval from "./pages/AwaitingApproval.tsx";
 import Chat from "./pages/Chat.tsx";
 import Todo from "./pages/Todo.tsx";
 import Admin from "./pages/Admin.tsx";
+import AuthCallback from "./pages/AuthCallback.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
