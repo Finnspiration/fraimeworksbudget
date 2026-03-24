@@ -142,9 +142,11 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
         if (!showZero && visibleSections && !visibleSections.has(curSec)) return null;
         return (
           <tr key={`sec-${idx}`} className="cursor-pointer hover:bg-secondary/50" onClick={() => toggleSec(row.lbl!)}>
-            <td colSpan={28} className="px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
+            <td className="sticky left-0 z-20 bg-card px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground" />
+            <td className="sticky left-[48px] z-20 bg-card px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground border-r border-border/30">
               {collapsedSecs[row.lbl!] ? '▶' : '▼'} {row.lbl}
             </td>
+            <td colSpan={29} />
           </tr>
         );
       }
