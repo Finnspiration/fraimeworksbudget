@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Check, X, Shield, Pencil, Plus, Save } from 'lucide-react';
+import { Check, X, Shield, Pencil, Plus, Save, Link2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserRow {
   id: string;
   name: string;
+  email: string | null;
   approved: boolean;
   created_at: string;
   roles: string[];
@@ -26,6 +27,9 @@ export default function Admin() {
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [magicLink, setMagicLink] = useState('');
+  const [magicLinkOpen, setMagicLinkOpen] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
 
   const load = async () => {
     const { data: profiles } = await supabase.from('profiles').select('*').order('created_at');
@@ -33,6 +37,7 @@ export default function Admin() {
     if (!profiles) return;
     setUsers(profiles.map(p => ({
       ...p,
+      email: (p as any).email ?? null,
       roles: (roles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
     })));
   };
@@ -103,6 +108,41 @@ export default function Admin() {
     }
   };
 
+  const generateMagicLink = async (user: UserRow) => {
+    if (!user.email) {
+      toast.error('Bruger har ingen email');
+      return;
+    }
+    setGeneratingLink(user.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-generate-magic-link`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ email: user.email }),
+        }
+      );
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      setMagicLink(result.link);
+      setMagicLinkOpen(true);
+    } catch (e: any) {
+      toast.error(e.message || 'Kunne ikke generere magic link');
+    } finally {
+      setGeneratingLink(null);
+    }
+  };
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(magicLink);
+    toast.success('Link kopieret til udklipsholder');
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -139,6 +179,27 @@ export default function Admin() {
         </Dialog>
       </div>
 
+      {/* Magic link dialog */}
+      <Dialog open={magicLinkOpen} onOpenChange={setMagicLinkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Magic link</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Kopiér linket og send det til brugeren. Linket giver adgang uden adgangskode.
+            </p>
+            <div className="flex gap-2">
+              <Input value={magicLink} readOnly className="text-xs" />
+              <Button size="sm" onClick={copyLink}>
+                <Copy className="h-4 w-4 mr-1" />
+                Kopiér
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="grid gap-3">
         {users.map(u => (
           <Card key={u.id}>
@@ -163,6 +224,7 @@ export default function Admin() {
                 ) : (
                   <div className="flex items-center gap-2">
                     <p className="font-medium truncate">{u.name}</p>
+                    {u.email && <span className="text-xs text-muted-foreground truncate">{u.email}</span>}
                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => startEdit(u)}>
                       <Pencil className="h-3 w-3 text-muted-foreground" />
                     </Button>
@@ -177,6 +239,16 @@ export default function Admin() {
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => generateMagicLink(u)}
+                  disabled={generatingLink === u.id}
+                  title="Generér magic link"
+                >
+                  <Link2 className="h-3.5 w-3.5 mr-1" />
+                  {generatingLink === u.id ? 'Genererer…' : 'Magic link'}
+                </Button>
                 <Button size="sm" variant={u.approved ? 'outline' : 'default'} onClick={() => approve(u.id, !u.approved)}>
                   {u.approved ? <X className="h-3.5 w-3.5 mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
                   {u.approved ? 'Fjern' : 'Godkend'}
