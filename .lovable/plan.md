@@ -1,40 +1,57 @@
 
 
-# Persistente magic links med visning, kopiering og sletning
+# Fix: Magic links logger forkert bruger ind + virker ikke i Safari
 
-## Problem
-Magic links genereres og vises i en dialog, men gemmes ikke. Når dialogen lukkes, er linket væk. Der er ingen indikation på brugerlisten om et link eksisterer.
+## Problemer
+
+### Problem 1: Charlotte's magic link logger Finn ind
+Når admin (Finn) åbner Charlotte's magic link i **samme browser**, sker der et session-skift. Men appen håndterer ikke dette korrekt — `onAuthStateChange` modtager `SIGNED_IN`-eventet for Charlotte, men den eksisterende Finn-session i localStorage kan forstyrre. Derudover: hvis admin tester linket i sin egen browser, er Finn allerede logget ind.
+
+**Årsag**: Magic links virker faktisk korrekt — de skifter session. Men appen genindlæser ikke profil-data korrekt ved session-skift, og admin tester sandsynligvis i samme browser.
+
+### Problem 2: Safari sender til login-siden
+Magic link redirecter til `https://fraimeworksbudget.lovable.app/` → `ProtectedRoute` tjekker `session` → session er endnu ikke etableret (race condition) → redirect til `/login`. Safari er ekstra sårbar fordi ITP (Intelligent Tracking Prevention) kan forsinke token-exchange fra URL-hash.
+
+**Årsag**: `redirect_to` peger på `/` som er beskyttet af `ProtectedRoute`. Når brugeren lander der, har Supabase-klienten endnu ikke nået at parse URL-hash tokens og etablere sessionen. Så `loading` er `false` men `session` er `null` → redirect til `/login`.
 
 ## Løsning
 
-### 1. Database: Tilføj `magic_link` kolonne på `profiles`
-**Migration:** Tilføj `magic_link text` (nullable) på `profiles`-tabellen. Når et link genereres, gemmes det. Når det fjernes, sættes det til `NULL`.
+### 1. Tilføj en `/auth/callback` route der håndterer token-exchange
+**Fil:** `src/pages/AuthCallback.tsx` (ny)
 
-### 2. Edge function: Gem linket i databasen
+- Ny side der vises ved `/auth/callback`
+- Viser en loading-spinner
+- Lader Supabase-klienten parse URL-hash tokens og etablere session
+- Venter på `onAuthStateChange` med `SIGNED_IN` event
+- Redirecter derefter til `/` (eller `/awaiting-approval` hvis ikke godkendt)
+
+### 2. Opdatér redirect_to i magic link generering
 **Fil:** `supabase/functions/admin-generate-magic-link/index.ts`
-- Efter generering, gem linket på `profiles.magic_link` via adminClient
-- Returnér linket som nu
 
-### 3. Admin UI: Vis, kopiér og fjern magic links
-**Fil:** `src/pages/Admin.tsx`
+- Ændr `generateLink` til at inkludere `options.redirectTo` der peger på `https://fraimeworksbudget.lovable.app/auth/callback`
+- Dette sikrer at magic links lander på en ubeskyttet side der kan håndtere token-exchange
 
-- Udvid `UserRow` med `magic_link: string | null`
-- Læs `magic_link` fra profiles i `load()`
-- **På brugerlisten:** Vis en `Link2`-ikon/badge ved brugere der har et aktivt magic link
-- **Generér-knap:** Når der klikkes, genereres link og gemmes — UI opdateres
-- **Vis link:** Når bruger har et link, vis det i en sektion (readonly input + kopiér-knap)
-- **Fjern link:** Knap til at slette magic_link fra profilen (`UPDATE profiles SET magic_link = NULL`)
-- Kopiér-funktionen bruger den eksisterende fallback-metode
+### 3. Registrér den nye route
+**Fil:** `src/App.tsx`
 
-### Resultat
-- Admin kan se hvem der har et magic link (badge/ikon på listen)
-- Admin kan klikke for at se og kopiere linket
-- Admin kan fjerne linket
-- Linket persists mellem sideindlæsninger
+- Tilføj `/auth/callback` route med `<AuthCallback />` (ubeskyttet, ingen `ProtectedRoute`)
+
+### 4. Håndtér session-skift korrekt i AuthContext
+**Fil:** `src/contexts/AuthContext.tsx`
+
+- Sørg for at `onAuthStateChange` ved `SIGNED_IN` event altid genindlæser profil for den nye bruger (også ved skift fra Finn → Charlotte)
+- Reset `profile` og `isAdmin` inden ny profil hentes, så der ikke vises stale data
+
+## Resultat
+- Magic links åbner på en ubeskyttet callback-side → ingen race condition
+- Token-exchange sker før ProtectedRoute tjekker session
+- Safari får tid til at parse URL-hash og etablere session
+- Session-skift viser korrekt bruger (ikke den forrige)
 
 | Fil | Ændring |
 |---|---|
-| `supabase/migrations/...` | Tilføj `magic_link text` på profiles |
-| `supabase/functions/admin-generate-magic-link/index.ts` | Gem link i DB efter generering |
-| `src/pages/Admin.tsx` | Vis/kopiér/fjern magic links, badge-indikator |
+| `src/pages/AuthCallback.tsx` | Ny: håndterer magic link token-exchange |
+| `src/App.tsx` | Tilføj `/auth/callback` route |
+| `supabase/functions/admin-generate-magic-link/index.ts` | Sæt `redirectTo` til `/auth/callback` |
+| `src/contexts/AuthContext.tsx` | Reset stale data ved session-skift |
 
