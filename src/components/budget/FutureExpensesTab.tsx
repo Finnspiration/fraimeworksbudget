@@ -289,7 +289,7 @@ export default function FutureExpensesTab({ activePL }: Props) {
               {filterKonto && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setFilterKonto(null)}>✕</Button>}
             </div>
             {selected.size > 0 && (
-              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={handleBulkDelete}>
+              <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowBulkDeleteConfirm(true)}>
                 <Trash2 className="h-3 w-3" />Slet {selected.size} valgte
               </Button>
             )}
