@@ -30,6 +30,8 @@ export default function Index() {
     for (const k of Object.keys(base)) {
       base[Number(k)] = [...base[Number(k)]];
     }
+    // Only merge pipeline + future expenses in dynamic mode
+    if (state.budgetMode !== 'dynamic') return base;
     // Add pipeline forecast
     pipelineJobs.forEach(job => {
       if (job.status === 'tabt') return;
