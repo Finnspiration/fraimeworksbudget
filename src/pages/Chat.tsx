@@ -149,7 +149,12 @@ export default function Chat() {
         }
       }
     }
-    const { data } = await supabase.from('chat_channels').insert({ is_direct: true }).select().single();
+    const { data, error } = await supabase.from('chat_channels').insert({ is_direct: true }).select().single();
+    if (error) {
+      console.error('createDm error:', error);
+      toast.error('Kunne ikke oprette samtale: ' + error.message);
+      return;
+    }
     if (data) {
       await supabase.from('chat_channel_members').insert([
         { channel_id: data.id, user_id: user.id },
