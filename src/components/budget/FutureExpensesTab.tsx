@@ -417,7 +417,17 @@ export default function FutureExpensesTab({ activePL }: Props) {
             </p>
             <div>
               <label className="text-xs font-medium">Antal måneder frem</label>
-              <Input type="number" min={1} max={36} className="h-8 text-xs w-24 mt-1" value={copyMonths} onChange={e => setCopyMonths(Math.max(1, Number(e.target.value)))} />
+              <div className="flex items-center gap-2 mt-1">
+                <Input type="number" min={1} max={36} className="h-8 text-xs w-24" value={copyMonths} onChange={e => setCopyMonths(Math.max(1, Number(e.target.value)))} />
+                {copyDialog?.dato && (() => {
+                  const remaining = 12 - parse(copyDialog.dato, 'yyyy-MM-dd', new Date()).getMonth() - 1;
+                  return remaining > 0 ? (
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCopyMonths(remaining)}>
+                      Resten af året ({remaining} mdr)
+                    </Button>
+                  ) : null;
+                })()}
+              </div>
             </div>
           </div>
           <DialogFooter>
