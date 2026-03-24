@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Check, X, Shield, Pencil, Plus, Save, Link2, Copy } from 'lucide-react';
+import { Check, X, Shield, Pencil, Plus, Save, Link2, Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserRow {
@@ -16,7 +16,29 @@ interface UserRow {
   approved: boolean;
   created_at: string;
   roles: string[];
+  magic_link: string | null;
 }
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success('Link kopieret til udklipsholder');
+  } catch {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast.success('Link kopieret til udklipsholder');
+    } catch {
+      toast.error('Kunne ikke kopiere linket');
+    }
+  }
+};
 
 export default function Admin() {
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -27,8 +49,6 @@ export default function Admin() {
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
-  const [magicLink, setMagicLink] = useState('');
-  const [magicLinkOpen, setMagicLinkOpen] = useState(false);
   const [generatingLink, setGeneratingLink] = useState<string | null>(null);
 
   const load = async () => {
@@ -38,6 +58,7 @@ export default function Admin() {
     setUsers(profiles.map(p => ({
       ...p,
       email: (p as any).email ?? null,
+      magic_link: (p as any).magic_link ?? null,
       roles: (roles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
     })));
   };
@@ -129,8 +150,8 @@ export default function Admin() {
       );
       const result = await res.json();
       if (result.error) throw new Error(result.error);
-      setMagicLink(result.link);
-      setMagicLinkOpen(true);
+      toast.success('Magic link genereret');
+      load();
     } catch (e: any) {
       toast.error(e.message || 'Kunne ikke generere magic link');
     } finally {
@@ -138,25 +159,10 @@ export default function Admin() {
     }
   };
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(magicLink);
-      toast.success('Link kopieret til udklipsholder');
-    } catch {
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = magicLink;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        toast.success('Link kopieret til udklipsholder');
-      } catch {
-        toast.error('Kunne ikke kopiere linket');
-      }
-    }
+  const removeMagicLink = async (user: UserRow) => {
+    await supabase.from('profiles').update({ magic_link: null } as any).eq('id', user.id);
+    toast.success('Magic link fjernet');
+    load();
   };
 
   return (
@@ -195,85 +201,87 @@ export default function Admin() {
         </Dialog>
       </div>
 
-      {/* Magic link dialog */}
-      <Dialog open={magicLinkOpen} onOpenChange={setMagicLinkOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Magic link</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-2">
-            <p className="text-sm text-muted-foreground">
-              Kopiér linket og send det til brugeren. Linket giver adgang uden adgangskode.
-            </p>
-            <div className="flex gap-2">
-              <Input value={magicLink} readOnly className="text-xs" />
-              <Button size="sm" onClick={copyLink}>
-                <Copy className="h-4 w-4 mr-1" />
-                Kopiér
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <div className="grid gap-3">
         {users.map(u => (
           <Card key={u.id}>
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div className="flex-1 min-w-0 mr-3">
-                {editingId === u.id ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={editName}
-                      onChange={e => setEditName(e.target.value)}
-                      className="h-8 text-sm"
-                      onKeyDown={e => e.key === 'Enter' && saveEdit(u.id)}
-                      autoFocus
-                    />
-                    <Button size="sm" variant="ghost" onClick={() => saveEdit(u.id)}>
-                      <Save className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
+            <CardContent className="py-3 px-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0 mr-3">
+                  {editingId === u.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        className="h-8 text-sm"
+                        onKeyDown={e => e.key === 'Enter' && saveEdit(u.id)}
+                        autoFocus
+                      />
+                      <Button size="sm" variant="ghost" onClick={() => saveEdit(u.id)}>
+                        <Save className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{u.name}</p>
+                      {u.email && <span className="text-xs text-muted-foreground truncate">{u.email}</span>}
+                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => startEdit(u)}>
+                        <Pencil className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex gap-1.5 mt-1">
+                    {u.approved
+                      ? <Badge variant="default" className="text-xs">Godkendt</Badge>
+                      : <Badge variant="secondary" className="text-xs">Afventer</Badge>
+                    }
+                    {u.roles.includes('admin') && <Badge variant="destructive" className="text-xs">Admin</Badge>}
+                    {u.magic_link && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Link2 className="h-3 w-3" />
+                        Magic link
+                      </Badge>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">{u.name}</p>
-                    {u.email && <span className="text-xs text-muted-foreground truncate">{u.email}</span>}
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => startEdit(u)}>
-                      <Pencil className="h-3 w-3 text-muted-foreground" />
-                    </Button>
-                  </div>
-                )}
-                <div className="flex gap-1.5 mt-1">
-                  {u.approved
-                    ? <Badge variant="default" className="text-xs">Godkendt</Badge>
-                    : <Badge variant="secondary" className="text-xs">Afventer</Badge>
-                  }
-                  {u.roles.includes('admin') && <Badge variant="destructive" className="text-xs">Admin</Badge>}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => generateMagicLink(u)}
+                    disabled={generatingLink === u.id}
+                    title="Generér magic link"
+                  >
+                    <Link2 className="h-3.5 w-3.5 mr-1" />
+                    {generatingLink === u.id ? 'Genererer…' : 'Magic link'}
+                  </Button>
+                  <Button size="sm" variant={u.approved ? 'outline' : 'default'} onClick={() => approve(u.id, !u.approved)}>
+                    {u.approved ? <X className="h-3.5 w-3.5 mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
+                    {u.approved ? 'Fjern' : 'Godkend'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => toggleAdmin(u)}>
+                    <Shield className="h-3.5 w-3.5 mr-1" />
+                    {u.roles.includes('admin') ? 'Fjern admin' : 'Gør admin'}
+                  </Button>
                 </div>
               </div>
-              <div className="flex gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => generateMagicLink(u)}
-                  disabled={generatingLink === u.id}
-                  title="Generér magic link"
-                >
-                  <Link2 className="h-3.5 w-3.5 mr-1" />
-                  {generatingLink === u.id ? 'Genererer…' : 'Magic link'}
-                </Button>
-                <Button size="sm" variant={u.approved ? 'outline' : 'default'} onClick={() => approve(u.id, !u.approved)}>
-                  {u.approved ? <X className="h-3.5 w-3.5 mr-1" /> : <Check className="h-3.5 w-3.5 mr-1" />}
-                  {u.approved ? 'Fjern' : 'Godkend'}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => toggleAdmin(u)}>
-                  <Shield className="h-3.5 w-3.5 mr-1" />
-                  {u.roles.includes('admin') ? 'Fjern admin' : 'Gør admin'}
-                </Button>
-              </div>
+
+              {/* Magic link section */}
+              {u.magic_link && (
+                <div className="flex items-center gap-2 pt-1 border-t border-border">
+                  <Input value={u.magic_link} readOnly className="text-xs h-8 flex-1" />
+                  <Button size="sm" variant="outline" className="h-8" onClick={() => copyToClipboard(u.magic_link!)}>
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    Kopiér
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8" onClick={() => removeMagicLink(u)}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                    Fjern
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
