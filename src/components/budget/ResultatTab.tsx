@@ -18,6 +18,7 @@ interface Props {
   txns?: Transaction[];
   pipelineJobs?: { konto: number; amount: number; probability: number; expected_payment_date: string; description: string; status: string }[];
   futureExpenses?: FutureExpense[];
+  futureExpensesBudget?: Record<number, number[]>;
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
