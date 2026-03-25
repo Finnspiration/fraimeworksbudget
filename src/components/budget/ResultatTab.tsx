@@ -81,7 +81,7 @@ function EditableBudgetCell({ value, dimmed, onSave, isExpense }: { value: numbe
   );
 }
 
-export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL, txns = [], pipelineJobs = [], futureExpenses = [] }: Props) {
+export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL, txns = [], pipelineJobs = [], futureExpenses = [], futureExpensesBudget = {} }: Props) {
   const isDynamic = budgetMode === 'dynamic';
 
   // Determine which accounts are revenue (positive convention) vs expense (negative convention)
