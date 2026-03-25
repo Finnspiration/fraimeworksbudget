@@ -14,6 +14,9 @@ interface Channel {
   id: string;
   name: string | null;
   is_direct: boolean;
+  is_thread?: boolean;
+  closed?: boolean;
+  context_label?: string | null;
 }
 
 interface Message {
@@ -196,6 +199,11 @@ export default function Chat() {
     });
   }, [channels, profiles, user]);
 
+  const threadChannels = channels.filter(c => (c as any).is_thread);
+  const openThreads = threadChannels.filter(c => !(c as any).closed);
+  const closedThreads = threadChannels.filter(c => (c as any).closed);
+  const [showClosedThreads, setShowClosedThreads] = useState(false);
+
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-4">
       {/* Sidebar */}
@@ -216,7 +224,7 @@ export default function Chat() {
           </Dialog>
         </div>
         <div className="space-y-0.5">
-          {channels.filter(c => !c.is_direct).map(ch => (
+          {channels.filter(c => !c.is_direct && !c.is_thread).map(ch => (
             <button
               key={ch.id}
               onClick={() => setActiveChannel(ch.id)}
@@ -260,6 +268,47 @@ export default function Chat() {
             </button>
           ))}
         </div>
+
+        {/* Threads */}
+        {(openThreads.length > 0 || closedThreads.length > 0) && (
+          <>
+            <div className="mt-4 mb-2">
+              <h3 className="text-sm font-semibold">Tråde</h3>
+            </div>
+            <div className="space-y-0.5">
+              {openThreads.map(ch => (
+                <button
+                  key={ch.id}
+                  onClick={() => setActiveChannel(ch.id)}
+                  className={`w-full text-left text-sm px-2 py-1.5 rounded flex items-center gap-1.5 ${activeChannel === ch.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'}`}
+                >
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{(ch as any).context_label || ch.name || 'Tråd'}</span>
+                </button>
+              ))}
+              {closedThreads.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowClosedThreads(p => !p)}
+                    className="w-full text-left text-xs px-2 py-1 text-muted-foreground hover:text-foreground"
+                  >
+                    {showClosedThreads ? '▼' : '▶'} {closedThreads.length} lukket{closedThreads.length !== 1 ? 'e' : ''} tråd{closedThreads.length !== 1 ? 'e' : ''}
+                  </button>
+                  {showClosedThreads && closedThreads.map(ch => (
+                    <button
+                      key={ch.id}
+                      onClick={() => setActiveChannel(ch.id)}
+                      className={`w-full text-left text-sm px-2 py-1.5 rounded flex items-center gap-1.5 opacity-50 ${activeChannel === ch.id ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'}`}
+                    >
+                      <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{(ch as any).context_label || ch.name || 'Tråd'}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </>
+        )}
       </Card>
 
       {/* Messages */}

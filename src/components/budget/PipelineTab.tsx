@@ -12,6 +12,7 @@ import { fmt, getTxnAmounts, getJobAmounts } from '@/lib/budget-utils';
 import { useCustomers, usePipelineJobs, useCreateCustomer, useDeleteCustomer, useCreateJob, useUpdateJob, useDeleteJob, useRevenueTransactions, useAssignCustomerToTxn, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { PLRow } from '@/data/budget-constants';
 import { toast } from 'sonner';
+import CommentButton from '@/components/CommentButton';
 
 const STATUS_OPTIONS = [
   { value: 'lead', label: 'Lead', color: 'bg-muted text-muted-foreground' },
@@ -198,6 +199,7 @@ export default function PipelineTab({ activePL }: Props) {
                           </Select>
                         </td>
                         <td className="px-3 py-2 text-center flex gap-1 justify-center">
+                          <CommentButton contextType="pipeline" contextRef={j.id} contextLabel={`Pipeline: ${j.description}`} />
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(j)}>
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>

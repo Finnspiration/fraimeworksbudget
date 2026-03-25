@@ -13,6 +13,7 @@ import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense, type MatchCandidate } from '@/hooks/use-future-expenses';
 import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil, CheckSquare, Link2 } from 'lucide-react';
+import CommentButton from '@/components/CommentButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format, addMonths, addDays, parse, isBefore, isAfter, startOfDay } from 'date-fns';
@@ -572,28 +573,31 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
                             : <span className="text-muted-foreground">Aktiv</span>}
                         </td>
                         <td className="py-1.5 text-right">
-                          {isEditing ? (
-                            <div className="flex gap-1 justify-end">
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleSaveEdit(exp.id)}><Check className="h-3.5 w-3.5" /></Button>
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingId(null)}>✕</Button>
-                            </div>
-                          ) : exp.matched ? (
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleUnmatch(exp.id)} title="Fortryd match">
-                              <Undo2 className="h-3.5 w-3.5" />
-                            </Button>
-                          ) : (
-                            <div className="flex gap-1 justify-end">
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => startEdit(exp)} title="Redigér">
-                                <Pencil className="h-3.5 w-3.5" />
+                          <div className="flex gap-1 justify-end items-center">
+                            <CommentButton contextType="future_expense" contextRef={exp.id} contextLabel={`Udgift: ${exp.tekst || exp.konto}`} />
+                            {isEditing ? (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleSaveEdit(exp.id)}><Check className="h-3.5 w-3.5" /></Button>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setEditingId(null)}>✕</Button>
+                              </>
+                            ) : exp.matched ? (
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleUnmatch(exp.id)} title="Fortryd match">
+                                <Undo2 className="h-3.5 w-3.5" />
                               </Button>
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCopyDialog(exp); setCopyMonths(1); }} title="Kopiér frem">
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => setDeleteConfirmId(exp.id)}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          )}
+                            ) : (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => startEdit(exp)} title="Redigér">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setCopyDialog(exp); setCopyMonths(1); }} title="Kopiér frem">
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => setDeleteConfirmId(exp.id)}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

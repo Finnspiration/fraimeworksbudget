@@ -123,21 +123,36 @@ export type Database = {
       }
       chat_channels: {
         Row: {
+          closed: boolean
+          context_label: string | null
+          context_ref: string | null
+          context_type: string | null
           created_at: string
           id: string
           is_direct: boolean
+          is_thread: boolean
           name: string | null
         }
         Insert: {
+          closed?: boolean
+          context_label?: string | null
+          context_ref?: string | null
+          context_type?: string | null
           created_at?: string
           id?: string
           is_direct?: boolean
+          is_thread?: boolean
           name?: string | null
         }
         Update: {
+          closed?: boolean
+          context_label?: string | null
+          context_ref?: string | null
+          context_type?: string | null
           created_at?: string
           id?: string
           is_direct?: boolean
+          is_thread?: boolean
           name?: string | null
         }
         Relationships: []
