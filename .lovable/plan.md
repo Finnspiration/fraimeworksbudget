@@ -1,39 +1,35 @@
 
 
-# Estimeret momsafregning i Skat & Moms
+# Fix: Konto 1010 fejlagtigt markeret som "Udgiftskonto"
 
 ## Problem
-Momsafregning-tabellen viser kun realiseret moms fra kassekladden. For kvartaler med fremtidige måneder (≥ nReal) vises 0, selvom der er budgetterede indtægter og udgifter.
+`revenueAccounts` i ResultatTab filtrerer på `grp === 'oms'`, men når en custom kontoplan er importeret, hedder grupperne `grp1`, `grp2`, osv. — aldrig `'oms'`. Derfor bliver **alle** konti (inkl. 1010 Salg af varer/ydelser) behandlet som udgiftskonti, og tooltippet viser forkert "Udgiftskonto – gemmes som negativt".
+
+Samme problem findes i OverblikTab (brugt til "Største udgiftsposter"-filteret, allerede delvist fixet).
 
 ## Løsning
 
-### `src/components/budget/SkatTab.tsx`
+### `src/components/budget/ResultatTab.tsx`
+Erstat `grp === 'oms'`-filteret med strukturel identifikation: alle `acct`-rækker der optræder **før** den første `total`-række i kontoplanen er omsætningskonti:
 
-**Tilføj budgetteret moms-beregning:**
+```typescript
+const revenueAccounts = useMemo(() => {
+  const revSet = new Set<number>();
+  for (const row of activePL) {
+    if (row.t === 'total') break; // Stop ved første total = "Omsætning i alt"
+    if (row.t === 'acct' && row.nr) revSet.add(row.nr);
+  }
+  return revSet;
+}, [activePL]);
+```
 
-1. Beregn budgetteret salgsmoms pr. måned: find alle `acct`-rækker i `activePL` med `grp:'oms'` og moms (U25), summér deres budgetværdi × 25% for fremtidige måneder
-2. Beregn budgetteret købsmoms pr. måned: find alle expense `acct`-rækker med I25-moms, summér budgetværdi × 25%
-3. For simplere tilgang: brug `pl['oms'].b[i]` (allerede netto) × 0.25 som budget salgsmoms, og summér expense-konti med moms × 0.25 som budget købsmoms
+Dette er samme tilgang som allerede er brugt i OverblikTab efter det tidligere fix.
 
-**Opdatér `computeSalgsmoms` og `computeKobsmoms`:**
-- Tilføj nye funktioner `computeBudgetSalgsmoms(months)` og `computeBudgetKobsmoms(months)` der bruger PL-budgetdata
-- For hvert kvartal: vis realiseret moms for måneder < nReal, og budgetteret moms for måneder ≥ nReal
-- Tilføj kolonne "heraf estimeret" eller vis samlet (realiseret + estimeret) med italic styling for estimerede dele
+### Tooltip-tekst
+Opdatér også tooltippet til at vise korrekt tekst for indtægtskonti:
+- Indtægtskonto: `"Indtægtskonto – klik for at redigere budget"`
+- Udgiftskonto: `"Udgiftskonto – gemmes som negativt"`
 
-**Tilføj nyt "Estimeret moms pr. måned" kort** (tilsvarende "Estimeret skat pr. måned"):
-- Tabel med kolonner: Måned, Salgsmoms, Købsmoms, Netto moms, Akkumuleret
-- For `i < nReal`: brug realiseret moms fra transaktioner
-- For `i >= nReal`: brug budgetteret moms fra PL-data
-- Fremtidige måneder vises i italic/muted som i skat-tabellen
-- Totalrække med årsestimat
-
-**Momsafregning-tabellen opdateres:**
-- Kvartals-tallene inkluderer nu budgetterede beløb for fremtidige måneder
-- Estimerede dele markeres visuelt (italic/muted) for at skelne fra realiseret
-
-## Fil
-
-| Fil | Ændring |
-|---|---|
-| `src/components/budget/SkatTab.tsx` | Tilføj budget-moms beregninger + nyt "Estimeret moms pr. måned" kort + opdatér momsafregning med estimater |
+## Omfang
+Én fil ændres: `src/components/budget/ResultatTab.tsx` — 3 linjer i `revenueAccounts` memo.
 
