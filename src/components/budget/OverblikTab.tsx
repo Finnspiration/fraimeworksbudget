@@ -43,21 +43,18 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
   const omsId = firstTotal?.id;
   const omsRow = omsId ? (pl[omsId] as PLValues | undefined) : undefined;
 
-  const omsGroups = useMemo(() => {
-    if (!firstTotal?.sum) return [] as string[];
-    return firstTotal.sum.split('+').map(s => s.trim()).filter(s => s.startsWith('grp:')).map(s => s.slice(4));
-  }, [firstTotal]);
-
-  const ytdReal = resRow ? sumArr(resRow.r, 0, nReal - 1) : 0;
-  const ytdBud = resRow ? sumArr(resRow.b, 0, nReal - 1) : 0;
-  const ytdOms = omsRow ? sumArr(omsRow.r, 0, nReal - 1) : 0;
-  const ytdOmsBud = omsRow ? sumArr(omsRow.b, 0, nReal - 1) : 0;
-  const projYear = nReal > 0 && resRow ? (sumArr(resRow.r, 0, nReal - 1) / nReal) * 12 : 0;
-  const yearBud = resRow ? sumArr(resRow.b) : 0;
+  const revenueNrs = useMemo(() => {
+    const nrs = new Set<number>();
+    for (const r of activePL) {
+      if (r.t === 'total' || r.t === 'res') break;
+      if (r.t === 'acct' && r.nr != null) nrs.add(r.nr);
+    }
+    return nrs;
+  }, [activePL]);
 
   const expenseAcctRows = useMemo(() =>
-    activePL.filter(r => r.t === 'acct' && !omsGroups.includes(r.grp!))
-  , [activePL, omsGroups]);
+    activePL.filter(r => r.t === 'acct' && r.nr != null && !revenueNrs.has(r.nr!))
+  , [activePL, revenueNrs]);
 
   const expensesByMonth = useMemo(() => {
     return MONTHS.map((_, i) => {
