@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
-import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
+import { useFutureExpenses, type FutureExpense, type MatchCandidate } from '@/hooks/use-future-expenses';
 import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil, CheckSquare, Link2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -67,6 +67,107 @@ interface Props {
   activePL: PLRow[];
   txns?: import('@/data/budget-constants').Transaction[];
   matchAgainstTransactions?: (txns: import('@/data/budget-constants').Transaction[]) => Promise<number>;
+}
+
+function MatchReviewDialog({ candidates, onApprove, onClose }: {
+  candidates: MatchCandidate[];
+  onApprove: (matches: { expenseId: string; txnId: number }[]) => void;
+  onClose: () => void;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(candidates.filter(c => c.bestMatch && c.bestMatch.score >= 40).map(c => c.expense.id))
+  );
+
+  const toggle = (id: string) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const toggleAll = () => {
+    if (selected.size === candidates.length) setSelected(new Set());
+    else setSelected(new Set(candidates.map(c => c.expense.id)));
+  };
+
+  const handleApprove = () => {
+    const matches = candidates
+      .filter(c => selected.has(c.expense.id) && c.bestMatch)
+      .map(c => ({ expenseId: c.expense.id, txnId: c.bestMatch!.txn.id }));
+    onApprove(matches);
+  };
+
+  const scoreColor = (score: number) => {
+    if (score >= 60) return 'text-[hsl(var(--budget-positive))]';
+    if (score >= 40) return 'text-[hsl(var(--chart-4))]';
+    return 'text-destructive';
+  };
+
+  return (
+    <Dialog open onOpenChange={o => !o && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-sm flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            Match mod kassekladde — {candidates.length} kandidat{candidates.length !== 1 ? 'er' : ''}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="overflow-auto flex-1">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-background">
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-1.5 pr-1 font-medium w-8">
+                  <Checkbox checked={candidates.length > 0 && selected.size === candidates.length} onCheckedChange={toggleAll} className="h-3.5 w-3.5" />
+                </th>
+                <th className="py-1.5 pr-2 font-medium" colSpan={3}>Fremtidig udgift</th>
+                <th className="py-1.5 pr-2 font-medium" colSpan={3}>Kassekladde-match</th>
+                <th className="py-1.5 pr-2 font-medium text-center">Score</th>
+              </tr>
+              <tr className="border-b text-left text-muted-foreground text-[10px]">
+                <th></th>
+                <th className="py-1 pr-2 font-normal">Tekst</th>
+                <th className="py-1 pr-2 font-normal text-right">Beløb</th>
+                <th className="py-1 pr-2 font-normal">Dato</th>
+                <th className="py-1 pr-2 font-normal">Tekst</th>
+                <th className="py-1 pr-2 font-normal text-right">Beløb</th>
+                <th className="py-1 pr-2 font-normal">Dato</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {candidates.map(c => {
+                const m = c.bestMatch;
+                if (!m) return null;
+                return (
+                  <tr key={c.expense.id} className="border-b hover:bg-muted/50">
+                    <td className="py-1.5 pr-1">
+                      <Checkbox checked={selected.has(c.expense.id)} onCheckedChange={() => toggle(c.expense.id)} className="h-3.5 w-3.5" />
+                    </td>
+                    <td className="py-1.5 pr-2 max-w-[160px] truncate" title={c.expense.tekst}>{c.expense.tekst}</td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">{fmtDec(c.expense.belob)}</td>
+                    <td className="py-1.5 pr-2 whitespace-nowrap">{c.expense.dato}</td>
+                    <td className="py-1.5 pr-2 max-w-[160px] truncate" title={m.txn.tekst}>{m.txn.tekst}</td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">{fmtDec(m.txn.belob)}</td>
+                    <td className="py-1.5 pr-2 whitespace-nowrap">{m.txn.dato}</td>
+                    <td className={`py-1.5 text-center font-bold tabular-nums ${scoreColor(m.score)}`}>{m.score}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <DialogFooter className="pt-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mr-auto">
+            <span className="text-[hsl(var(--budget-positive))]">●</span> ≥60 sikker
+            <span className="text-[hsl(var(--chart-4))]">●</span> ≥40 sandsynlig
+            <span className="text-destructive">●</span> &lt;40 usikker
+          </div>
+          <Button variant="outline" size="sm" onClick={onClose}>Annullér</Button>
+          <Button size="sm" onClick={handleApprove} disabled={selected.size === 0}>
+            <Check className="h-3 w-3 mr-1" />Godkend {selected.size} match{selected.size !== 1 ? 'es' : ''}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 const emptyRow = (): Omit<FutureExpense, 'id' | 'matched' | 'matched_txn_id' | 'created_at'> => ({
