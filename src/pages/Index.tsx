@@ -144,7 +144,8 @@ export default function Index() {
               bskat={state.bskat} setBskat={state.setBskat}
               andenGeld={state.andenGeld} setAndenGeld={state.setAndenGeld}
               skatPct={state.skatPct} setSkatPct={state.setSkatPct}
-              virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype} />
+              virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype}
+              budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} />
           </TabsContent>
           <TabsContent value="udgifter">
             <FutureExpensesTab activePL={state.activePL} txns={state.txns} matchAgainstTransactions={matchAgainstTransactions} />

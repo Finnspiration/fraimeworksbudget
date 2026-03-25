@@ -3,7 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { MONTHS, YEAR, type PLRow, type BskatRate } from '@/data/budget-constants';
 import { fmt, sumArr, getTxnAmounts, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Crosshair, Users, AlertTriangle } from 'lucide-react';
 import { useRevenueTransactions, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { Transaction } from '@/data/budget-constants';
@@ -177,11 +178,11 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     <div className="space-y-6">
       {/* Budget toggle */}
       <div className="flex items-center gap-3">
-        <span className="text-xs font-medium text-muted-foreground">Budget:</span>
-        <ToggleGroup type="single" value={budgetMode} onValueChange={v => v && setBudgetMode(v as 'fixed' | 'dynamic')}>
-          <ToggleGroupItem value="fixed" className="text-xs px-3 h-7">Fast budget</ToggleGroupItem>
-          <ToggleGroupItem value="dynamic" className="text-xs px-3 h-7">Dynamisk budget</ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{budgetMode === 'dynamic' ? 'Dynamisk' : 'Fast'} budget</span>
+          <Switch checked={budgetMode === 'dynamic'} onCheckedChange={c => setBudgetMode(c ? 'dynamic' : 'fixed')} />
+        </div>
+        {budgetMode === 'dynamic' && <Badge variant="secondary" className="text-xs">Rolling forecast</Badge>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

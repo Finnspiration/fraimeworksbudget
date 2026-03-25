@@ -3,6 +3,8 @@ import { fmt, sumArr, resolveEffectiveMoms, type PLValues } from '@/lib/budget-u
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import type { Transaction, BskatRate, PLRow } from '@/data/budget-constants';
 
 interface Props {
@@ -20,6 +22,8 @@ interface Props {
   setSkatPct: (v: number) => void;
   virksomhedstype: 'personlig' | 'selskab';
   setVirksomhedstype: (v: 'personlig' | 'selskab') => void;
+  budgetMode: 'fixed' | 'dynamic';
+  setBudgetMode: (v: 'fixed' | 'dynamic') => void;
 }
 
 const quarters = [
@@ -29,7 +33,8 @@ const quarters = [
   { id: 4, label: 'Q4 Okt-Dec', months: [9, 10, 11], forfald: '01-04-2027' },
 ];
 
-export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype }: Props) {
+export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype, budgetMode, setBudgetMode }: Props) {
+  const isDynamic = budgetMode === 'dynamic';
   const updateBskat = (i: number, field: keyof BskatRate, val: string | number) =>
     setBskat(prev => prev.map((r, j) => j === i ? { ...r, [field]: val } : r));
 
@@ -54,7 +59,7 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
   const totalBskatSkyldigt = bskat.reduce((s, r) => s + Number(r.belob || 0), 0);
   const totalBskatBetalt = bskat.reduce((s, r) => s + Number(r.betalt || 0), 0);
   const resRow = pl['res'] as PLValues | undefined;
-  const projRes = resRow && nReal > 0 ? sumArr(resRow.r, 0, nReal - 1) * 12 / nReal : 0;
+  const projRes = resRow ? MONTHS.reduce((s, _, i) => s + (i < nReal ? resRow.r[i] : resRow.b[i]), 0) : 0;
   const estimSkat = Math.max(0, projRes * (skatPct / 100));
   const restskat = estimSkat - totalBskatBetalt;
 
@@ -73,6 +78,15 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
           </ToggleGroup>
         </CardContent>
       </Card>
+
+      {/* Budget toggle */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{isDynamic ? 'Dynamisk' : 'Fast'} budget</span>
+          <Switch checked={isDynamic} onCheckedChange={c => setBudgetMode(c ? 'dynamic' : 'fixed')} />
+        </div>
+        {isDynamic && <Badge variant="secondary" className="text-xs">Rolling forecast</Badge>}
+      </div>
 
       <Card>
         <CardHeader className="pb-2">
@@ -207,26 +221,27 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
               </thead>
               <tbody>
                 {(() => {
-                  const avgRes = nReal > 0 && resRow ? sumArr(resRow.r, 0, nReal - 1) / nReal : 0;
-                  let acc = 0;
+                  let accRes = 0;
+                  let accTax = 0;
                   return MONTHS.map((m, i) => {
                     const isReal = i < nReal;
-                    const monthRes = isReal && resRow ? resRow.r[i] : avgRes;
-                    const monthTax = Math.max(0, monthRes * (skatPct / 100));
-                    acc += monthTax;
+                    const monthRes = isReal && resRow ? resRow.r[i] : (resRow ? resRow.b[i] : 0);
+                    accRes += monthRes;
+                    const monthTax = Math.max(0, accRes * (skatPct / 100)) - accTax;
+                    accTax += monthTax;
                     return (
                       <tr key={m} className={`border-b border-border/30 ${!isReal ? 'text-muted-foreground italic' : ''}`}>
                         <td className={`px-3 py-2 ${isReal ? 'font-medium' : ''}`}>{m}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{fmt(monthRes)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{fmt(monthTax)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(acc)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(accTax)}</td>
                       </tr>
                     );
                   });
                 })()}
                 <tr className="font-semibold bg-secondary/50">
                   <td className="px-3 py-2">Årsestimat</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(projRes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(resRow ? MONTHS.reduce((s, _, i) => s + (i < nReal ? resRow.r[i] : resRow.b[i]), 0) : 0)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{fmt(estimSkat)}</td>
                   <td />
                 </tr>
