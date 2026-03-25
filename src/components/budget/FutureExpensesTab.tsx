@@ -235,11 +235,6 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
     }
     return true;
   }), [expenses, filterStatus, filterKonto, searchTerm, acctMap]);
-  const acctMap = useMemo(() => {
-    const m = new Map<number, string>();
-    acctList.forEach(r => m.set(r.nr!, r.lbl || ''));
-    return m;
-  }, [acctList]);
   const acctMomsMap = useMemo(() => {
     const m = new Map<number, string | null>();
     acctList.forEach(r => m.set(r.nr!, r.moms ?? null));
