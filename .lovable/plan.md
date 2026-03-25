@@ -1,21 +1,28 @@
 
 
-# Fritekst-søgning i Fremtidige Udgifter
+# Sortering + opsummerings-fix i Fremtidige Udgifter
 
-## Ændring
-
-Tilføj et søgefelt i filter-baren der filtrerer på tværs af alle tekstfelter (tekst, bilag, faktura, konto-navn, beløb, dato).
+## 1. Kolonne-sortering
 
 ### Fil: `src/components/budget/FutureExpensesTab.tsx`
 
-1. **Ny state**: `const [searchTerm, setSearchTerm] = useState('')`
+**Ny state:**
+```tsx
+const [sortCol, setSortCol] = useState<'dato' | 'tekst' | 'belob' | 'konto' | 'moms' | 'status' | null>('dato');
+const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+```
 
-2. **Udvid `filtered` useMemo** med søgelogik:
-   - Lowercase søgeterm matches mod: `tekst`, `bilag`, `faktura`, `dato`, formateret `belob`, kontonummer og kontonavn fra `acctMap`
-   - Søgningen sker efter status- og konto-filtrering
+**Sorterings-logik:** Udvid `filtered` med `.sort()` baseret på `sortCol`/`sortDir` — sammenlign strenge for tekst/dato/moms, tal for beløb/konto, og boolean for status (matched).
 
-3. **UI**: Tilføj `<Input placeholder="Søg..." />` i filter-baren (linje ~385), med et ryd-kryds når der er tekst
+**UI:** Gør hver `<th>` klikbar med en `onClick` handler der toggler retning (eller skifter kolonne). Vis en lille pil-indikator (▲/▼) ved aktiv sorteringskolonne.
 
-### Placering
-Søgefeltet placeres i filter-baren mellem konto-filteret og slet-knappen, med passende bredde (`w-48` eller `w-56`).
+## 2. Opsummeringer ekskluderer matchede
+
+Koden ekskluderer allerede matchede udgifter fra 7/30-dages opsummeringerne (linje 351: `if (e.matched || !e.dato) continue`). **Ingen ændring nødvendig her** — det virker korrekt.
+
+### Filer
+
+| Fil | Ændring |
+|---|---|
+| `src/components/budget/FutureExpensesTab.tsx` | Sorteringsstate, sorteret `filtered`, klikbare kolonnehoveder med pil-indikator |
 
