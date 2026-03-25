@@ -187,9 +187,10 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
                   accountNr={row.nr} monthIndex={i} pipelineJobs={pipelineJobs} futureExpenses={futureExpenses}
                   budgetBase={budget[row.nr!]?.[i] || 0} />
               ) : (
-                <EditableBudgetCell
+                <FixedBudgetCell
                   key={`b-${i}`}
-                  value={v?.b[i] || 0}
+                  budgetValue={v?.b[i] || 0}
+                  futureValue={futureExpensesBudget[row.nr!]?.[i] || 0}
                   dimmed={i >= nReal}
                   isExpense={isExpenseAccount(row.nr!)}
                   onSave={(val) => updateBudget(row.nr!, i, val)}
