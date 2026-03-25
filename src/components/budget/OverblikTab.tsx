@@ -3,7 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { MONTHS, YEAR, type PLRow, type BskatRate } from '@/data/budget-constants';
 import { fmt, sumArr, getTxnAmounts, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, DollarSign, Target, BarChart3, Crosshair, Users, AlertTriangle } from 'lucide-react';
 import { useRevenueTransactions, type PipelineJobWithCustomer } from '@/hooks/use-pipeline';
 import type { Transaction } from '@/data/budget-constants';
