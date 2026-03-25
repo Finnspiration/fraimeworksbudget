@@ -1,46 +1,34 @@
 
 
-# Fast budget med Fremtidige Udgifter + Rolling forecast kun fra realiseret
+# Match fremtidige udgifter mod kassekladde
 
-## Oversigt
+## Problem
+Matching af fremtidige udgifter mod kassekladde-posteringer sker kun automatisk ved import. Der er ingen mulighed for manuelt at køre matching, så allerede importerede posteringer kan ikke matches efterfølgende.
 
-To ændringer:
+## Løsning
 
-1. **Fast budget**: Celler viser Fremtidige Udgifter (summeret per konto+måned) med prioritet over manuelt indtastede beløb. Visuelt markeret med dashed ramme når værdien kommer fra Fremtidige Udgifter.
-2. **Rolling forecast (dynamisk)**: Fjern future expenses fra merge — kun pipeline + realiserede tal.
+### Fil: `src/components/budget/FutureExpensesTab.tsx`
 
-## Ændringer
+Tilføj en **"Match mod kassekladde"**-knap i toolbar-området (ved siden af bulk-slet knappen), der:
+1. Modtager `txns` (kassekladde-posteringer) og `matchAgainstTransactions` som nye props
+2. Kalder `matchAgainstTransactions(txns)` og viser en toast med antal matches
 
-### 1. `src/pages/Index.tsx`
+### Fil: `src/pages/Index.tsx`
 
-- **Beregn `futureExpensesBudget`**: Nyt `useMemo` der bygger `Record<number, number[]>` fra `activeExpenses` (sum per konto+måned). Sendes som prop til `ResultatTab`.
-- **Fjern future expenses fra dynamic merge**: Slet blokken (linje 46-53) der tilføjer `activeExpenses` i dynamic mode.
-- **Tilføj future expenses i fixed mode**: I fixed mode, overlay `futureExpensesBudget` oven på `base` budget, så `computePL` får de korrekte tal.
-
-### 2. `src/components/budget/ResultatTab.tsx`
-
-- **Ny prop**: `futureExpensesBudget: Record<number, number[]>`
-- **Ny `FixedBudgetCell` komponent** til brug i fast tilstand:
-  - Tjek `futureExpensesBudget[konto][month]` — hvis ≠ 0: vis beløbet readonly med `border border-dashed border-amber-500/60 rounded bg-amber-50/30` 
-  - Ellers: vis `EditableBudgetCell` som nu
-- Erstat den eksisterende `EditableBudgetCell`-rendering i fast tilstand med `FixedBudgetCell`
-
-### Visuel logik per celle (fast budget)
-
-```text
-futureExp[konto][month] ≠ 0?
-  → Readonly celle med dashed amber ramme
-  → Tooltip: "Fra Fremtidige Udgifter"
-Ellers manuelBudget ≠ 0?
-  → Redigerbar celle (som nu)
-Ellers:
-  → Vis '–'
+Send `txns` og `matchAgainstTransactions` som props til `FutureExpensesTab`:
+```tsx
+<FutureExpensesTab 
+  activePL={state.activePL} 
+  txns={state.txns} 
+  matchAgainstTransactions={matchAgainstTransactions} 
+/>
 ```
 
-### Filer
+### UI
+En knap med ikon (fx `Check` eller `Link`) og teksten "Match mod kassekladde" placeret i filterlinjen. Viser toast: "X udgifter matchet" eller "Ingen nye matches fundet".
 
 | Fil | Ændring |
 |---|---|
-| `src/pages/Index.tsx` | Beregn futureExpensesBudget, fjern future exp fra dynamic, merge i fixed mode |
-| `src/components/budget/ResultatTab.tsx` | Ny prop + FixedBudgetCell komponent |
+| `src/pages/Index.tsx` | Send txns + matchAgainstTransactions som props |
+| `src/components/budget/FutureExpensesTab.tsx` | Ny prop-typer, match-knap i toolbar |
 
