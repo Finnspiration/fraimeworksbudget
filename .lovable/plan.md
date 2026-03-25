@@ -1,24 +1,24 @@
 
 
-# Fix: Logo skal altid linke til overblik
+# Fix: Logo-klik skal altid føre til Overblik-tab
 
 ## Problem
-I `src/pages/Index.tsx` (linje 99) er logoet bare et `<img>` tag uden et `<Link>` wrapper — det er derfor ikke klikbart. `AppLayout.tsx` virker korrekt allerede.
+Logoet linker til `/`, men da man allerede er på `/`, sker der ingenting — man forbliver på den aktive tab (fx "Fremtidige udgifter").
 
-## Ændring
+## Løsning
 
 ### `src/pages/Index.tsx`
-Wrap logoet i et `<Link to="/">` så det matcher AppLayout:
+Erstat `<Link to="/">` omkring logoet med en `<a>` eller `onClick`-handler der sætter tab til `'overblik'`:
 
 ```tsx
-// Linje 99: Fra
-<img src={logo} alt="FraimeWorks" className="h-8" />
-
-// Til
+// Fra:
 <Link to="/"><img src={logo} alt="FraimeWorks" className="h-8" /></Link>
+
+// Til:
+<a href="#" onClick={(e) => { e.preventDefault(); setTab('overblik'); }} className="cursor-pointer">
+  <img src={logo} alt="FraimeWorks" className="h-8" />
+</a>
 ```
 
-`Link` er allerede importeret i filen (linje 16).
-
-Én linje ændres i én fil.
+Én linje ændres i én fil. Logoet nulstiller nu altid til Overblik-tabben.
 
