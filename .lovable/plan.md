@@ -1,67 +1,53 @@
 
 
-# Kontekstuelle kommentarer med chat-tråde
+# Notifikationstællere i navigationen
 
 ## Oversigt
-Brugere kan oprette kommentarer direkte på felter/rækker i appen (f.eks. en konto-linje i resultatopgørelsen eller en udgift). Kommentaren starter en tråd i chat-systemet. Tråde kan lukkes når samtalen er færdig.
+Tilføj badge-tællere på "Chat" og "Opgaver" knapperne i header-navigationen, der viser antal ulæste chat-beskeder og nye/utildelte opgaver.
 
-## Database-ændringer
+## Tilgang
 
-### 1. Udvid `chat_channels` med tråd-metadata
+### Database: Ny tabel `chat_last_read`
+Tracker hvornår hver bruger sidst læste hver kanal:
+
 ```sql
-ALTER TABLE chat_channels ADD COLUMN context_type text;      -- f.eks. 'resultat', 'future_expense', 'pipeline'
-ALTER TABLE chat_channels ADD COLUMN context_ref text;        -- reference-id (konto-nr, expense-id, etc.)
-ALTER TABLE chat_channels ADD COLUMN context_label text;      -- visningsnavn ("Konto 1010 – Salg", "Udgift: Husleje apr")
-ALTER TABLE chat_channels ADD COLUMN is_thread boolean NOT NULL DEFAULT false;
-ALTER TABLE chat_channels ADD COLUMN closed boolean NOT NULL DEFAULT false;
+CREATE TABLE public.chat_last_read (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  channel_id uuid NOT NULL,
+  last_read_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, channel_id)
+);
+ALTER TABLE public.chat_last_read ENABLE ROW LEVEL SECURITY;
+-- Brugere kan læse/skrive egne rækker
+CREATE POLICY "Users manage own read status" ON public.chat_last_read
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 ```
 
-### 2. Realtime på chat_messages (allerede aktiveret? Tjekkes)
+### Ny hook: `src/hooks/use-unread-counts.ts`
+- Henter alle brugerens kanaler via `chat_channel_members`
+- Henter `chat_last_read` for brugeren
+- Tæller beskeder i hver kanal der er nyere end `last_read_at` (eller alle hvis ingen read-entry)
+- Lytter på realtime `INSERT` på `chat_messages` for at opdatere tælleren live
+- Returnerer `{ unreadChat: number, unreadTasks: number }`
 
-## Nye komponenter
+For opgaver: tæller `todo_cards` der ikke er tildelt nogen (`assigned_to IS NULL`) eller er nyere end en bestemt dato — eller simpelthen antal kort i første kolonne (backlog). Alternativt: tæller kort tildelt til brugeren.
 
-### `src/components/CommentButton.tsx`
-- En lille ikon-knap (💬) der kan placeres ved enhver celle/række
-- Props: `contextType`, `contextRef`, `contextLabel`
-- Ved klik: tjekker om der allerede findes en åben tråd for den kontekst → åbner den, ellers opretter ny kanal med `is_thread=true` og kontekst-metadata
-- Tilføjer alle godkendte brugere som medlemmer (ligesom ved kanal-oprettelse)
-- Viser et badge/indikator hvis der er en eksisterende aktiv tråd
+### Opdater last_read
+I `Chat.tsx`: Når brugeren åbner/ser en kanal, upsert `chat_last_read` med `now()`.
 
-### `src/components/ThreadPanel.tsx`
-- Slide-over panel (Sheet) der viser trådens beskeder
-- Genbruger besked-visning og input fra Chat.tsx (evt. udtrukket til fælles komponent)
-- "Luk tråd"-knap der sætter `closed = true` på kanalen
-- Lukket tråd kan stadig læses men ikke skrives til
+### UI-ændringer
 
-## Integration i eksisterende tabs
-
-### ResultatTab
-- Tilføj `CommentButton` ved hver konto-række (contextType='resultat', contextRef=konto-nr)
-
-### FutureExpensesTab
-- Tilføj `CommentButton` ved hver udgifts-række (contextType='future_expense', contextRef=expense-id)
-
-### PipelineTab
-- Tilføj `CommentButton` ved hver pipeline-job (contextType='pipeline', contextRef=job-id)
-
-## Chat-side opdatering
-- Tråde vises i en separat sektion "Tråde" i sidebar
-- Lukkede tråde vises nedtonet eller i en sammenklappet sektion
-- Kontekst-label vises som overskrift i tråden
-
-## RLS
-- Genbruger eksisterende `is_channel_member` RLS — ingen nye policies nødvendige
-- UPDATE policy på `chat_channels` tilføjes så medlemmer kan sætte `closed = true`
+**`src/components/AppLayout.tsx`** og **`src/pages/Index.tsx`** (begge har navigation):
+- Importer hooket og Badge-komponenten
+- Vis en rød badge med tallet ved siden af "Chat" og "Opgaver" når count > 0
 
 ## Filer
 
 | Fil | Ændring |
 |---|---|
-| Migration | Tilføj kolonner til `chat_channels` + UPDATE RLS policy |
-| `src/components/CommentButton.tsx` | Ny — knap + opret/åbn tråd |
-| `src/components/ThreadPanel.tsx` | Ny — besked-panel med luk-funktion |
-| `src/components/budget/ResultatTab.tsx` | Tilføj CommentButton per konto-række |
-| `src/components/budget/FutureExpensesTab.tsx` | Tilføj CommentButton per udgift |
-| `src/components/budget/PipelineTab.tsx` | Tilføj CommentButton per job |
-| `src/pages/Chat.tsx` | Vis tråde-sektion i sidebar, håndter lukkede tråde |
+| Migration | Opret `chat_last_read` tabel + RLS |
+| `src/hooks/use-unread-counts.ts` | Ny — hook der returnerer ulæste tællere |
+| `src/components/AppLayout.tsx` | Tilføj badge på Chat og Opgaver knapper |
+| `src/pages/Index.tsx` | Tilføj badge på Chat og Opgaver knapper i Index-headeren |
+| `src/pages/Chat.tsx` | Upsert `chat_last_read` ved kanalskift |
 
