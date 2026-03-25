@@ -150,3 +150,61 @@ export function fmtDec(n: number | null | undefined): string {
 export function sumArr(arr: number[], from = 0, to = 11): number {
   return arr.slice(from, to + 1).reduce((a, b) => a + b, 0);
 }
+
+/**
+ * Tokenize a string into lowercase words for comparison.
+ */
+function tokenize(s: string): string[] {
+  return (s || '').toLowerCase().replace(/[^a-zæøå0-9]/gi, ' ').split(/\s+/).filter(t => t.length > 1);
+}
+
+/**
+ * Compute token overlap ratio (0–1) between two strings.
+ */
+export function tokenOverlap(a: string, b: string): number {
+  const ta = tokenize(a);
+  const tb = new Set(tokenize(b));
+  if (ta.length === 0 || tb.size === 0) return 0;
+  const matches = ta.filter(t => tb.has(t)).length;
+  return matches / Math.max(ta.length, tb.size);
+}
+
+/**
+ * Compute a match score between a future expense and a transaction.
+ * Returns 0 if konto doesn't match (hard requirement).
+ */
+export function computeMatchScore(
+  expense: { konto: number; belob: number; dato: string; tekst: string },
+  txn: { konto: number; belob: number; dato: string; tekst: string }
+): number {
+  // Hard requirement: same account
+  if (expense.konto !== txn.konto) return 0;
+
+  let score = 0;
+
+  // Amount scoring (compare absolute values)
+  const expAbs = Math.abs(expense.belob);
+  const txnAbs = Math.abs(txn.belob);
+  const maxAbs = Math.max(expAbs, txnAbs, 1);
+  const pctDiff = Math.abs(expAbs - txnAbs) / maxAbs;
+  if (pctDiff <= 0.005 || Math.abs(expAbs - txnAbs) <= 1) score += 50;
+  else if (pctDiff <= 0.05) score += 30;
+  else if (pctDiff <= 0.15) score += 10;
+
+  // Date proximity scoring
+  if (expense.dato && txn.dato) {
+    const expDate = new Date(expense.dato);
+    const txnDate = new Date(txn.dato);
+    const diffDays = Math.abs(expDate.getTime() - txnDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (diffDays <= 0.5) score += 30;
+    else if (diffDays <= 7) score += 20;
+    else if (diffDays <= 30) score += 10;
+    else score += 5;
+  }
+
+  // Text similarity bonus (up to 20 points)
+  const overlap = tokenOverlap(expense.tekst, txn.tekst);
+  score += Math.round(overlap * 20);
+
+  return score;
+}
