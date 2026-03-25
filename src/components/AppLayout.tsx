@@ -26,7 +26,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card px-4 sm:px-6 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <nav className="flex items-center gap-1">
+          <div className="flex items-center gap-4">
+            <Link to="/"><img src={logo} alt="FraimeWorks" className="h-8" /></Link>
+            <nav className="flex items-center gap-1">
             {navItems.map(item => {
               const count = item.countKey ? counts[item.countKey] : 0;
               return (
