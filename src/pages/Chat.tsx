@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
-import { Plus, Hash, MessageCircle, Send } from 'lucide-react';
+import { Plus, Hash, MessageCircle, Send, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -328,14 +328,41 @@ export default function Chat() {
       <Card className="flex-1 flex flex-col p-0 overflow-hidden">
         {activeChannel ? (
           <>
-            <div className="border-b px-4 py-2.5">
+            <div className="border-b px-4 py-2.5 flex items-center justify-between">
               <h3 className="font-medium text-sm">
-                {channels.find(c => c.id === activeChannel)?.is_direct
-                  ? dmNames[activeChannel] || 'Besked'
-                  : `# ${channels.find(c => c.id === activeChannel)?.name || 'Kanal'}`
-                }
+                {(() => {
+                  const ch = channels.find(c => c.id === activeChannel);
+                  if (!ch) return 'Kanal';
+                  if (ch.is_thread) return ch.context_label || ch.name || 'Tråd';
+                  if (ch.is_direct) return dmNames[activeChannel] || 'Besked';
+                  return `# ${ch.name || 'Kanal'}`;
+                })()}
               </h3>
+              {channels.find(c => c.id === activeChannel)?.is_thread && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={async () => {
+                    const ch = channels.find(c => c.id === activeChannel);
+                    if (!ch) return;
+                    const newClosed = !ch.closed;
+                    const { error } = await supabase.from('chat_channels').update({ closed: newClosed }).eq('id', ch.id);
+                    if (error) { toast.error('Kunne ikke opdatere tråd'); return; }
+                    setChannels(prev => prev.map(c => c.id === ch.id ? { ...c, closed: newClosed } : c));
+                    toast.success(newClosed ? 'Tråd lukket' : 'Tråd genåbnet');
+                  }}
+                >
+                  {channels.find(c => c.id === activeChannel)?.closed
+                    ? <><Unlock className="h-3 w-3" /> Genåbn</>
+                    : <><Lock className="h-3 w-3" /> Luk tråd</>
+                  }
+                </Button>
+              )}
             </div>
+            {channels.find(c => c.id === activeChannel)?.closed && channels.find(c => c.id === activeChannel)?.is_thread && (
+              <p className="text-xs text-muted-foreground px-4 py-1.5 border-b bg-muted/50">Denne tråd er lukket</p>
+            )}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
                 {messages.map(m => (
@@ -352,15 +379,17 @@ export default function Chat() {
                 <div ref={bottomRef} />
               </div>
             </ScrollArea>
-            <div className="border-t p-3 flex gap-2">
-              <Input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                placeholder="Skriv en besked…"
-              />
-              <Button size="icon" onClick={sendMessage}><Send className="h-4 w-4" /></Button>
-            </div>
+            {!(channels.find(c => c.id === activeChannel)?.is_thread && channels.find(c => c.id === activeChannel)?.closed) && (
+              <div className="border-t p-3 flex gap-2">
+                <Input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                  placeholder="Skriv en besked…"
+                />
+                <Button size="icon" onClick={sendMessage}><Send className="h-4 w-4" /></Button>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">

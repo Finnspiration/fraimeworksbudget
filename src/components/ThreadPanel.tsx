@@ -103,12 +103,12 @@ export default function ThreadPanel({ channelId, label, open, onClose, onClosed 
     <Sheet open={open} onOpenChange={o => !o && onClose()}>
       <SheetContent className="flex flex-col p-0 w-[400px] sm:max-w-[400px]">
         <SheetHeader className="px-4 py-3 border-b">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-sm truncate pr-2">{label}</SheetTitle>
+          <div className="flex items-center gap-2">
+            <SheetTitle className="text-sm truncate">{label}</SheetTitle>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 gap-1 text-xs shrink-0"
+              className="h-7 gap-1 text-xs shrink-0 mr-6"
               onClick={toggleClosed}
             >
               {closed ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
