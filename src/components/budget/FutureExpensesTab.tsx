@@ -618,6 +618,23 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Match review dialog */}
+      {matchCandidates && (
+        <MatchReviewDialog
+          candidates={matchCandidates}
+          onApprove={async (matches) => {
+            try {
+              await Promise.all(matches.map(m => matchExpenseToTxn(m.expenseId, m.txnId)));
+              toast.success(`${matches.length} udgift${matches.length > 1 ? 'er' : ''} matchet`);
+            } catch {
+              toast.error('Kunne ikke gemme matches');
+            }
+            setMatchCandidates(null);
+          }}
+          onClose={() => setMatchCandidates(null)}
+        />
+      )}
     </div>
   );
 }
