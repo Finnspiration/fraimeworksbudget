@@ -406,6 +406,20 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
               <KontoPicker value={filterKonto || 0} onChange={v => setFilterKonto(v)} acctList={acctList} acctMap={acctMap} className="w-48" />
               {filterKonto && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setFilterKonto(null)}>✕</Button>}
             </div>
+            <div className="relative">
+              <Input
+                placeholder="Søg..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="h-7 w-48 text-xs pr-7"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                >✕</button>
+              )}
+            </div>
             {selected.size > 0 && (
               <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowBulkDeleteConfirm(true)}>
                 <Trash2 className="h-3 w-3" />Slet {selected.size} valgte
