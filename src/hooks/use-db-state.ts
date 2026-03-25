@@ -171,6 +171,7 @@ export function useDbState() {
         moms: r.moms,
         modkonto: r.modkonto ?? undefined,
         faktura: r.faktura ?? undefined,
+        customer_id: r.customer_id ?? null,
       })) as Transaction[];
     },
     enabled: seeded,
@@ -192,6 +193,7 @@ export function useDbState() {
         moms: t.moms,
         modkonto: t.modkonto ?? null,
         faktura: t.faktura ?? null,
+        customer_id: t.customer_id ?? null,
       }));
       for (let i = 0; i < rows.length; i += 50) {
         await supabase.from('transactions').insert(rows.slice(i, i + 50));

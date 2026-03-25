@@ -93,6 +93,7 @@ export function useAssignCustomerToTxn() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['revenue_transactions'] });
+      qc.invalidateQueries({ queryKey: ['db_transactions'] });
     },
   });
 }
