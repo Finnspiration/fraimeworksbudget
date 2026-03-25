@@ -24,35 +24,53 @@ export default function Index() {
   const { data: pipelineJobs = [] } = usePipelineJobs();
   const { activeExpenses, matchAgainstTransactions } = useFutureExpenses();
 
-  // Merge weighted pipeline + future expenses into budget for PL calculation
+  // Build future expenses budget map (konto → 12-month array of sums)
+  const futureExpensesBudget = useMemo(() => {
+    const map: Record<number, number[]> = {};
+    activeExpenses.forEach(exp => {
+      const d = new Date(exp.dato);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      const month = d.getMonth();
+      if (!map[exp.konto]) map[exp.konto] = new Array(12).fill(0);
+      map[exp.konto][month] += exp.belob;
+    });
+    return map;
+  }, [activeExpenses]);
+
+  // Merge weighted pipeline into budget for PL calculation
   const mergedBudget = useMemo(() => {
     const base = { ...state.activeBudget };
     for (const k of Object.keys(base)) {
       base[Number(k)] = [...base[Number(k)]];
     }
-    // Only merge pipeline + future expenses in dynamic mode
-    if (state.budgetMode !== 'dynamic') return base;
-    // Add pipeline forecast
-    pipelineJobs.forEach(job => {
-      if (job.status === 'tabt') return;
-      const d = new Date(job.expected_payment_date);
-      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
-      const month = d.getMonth();
-      const weighted = Number(job.amount) * job.probability / 100;
-      const konto = job.konto;
-      if (!base[konto]) base[konto] = new Array(12).fill(0);
-      base[konto][month] += weighted;
-    });
-    // Add future expenses (100% weight)
-    activeExpenses.forEach(exp => {
-      const d = new Date(exp.dato);
-      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
-      const month = d.getMonth();
-      if (!base[exp.konto]) base[exp.konto] = new Array(12).fill(0);
-      base[exp.konto][month] -= exp.belob;
-    });
+
+    if (state.budgetMode === 'dynamic') {
+      // Rolling forecast: only add pipeline (no future expenses)
+      pipelineJobs.forEach(job => {
+        if (job.status === 'tabt') return;
+        const d = new Date(job.expected_payment_date);
+        if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+        const month = d.getMonth();
+        const weighted = Number(job.amount) * job.probability / 100;
+        const konto = job.konto;
+        if (!base[konto]) base[konto] = new Array(12).fill(0);
+        base[konto][month] += weighted;
+      });
+    } else {
+      // Fixed budget: overlay future expenses (priority over manual entries)
+      for (const [konto, months] of Object.entries(futureExpensesBudget)) {
+        const k = Number(konto);
+        if (!base[k]) base[k] = new Array(12).fill(0);
+        months.forEach((val, i) => {
+          if (val !== 0) {
+            base[k][i] = -val; // expenses stored as negative in budget
+          }
+        });
+      }
+    }
+
     return base;
-  }, [state.activeBudget, state.budgetMode, pipelineJobs, activeExpenses]);
+  }, [state.activeBudget, state.budgetMode, pipelineJobs, futureExpensesBudget]);
 
   // Recompute PL with merged budget
   const mergedPL = useMemo(() => {
@@ -112,7 +130,7 @@ export default function Index() {
           </TabsContent>
           <TabsContent value="resultat">
             <ResultatTab pl={mergedPL} nReal={state.nReal} setNReal={state.setNReal} budget={mergedBudget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL}
-              txns={state.txns} pipelineJobs={pipelineJobs} futureExpenses={activeExpenses} />
+              txns={state.txns} pipelineJobs={pipelineJobs} futureExpenses={activeExpenses} futureExpensesBudget={futureExpensesBudget} />
           </TabsContent>
           <TabsContent value="pipeline">
             <PipelineTab activePL={state.activePL} />
