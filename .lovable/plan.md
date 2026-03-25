@@ -1,37 +1,46 @@
 
 
-# Fix: Bulk delete virker ikke — `confirm()` blokeres i sandboxed iframe
+# Fast budget med Fremtidige Udgifter + Rolling forecast kun fra realiseret
 
-## Problem
-`handleBulkDelete` bruger `confirm()` (browser-native dialog) til at bekræfte sletning. I sandboxed iframes (som Lovable preview) blokeres `confirm()` og returnerer altid `false`, så funktionen returnerer tidligt uden at slette noget.
+## Oversigt
 
-## Løsning
+To ændringer:
 
-### Fil: `src/components/budget/FutureExpensesTab.tsx`
+1. **Fast budget**: Celler viser Fremtidige Udgifter (summeret per konto+måned) med prioritet over manuelt indtastede beløb. Visuelt markeret med dashed ramme når værdien kommer fra Fremtidige Udgifter.
+2. **Rolling forecast (dynamisk)**: Fjern future expenses fra merge — kun pipeline + realiserede tal.
 
-Erstat `confirm()` med en `AlertDialog` fra shadcn/ui:
+## Ændringer
 
-1. Tilføj state `showBulkDeleteConfirm` (boolean)
-2. Knappen "Slet X valgte" sætter `showBulkDeleteConfirm = true` i stedet for at kalde `handleBulkDelete` direkte
-3. Tilføj en `AlertDialog` komponent der viser "Er du sikker på at du vil slette X udgifter?" med Annuller/Slet-knapper
-4. "Slet"-knappen kalder den faktiske slettelogik (uden `confirm()`)
+### 1. `src/pages/Index.tsx`
 
-```tsx
-<AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>Slet {selected.size} udgift{selected.size > 1 ? 'er' : ''}?</AlertDialogTitle>
-      <AlertDialogDescription>Denne handling kan ikke fortrydes.</AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel>Annuller</AlertDialogCancel>
-      <AlertDialogAction onClick={executeBulkDelete}>Slet</AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+- **Beregn `futureExpensesBudget`**: Nyt `useMemo` der bygger `Record<number, number[]>` fra `activeExpenses` (sum per konto+måned). Sendes som prop til `ResultatTab`.
+- **Fjern future expenses fra dynamic merge**: Slet blokken (linje 46-53) der tilføjer `activeExpenses` i dynamic mode.
+- **Tilføj future expenses i fixed mode**: I fixed mode, overlay `futureExpensesBudget` oven på `base` budget, så `computePL` får de korrekte tal.
+
+### 2. `src/components/budget/ResultatTab.tsx`
+
+- **Ny prop**: `futureExpensesBudget: Record<number, number[]>`
+- **Ny `FixedBudgetCell` komponent** til brug i fast tilstand:
+  - Tjek `futureExpensesBudget[konto][month]` — hvis ≠ 0: vis beløbet readonly med `border border-dashed border-amber-500/60 rounded bg-amber-50/30` 
+  - Ellers: vis `EditableBudgetCell` som nu
+- Erstat den eksisterende `EditableBudgetCell`-rendering i fast tilstand med `FixedBudgetCell`
+
+### Visuel logik per celle (fast budget)
+
+```text
+futureExp[konto][month] ≠ 0?
+  → Readonly celle med dashed amber ramme
+  → Tooltip: "Fra Fremtidige Udgifter"
+Ellers manuelBudget ≠ 0?
+  → Redigerbar celle (som nu)
+Ellers:
+  → Vis '–'
 ```
+
+### Filer
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/FutureExpensesTab.tsx` | Erstat `confirm()` med `AlertDialog` |
+| `src/pages/Index.tsx` | Beregn futureExpensesBudget, fjern future exp fra dynamic, merge i fixed mode |
+| `src/components/budget/ResultatTab.tsx` | Ny prop + FixedBudgetCell komponent |
 
