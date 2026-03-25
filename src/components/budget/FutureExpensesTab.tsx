@@ -207,15 +207,34 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
   const [copyMonths, setCopyMonths] = useState(1);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'matched'>('all');
   const [filterKonto, setFilterKonto] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
+  const acctMap = useMemo(() => {
+    const m = new Map<number, string>();
+    acctList.forEach(a => { if (a.nr) m.set(a.nr, a.lbl || ''); });
+    return m;
+  }, [acctList]);
 
   const filtered = useMemo(() => expenses.filter(e => {
     if (filterStatus === 'active' && e.matched) return false;
     if (filterStatus === 'matched' && !e.matched) return false;
     if (filterKonto && e.konto !== filterKonto) return false;
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      const fields = [
+        e.tekst,
+        e.bilag,
+        e.faktura,
+        e.dato,
+        e.belob?.toString(),
+        e.konto?.toString(),
+        acctMap.get(e.konto),
+      ];
+      return fields.some(f => f?.toLowerCase().includes(s));
+    }
     return true;
-  }), [expenses, filterStatus, filterKonto]);
-  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
+  }), [expenses, filterStatus, filterKonto, searchTerm, acctMap]);
   const acctMap = useMemo(() => {
     const m = new Map<number, string>();
     acctList.forEach(r => m.set(r.nr!, r.lbl || ''));
