@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadCounts } from '@/hooks/use-unread-counts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,6 +30,16 @@ interface Message {
 
 export default function Chat() {
   const { user } = useAuth();
+  const { refreshChat } = useUnreadCounts();
+
+  const markChannelRead = useCallback(async (channelId: string) => {
+    if (!user) return;
+    await supabase.from('chat_last_read').upsert(
+      { user_id: user.id, channel_id: channelId, last_read_at: new Date().toISOString() },
+      { onConflict: 'user_id,channel_id' }
+    );
+    refreshChat();
+  }, [user, refreshChat]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -75,6 +86,7 @@ export default function Chat() {
       setMessages(data ?? []);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     });
+    markChannelRead(activeChannel);
 
     const channel = supabase.channel(`chat-${activeChannel}`)
       .on('postgres_changes', {
