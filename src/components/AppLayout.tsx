@@ -51,7 +51,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </Button>
               </Link>
             )}
-          </nav>
+           </nav>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{profile?.name}</span>
             <Button variant="ghost" size="sm" onClick={signOut} className="gap-1.5">
