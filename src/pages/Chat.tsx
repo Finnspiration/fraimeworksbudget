@@ -196,6 +196,11 @@ export default function Chat() {
     });
   }, [channels, profiles, user]);
 
+  const threadChannels = channels.filter(c => (c as any).is_thread);
+  const openThreads = threadChannels.filter(c => !(c as any).closed);
+  const closedThreads = threadChannels.filter(c => (c as any).closed);
+  const [showClosedThreads, setShowClosedThreads] = useState(false);
+
   return (
     <div className="flex h-[calc(100vh-8rem)] gap-4">
       {/* Sidebar */}

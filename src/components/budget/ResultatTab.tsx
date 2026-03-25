@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { CellWithTooltip } from '@/components/budget/CellWithTooltip';
 import type { FutureExpense } from '@/hooks/use-future-expenses';
+import CommentButton from '@/components/CommentButton';
 
 interface Props {
   pl: Record<string | number, PLValues>;
