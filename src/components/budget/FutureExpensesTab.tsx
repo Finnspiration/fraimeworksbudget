@@ -198,7 +198,8 @@ function DatePicker({ value, onChange, className }: { value: string; onChange: (
 }
 
 export default function FutureExpensesTab({ activePL, txns, matchAgainstTransactions }: Props) {
-  const { expenses, addExpense, updateExpense, deleteExpense, unmatchExpense, isLoading } = useFutureExpenses();
+  const { expenses, addExpense, updateExpense, deleteExpense, unmatchExpense, isLoading, findMatchCandidates, matchExpenseToTxn } = useFutureExpenses();
+  const [matchCandidates, setMatchCandidates] = useState<MatchCandidate[] | null>(null);
   const [newRow, setNewRow] = useState(emptyRow());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRow, setEditRow] = useState<Partial<FutureExpense>>({});
