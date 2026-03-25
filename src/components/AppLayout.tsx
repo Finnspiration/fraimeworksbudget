@@ -5,6 +5,7 @@ import { useUnreadCounts } from '@/hooks/use-unread-counts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, MessageCircle, CheckSquare, Shield, LogOut } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const navItems = [
   { to: '/', label: 'Budget', icon: BarChart3 },
