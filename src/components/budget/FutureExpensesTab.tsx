@@ -208,6 +208,8 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'matched'>('all');
   const [filterKonto, setFilterKonto] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortCol, setSortCol] = useState<'dato' | 'tekst' | 'belob' | 'konto' | 'moms' | 'status' | null>('dato');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
   const acctMap = useMemo(() => {
@@ -216,25 +218,35 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
     return m;
   }, [acctList]);
 
-  const filtered = useMemo(() => expenses.filter(e => {
-    if (filterStatus === 'active' && e.matched) return false;
-    if (filterStatus === 'matched' && !e.matched) return false;
-    if (filterKonto && e.konto !== filterKonto) return false;
-    if (searchTerm) {
-      const s = searchTerm.toLowerCase();
-      const fields = [
-        e.tekst,
-        e.bilag,
-        e.faktura,
-        e.dato,
-        e.belob?.toString(),
-        e.konto?.toString(),
-        acctMap.get(e.konto),
-      ];
-      return fields.some(f => f?.toLowerCase().includes(s));
-    }
-    return true;
-  }), [expenses, filterStatus, filterKonto, searchTerm, acctMap]);
+  const filtered = useMemo(() => {
+    const list = expenses.filter(e => {
+      if (filterStatus === 'active' && e.matched) return false;
+      if (filterStatus === 'matched' && !e.matched) return false;
+      if (filterKonto && e.konto !== filterKonto) return false;
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        const fields = [
+          e.tekst, e.bilag, e.faktura, e.dato,
+          e.belob?.toString(), e.konto?.toString(), acctMap.get(e.konto),
+        ];
+        return fields.some(f => f?.toLowerCase().includes(s));
+      }
+      return true;
+    });
+    if (!sortCol) return list;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return list.sort((a, b) => {
+      switch (sortCol) {
+        case 'dato': return dir * (a.dato || '').localeCompare(b.dato || '');
+        case 'tekst': return dir * (a.tekst || '').localeCompare(b.tekst || '');
+        case 'belob': return dir * (a.belob - b.belob);
+        case 'konto': return dir * (a.konto - b.konto);
+        case 'moms': return dir * (a.moms || '').localeCompare(b.moms || '');
+        case 'status': return dir * (Number(a.matched) - Number(b.matched));
+        default: return 0;
+      }
+    });
+  }, [expenses, filterStatus, filterKonto, searchTerm, acctMap, sortCol, sortDir]);
   const acctMomsMap = useMemo(() => {
     const m = new Map<number, string | null>();
     acctList.forEach(r => m.set(r.nr!, r.moms ?? null));
@@ -488,12 +500,18 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
                     <th className="py-1 pr-1 font-medium w-8">
                       <Checkbox checked={filtered.length > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} className="h-3.5 w-3.5" />
                     </th>
-                    <th className="py-1 pr-2 font-medium">Dato</th>
-                    <th className="py-1 pr-2 font-medium">Tekst</th>
-                    <th className="py-1 pr-2 font-medium text-right">Beløb</th>
-                    <th className="py-1 pr-2 font-medium">Konto</th>
-                    <th className="py-1 pr-2 font-medium">Moms</th>
-                    <th className="py-1 pr-2 font-medium">Status</th>
+                    {([['dato', 'Dato', ''], ['tekst', 'Tekst', ''], ['belob', 'Beløb', 'text-right'], ['konto', 'Konto', ''], ['moms', 'Moms', ''], ['status', 'Status', '']] as const).map(([col, label, extra]) => (
+                      <th
+                        key={col}
+                        className={cn("py-1 pr-2 font-medium cursor-pointer select-none hover:text-foreground transition-colors", extra)}
+                        onClick={() => {
+                          if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                          else { setSortCol(col); setSortDir('asc'); }
+                        }}
+                      >
+                        {label}{sortCol === col ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </th>
+                    ))}
                     <th className="py-1 font-medium w-24"></th>
                   </tr>
                 </thead>
