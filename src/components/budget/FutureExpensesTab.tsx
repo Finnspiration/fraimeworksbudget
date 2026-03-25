@@ -207,20 +207,34 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
   const [copyMonths, setCopyMonths] = useState(1);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'matched'>('all');
   const [filterKonto, setFilterKonto] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
+  const acctMap = useMemo(() => {
+    const m = new Map<number, string>();
+    acctList.forEach(a => { if (a.nr) m.set(a.nr, a.lbl || ''); });
+    return m;
+  }, [acctList]);
 
   const filtered = useMemo(() => expenses.filter(e => {
     if (filterStatus === 'active' && e.matched) return false;
     if (filterStatus === 'matched' && !e.matched) return false;
     if (filterKonto && e.konto !== filterKonto) return false;
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      const fields = [
+        e.tekst,
+        e.bilag,
+        e.faktura,
+        e.dato,
+        e.belob?.toString(),
+        e.konto?.toString(),
+        acctMap.get(e.konto),
+      ];
+      return fields.some(f => f?.toLowerCase().includes(s));
+    }
     return true;
-  }), [expenses, filterStatus, filterKonto]);
-  const acctList = useMemo(() => activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr), [activePL]);
-  const acctMap = useMemo(() => {
-    const m = new Map<number, string>();
-    acctList.forEach(r => m.set(r.nr!, r.lbl || ''));
-    return m;
-  }, [acctList]);
+  }), [expenses, filterStatus, filterKonto, searchTerm, acctMap]);
   const acctMomsMap = useMemo(() => {
     const m = new Map<number, string | null>();
     acctList.forEach(r => m.set(r.nr!, r.moms ?? null));
@@ -391,6 +405,20 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
             <div className="flex items-center gap-1">
               <KontoPicker value={filterKonto || 0} onChange={v => setFilterKonto(v)} acctList={acctList} acctMap={acctMap} className="w-48" />
               {filterKonto && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground" onClick={() => setFilterKonto(null)}>✕</Button>}
+            </div>
+            <div className="relative">
+              <Input
+                placeholder="Søg..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="h-7 w-48 text-xs pr-7"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+                >✕</button>
+              )}
             </div>
             {selected.size > 0 && (
               <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowBulkDeleteConfirm(true)}>
