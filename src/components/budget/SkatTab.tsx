@@ -3,6 +3,8 @@ import { fmt, sumArr, resolveEffectiveMoms, type PLValues } from '@/lib/budget-u
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import type { Transaction, BskatRate, PLRow } from '@/data/budget-constants';
 
 interface Props {
@@ -20,6 +22,8 @@ interface Props {
   setSkatPct: (v: number) => void;
   virksomhedstype: 'personlig' | 'selskab';
   setVirksomhedstype: (v: 'personlig' | 'selskab') => void;
+  budgetMode: 'fixed' | 'dynamic';
+  setBudgetMode: (v: 'fixed' | 'dynamic') => void;
 }
 
 const quarters = [
@@ -29,7 +33,8 @@ const quarters = [
   { id: 4, label: 'Q4 Okt-Dec', months: [9, 10, 11], forfald: '01-04-2027' },
 ];
 
-export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype }: Props) {
+export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype, budgetMode, setBudgetMode }: Props) {
+  const isDynamic = budgetMode === 'dynamic';
   const updateBskat = (i: number, field: keyof BskatRate, val: string | number) =>
     setBskat(prev => prev.map((r, j) => j === i ? { ...r, [field]: val } : r));
 
