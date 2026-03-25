@@ -1,35 +1,37 @@
 
 
-# Fix: Konto 1010 fejlagtigt markeret som "Udgiftskonto"
+# Fix: Skyldige poster opdateres ikke korrekt
 
-## Problem
-`revenueAccounts` i ResultatTab filtrerer på `grp === 'oms'`, men når en custom kontoplan er importeret, hedder grupperne `grp1`, `grp2`, osv. — aldrig `'oms'`. Derfor bliver **alle** konti (inkl. 1010 Salg af varer/ydelser) behandlet som udgiftskonti, og tooltippet viser forkert "Udgiftskonto – gemmes som negativt".
+## Problemer identificeret
 
-Samme problem findes i OverblikTab (brugt til "Største udgiftsposter"-filteret, allerede delvist fixet).
+1. **Proj. årsresultat bruger simpel ekstrapolering** (linje 64): `(realized / nReal) * 12` — ignorerer helt budgetdata. Bør bruge realiseret + budget for resterende måneder.
 
-## Løsning
+2. **Estimeret skat beregnes på negative resultater** (linje 166): `projYear * skatPct / 100` kan give negativ skat. Bør være `Math.max(0, projYear) * skatPct / 100`.
 
-### `src/components/budget/ResultatTab.tsx`
-Erstat `grp === 'oms'`-filteret med strukturel identifikation: alle `acct`-rækker der optræder **før** den første `total`-række i kontoplanen er omsætningskonti:
+3. **Moms kun baseret på realiserede transaktioner** (linje 153-158): Fremtidige kvartaler viser 0, selvom der er budgetdata. Bør inkludere budgetteret moms (som allerede beregnes i SkatTab).
 
+## Ændringer i `src/components/budget/OverblikTab.tsx`
+
+### 1. Fix `projYear` — brug realiseret + budget
 ```typescript
-const revenueAccounts = useMemo(() => {
-  const revSet = new Set<number>();
-  for (const row of activePL) {
-    if (row.t === 'total') break; // Stop ved første total = "Omsætning i alt"
-    if (row.t === 'acct' && row.nr) revSet.add(row.nr);
-  }
-  return revSet;
-}, [activePL]);
+// Fra:
+const projYear = nReal > 0 && resRow ? (sumArr(resRow.r, 0, nReal - 1) / nReal) * 12 : 0;
+
+// Til:
+const projYear = resRow ? sumArr(resRow.r, 0, nReal - 1) + sumArr(resRow.b, nReal, 11) : 0;
 ```
 
-Dette er samme tilgang som allerede er brugt i OverblikTab efter det tidligere fix.
+### 2. Fix estimeret skat — ingen skat på tab
+```typescript
+const estimatedTax = Math.max(0, projYear) * skatPct / 100;
+```
 
-### Tooltip-tekst
-Opdatér også tooltippet til at vise korrekt tekst for indtægtskonti:
-- Indtægtskonto: `"Indtægtskonto – klik for at redigere budget"`
-- Udgiftskonto: `"Udgiftskonto – gemmes som negativt"`
+### 3. Fix moms — inkludér budgetteret moms for fremtidige måneder
+Beregn budgetteret salgsmoms (U25-konti) og købsmoms (I25-konti) fra `pl`-data for måneder ≥ nReal, samme logik som SkatTab. Tilføj til kvartalernes netto-moms så fremtidige kvartaler ikke er 0.
 
-## Omfang
-Én fil ændres: `src/components/budget/ResultatTab.tsx` — 3 linjer i `revenueAccounts` memo.
+## Fil
+
+| Fil | Ændring |
+|---|---|
+| `src/components/budget/OverblikTab.tsx` | Fix projYear, skat-beregning, og moms-beregning i debtData |
 
