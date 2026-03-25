@@ -221,26 +221,27 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
               </thead>
               <tbody>
                 {(() => {
-                  const avgRes = nReal > 0 && resRow ? sumArr(resRow.r, 0, nReal - 1) / nReal : 0;
-                  let acc = 0;
+                  let accRes = 0;
+                  let accTax = 0;
                   return MONTHS.map((m, i) => {
                     const isReal = i < nReal;
-                    const monthRes = isReal && resRow ? resRow.r[i] : avgRes;
-                    const monthTax = Math.max(0, monthRes * (skatPct / 100));
-                    acc += monthTax;
+                    const monthRes = isReal && resRow ? resRow.r[i] : (resRow ? resRow.b[i] : 0);
+                    accRes += monthRes;
+                    const monthTax = Math.max(0, accRes * (skatPct / 100)) - accTax;
+                    accTax += monthTax;
                     return (
                       <tr key={m} className={`border-b border-border/30 ${!isReal ? 'text-muted-foreground italic' : ''}`}>
                         <td className={`px-3 py-2 ${isReal ? 'font-medium' : ''}`}>{m}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{fmt(monthRes)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{fmt(monthTax)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(acc)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(accTax)}</td>
                       </tr>
                     );
                   });
                 })()}
                 <tr className="font-semibold bg-secondary/50">
                   <td className="px-3 py-2">Årsestimat</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(projRes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(resRow ? MONTHS.reduce((s, _, i) => s + (i < nReal ? resRow.r[i] : resRow.b[i]), 0) : 0)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{fmt(estimSkat)}</td>
                   <td />
                 </tr>
