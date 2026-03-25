@@ -397,11 +397,14 @@ export default function FutureExpensesTab({ activePL, txns, matchAgainstTransact
                 <Trash2 className="h-3 w-3" />Slet {selected.size} valgte
               </Button>
             )}
-            {txns && matchAgainstTransactions && (
-              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={async () => {
-                const count = await matchAgainstTransactions(txns);
-                if (count > 0) toast.success(`${count} udgift${count > 1 ? 'er' : ''} matchet`);
-                else toast.info('Ingen nye matches fundet');
+            {txns && (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => {
+                const candidates = findMatchCandidates(txns);
+                if (candidates.length === 0) {
+                  toast.info('Ingen match-kandidater fundet');
+                } else {
+                  setMatchCandidates(candidates);
+                }
               }}>
                 <Link2 className="h-3 w-3" />Match mod kassekladde
               </Button>
