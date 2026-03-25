@@ -96,7 +96,7 @@ export default function Index() {
       <header className="border-b bg-card px-4 sm:px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="FraimeWorks" className="h-8" />
+            <Link to="/"><img src={logo} alt="FraimeWorks" className="h-8" /></Link>
             <p className="text-xs text-muted-foreground">Budget & regnskab {YEAR}</p>
           </div>
           <div className="flex items-center gap-2">
