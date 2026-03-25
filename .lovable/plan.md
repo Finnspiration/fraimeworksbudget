@@ -1,31 +1,39 @@
 
 
-# Budget toggle konsistens + estimeret skat/moms i Skat & Moms
+# Estimeret momsafregning i Skat & Moms
 
-## Ændringer
+## Problem
+Momsafregning-tabellen viser kun realiseret moms fra kassekladden. For kvartaler med fremtidige måneder (≥ nReal) vises 0, selvom der er budgetterede indtægter og udgifter.
 
-### 1. Overblik: Ret budget toggle til Switch-stil
-**`src/components/budget/OverblikTab.tsx`**
-- Erstat `ToggleGroup` med `Switch` + `Badge` (som i ResultatTab)
-- Samme layout: `"Fast/Dynamisk budget"` label + Switch + Badge "Rolling forecast"
+## Løsning
 
-### 2. Skat & Moms: Tilføj budget toggle + budgetterede tal
-**`src/components/budget/SkatTab.tsx`**
-- Tilføj `budgetMode` og `setBudgetMode` til Props
-- Tilføj Switch-baseret budget toggle øverst (samme stil som ResultatTab)
-- **Momsafregning**: Tilføj kolonner for "Budget salgsmoms" og "Budget købsmoms" beregnet fra `pl`-data (omsætning × 25% for salg, udgifter × 25% for køb) for måneder uden realiserede data (≥ nReal)
-- **Estimeret skat pr. måned**: Brug budgettal for fremtidige måneder i stedet for gennemsnit. For `i < nReal`: brug `resRow.r[i]`. For `i >= nReal`: brug `resRow.b[i]`. Beregn skat korrekt (kun på positiv akkumuleret resultat) så tallene vises i stedet for "–"
-- Estimeret skat vises nu korrekt: akkumuleret resultat × skatpct, og kun skat på positiv del
+### `src/components/budget/SkatTab.tsx`
 
-### 3. Index.tsx: Send budgetMode/setBudgetMode til SkatTab
-**`src/pages/Index.tsx`**
-- Tilføj `budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode}` til SkatTab props
+**Tilføj budgetteret moms-beregning:**
 
-## Filer
+1. Beregn budgetteret salgsmoms pr. måned: find alle `acct`-rækker i `activePL` med `grp:'oms'` og moms (U25), summér deres budgetværdi × 25% for fremtidige måneder
+2. Beregn budgetteret købsmoms pr. måned: find alle expense `acct`-rækker med I25-moms, summér budgetværdi × 25%
+3. For simplere tilgang: brug `pl['oms'].b[i]` (allerede netto) × 0.25 som budget salgsmoms, og summér expense-konti med moms × 0.25 som budget købsmoms
+
+**Opdatér `computeSalgsmoms` og `computeKobsmoms`:**
+- Tilføj nye funktioner `computeBudgetSalgsmoms(months)` og `computeBudgetKobsmoms(months)` der bruger PL-budgetdata
+- For hvert kvartal: vis realiseret moms for måneder < nReal, og budgetteret moms for måneder ≥ nReal
+- Tilføj kolonne "heraf estimeret" eller vis samlet (realiseret + estimeret) med italic styling for estimerede dele
+
+**Tilføj nyt "Estimeret moms pr. måned" kort** (tilsvarende "Estimeret skat pr. måned"):
+- Tabel med kolonner: Måned, Salgsmoms, Købsmoms, Netto moms, Akkumuleret
+- For `i < nReal`: brug realiseret moms fra transaktioner
+- For `i >= nReal`: brug budgetteret moms fra PL-data
+- Fremtidige måneder vises i italic/muted som i skat-tabellen
+- Totalrække med årsestimat
+
+**Momsafregning-tabellen opdateres:**
+- Kvartals-tallene inkluderer nu budgetterede beløb for fremtidige måneder
+- Estimerede dele markeres visuelt (italic/muted) for at skelne fra realiseret
+
+## Fil
 
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/OverblikTab.tsx` | Erstat ToggleGroup med Switch+Badge |
-| `src/components/budget/SkatTab.tsx` | Tilføj budget toggle, brug budget-resultat for fremtidige måneder, vis estimeret skat korrekt |
-| `src/pages/Index.tsx` | Send budgetMode/setBudgetMode til SkatTab |
+| `src/components/budget/SkatTab.tsx` | Tilføj budget-moms beregninger + nyt "Estimeret moms pr. måned" kort + opdatér momsafregning med estimater |
 
