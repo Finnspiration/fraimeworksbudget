@@ -144,7 +144,7 @@ export default function Index() {
               virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype} />
           </TabsContent>
           <TabsContent value="udgifter">
-            <FutureExpensesTab activePL={state.activePL} />
+            <FutureExpensesTab activePL={state.activePL} txns={state.txns} matchAgainstTransactions={matchAgainstTransactions} />
           </TabsContent>
           <TabsContent value="import">
             <ImportTab txns={state.txns} setTxns={state.setTxns} customPL={state.customPL} setCustomPL={state.setCustomPL}

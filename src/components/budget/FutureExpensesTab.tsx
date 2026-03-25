@@ -12,7 +12,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandG
 import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
 import type { PLRow } from '@/data/budget-constants';
 import { useFutureExpenses, type FutureExpense } from '@/hooks/use-future-expenses';
-import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil, CheckSquare } from 'lucide-react';
+import { Plus, Trash2, Check, CalendarClock, CalendarIcon, Undo2, Copy, ChevronsUpDown, Pencil, CheckSquare, Link2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format, addMonths, addDays, parse, isBefore, isAfter, startOfDay } from 'date-fns';
@@ -65,6 +65,8 @@ function KontoPicker({ value, onChange, acctList, acctMap, className }: {
 
 interface Props {
   activePL: PLRow[];
+  txns?: import('@/data/budget-constants').Transaction[];
+  matchAgainstTransactions?: (txns: import('@/data/budget-constants').Transaction[]) => Promise<number>;
 }
 
 const emptyRow = (): Omit<FutureExpense, 'id' | 'matched' | 'matched_txn_id' | 'created_at'> => ({
@@ -94,7 +96,7 @@ function DatePicker({ value, onChange, className }: { value: string; onChange: (
   );
 }
 
-export default function FutureExpensesTab({ activePL }: Props) {
+export default function FutureExpensesTab({ activePL, txns, matchAgainstTransactions }: Props) {
   const { expenses, addExpense, updateExpense, deleteExpense, unmatchExpense, isLoading } = useFutureExpenses();
   const [newRow, setNewRow] = useState(emptyRow());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -291,6 +293,15 @@ export default function FutureExpensesTab({ activePL }: Props) {
             {selected.size > 0 && (
               <Button variant="destructive" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowBulkDeleteConfirm(true)}>
                 <Trash2 className="h-3 w-3" />Slet {selected.size} valgte
+              </Button>
+            )}
+            {txns && matchAgainstTransactions && (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={async () => {
+                const count = await matchAgainstTransactions(txns);
+                if (count > 0) toast.success(`${count} udgift${count > 1 ? 'er' : ''} matchet`);
+                else toast.info('Ingen nye matches fundet');
+              }}>
+                <Link2 className="h-3 w-3" />Match mod kassekladde
               </Button>
             )}
             <span className="text-xs text-muted-foreground ml-auto">{filtered.length} af {expenses.length} vist</span>
