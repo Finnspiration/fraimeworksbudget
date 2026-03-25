@@ -56,6 +56,13 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
     activePL.filter(r => r.t === 'acct' && r.nr != null && !revenueNrs.has(r.nr!))
   , [activePL, revenueNrs]);
 
+  const ytdReal = resRow ? sumArr(resRow.r, 0, nReal - 1) : 0;
+  const ytdBud = resRow ? sumArr(resRow.b, 0, nReal - 1) : 0;
+  const ytdOms = omsRow ? sumArr(omsRow.r, 0, nReal - 1) : 0;
+  const ytdOmsBud = omsRow ? sumArr(omsRow.b, 0, nReal - 1) : 0;
+  const projYear = nReal > 0 && resRow ? (sumArr(resRow.r, 0, nReal - 1) / nReal) * 12 : 0;
+  const yearBud = resRow ? sumArr(resRow.b) : 0;
+
   const expensesByMonth = useMemo(() => {
     return MONTHS.map((_, i) => {
       let total = 0;
