@@ -61,7 +61,7 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
   const ytdBud = resRow ? sumArr(resRow.b, 0, nReal - 1) : 0;
   const ytdOms = omsRow ? sumArr(omsRow.r, 0, nReal - 1) : 0;
   const ytdOmsBud = omsRow ? sumArr(omsRow.b, 0, nReal - 1) : 0;
-  const projYear = nReal > 0 && resRow ? (sumArr(resRow.r, 0, nReal - 1) / nReal) * 12 : 0;
+  const projYear = resRow ? sumArr(resRow.r, 0, nReal - 1) + sumArr(resRow.b, nReal, 11) : 0;
   const yearBud = resRow ? sumArr(resRow.b) : 0;
 
   const expensesByMonth = useMemo(() => {
@@ -140,8 +140,24 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
   const maxCustomer = topCustomers[0]?.amount || 1;
 
   // ─── Debt overview ───
+  // Identify U25/I25 accounts for budgeted VAT
+  const u25Accounts = useMemo(() => {
+    const set = new Set<number>();
+    for (const r of activePL) {
+      if ((r.t === 'acct' || r.t === 'bal') && r.nr != null && r.moms === 'U25') set.add(r.nr);
+    }
+    return set;
+  }, [activePL]);
+
+  const i25Accounts = useMemo(() => {
+    const set = new Set<number>();
+    for (const r of activePL) {
+      if ((r.t === 'acct' || r.t === 'bal') && r.nr != null && r.moms === 'I25') set.add(r.nr);
+    }
+    return set;
+  }, [activePL]);
+
   const debtData = useMemo(() => {
-    // Moms: salgsmoms - købsmoms - betalt
     let totalMomsOwed = 0;
     const qDefs = [
       { months: [0, 1, 2] },
@@ -150,20 +166,36 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
       { months: [9, 10, 11] },
     ];
     qDefs.forEach((q, qi) => {
+      // Realiseret moms fra kassekladde
       const salgsmoms = txns
         .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'U25')
         .reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
       const kobsmoms = txns
         .filter(tx => tx.dato && new Date(tx.dato).getFullYear() === YEAR && q.months.includes(new Date(tx.dato).getMonth()) && resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'I25')
         .reduce((s, tx) => s + tx.belob / 5, 0);
-      const netto = salgsmoms + kobsmoms; // kobsmoms is negative
+
+      // Budgetteret moms for fremtidige måneder
+      let budSalg = 0, budKob = 0;
+      for (const mi of q.months) {
+        if (mi < nReal) continue;
+        for (const nr of u25Accounts) {
+          const v = pl[nr] as PLValues | undefined;
+          if (v) budSalg += Math.abs(v.b[mi]) * 0.25;
+        }
+        for (const nr of i25Accounts) {
+          const v = pl[nr] as PLValues | undefined;
+          if (v) budKob += Math.abs(v.b[mi]) * 0.25;
+        }
+      }
+
+      const netto = salgsmoms + kobsmoms + budSalg - budKob;
       const betalt = momsBetalt[qi] || 0;
       totalMomsOwed += netto - betalt;
     });
 
-    // Skat
+    // Skat — ingen skat på tab
     const totalBskatBetalt = bskat.reduce((s, r) => s + r.betalt, 0);
-    const estimatedTax = projYear * skatPct / 100;
+    const estimatedTax = Math.max(0, projYear) * skatPct / 100;
     const skatOwed = estimatedTax - totalBskatBetalt;
 
     return {
@@ -172,7 +204,7 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
       andenGeld: Math.round(andenGeld),
       total: Math.round(totalMomsOwed + skatOwed + andenGeld),
     };
-  }, [txns, momsBetalt, bskat, projYear, skatPct, andenGeld]);
+  }, [txns, momsBetalt, bskat, projYear, skatPct, andenGeld, nReal, pl, u25Accounts, i25Accounts, activePL]);
 
   return (
     <div className="space-y-6">
