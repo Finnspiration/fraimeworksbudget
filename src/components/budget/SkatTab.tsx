@@ -79,6 +79,15 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
         </CardContent>
       </Card>
 
+      {/* Budget toggle */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{isDynamic ? 'Dynamisk' : 'Fast'} budget</span>
+          <Switch checked={isDynamic} onCheckedChange={c => setBudgetMode(c ? 'dynamic' : 'fixed')} />
+        </div>
+        {isDynamic && <Badge variant="secondary" className="text-xs">Rolling forecast</Badge>}
+      </div>
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">📋 Momsafregning {YEAR}</CardTitle>
