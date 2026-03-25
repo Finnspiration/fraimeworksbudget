@@ -97,7 +97,7 @@ export default function Chat() {
       }, (payload) => {
         setMessages(prev => [...prev, payload.new as Message]);
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-      })
+        markChannelRead(activeChannel);
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
