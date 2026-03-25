@@ -1,40 +1,31 @@
 
 
-# Fix: Robust kundeallokering for importerede transaktioner
+# Budget toggle konsistens + estimeret skat/moms i Skat & Moms
 
-## Problem
-Når en kunde tildeles en importeret transaktion, gemmes `customer_id` korrekt i databasen. Men `setTxns` i `use-db-state.ts` sletter **alle** transaktioner og genindsætter dem — uden at inkludere `customer_id`. Så ved næste import/redigering mistes alle kundetildelinger.
+## Ændringer
 
-Derudover mangler `customer_id` i `Transaction`-interfacet.
+### 1. Overblik: Ret budget toggle til Switch-stil
+**`src/components/budget/OverblikTab.tsx`**
+- Erstat `ToggleGroup` med `Switch` + `Badge` (som i ResultatTab)
+- Samme layout: `"Fast/Dynamisk budget"` label + Switch + Badge "Rolling forecast"
 
-## Løsning
+### 2. Skat & Moms: Tilføj budget toggle + budgetterede tal
+**`src/components/budget/SkatTab.tsx`**
+- Tilføj `budgetMode` og `setBudgetMode` til Props
+- Tilføj Switch-baseret budget toggle øverst (samme stil som ResultatTab)
+- **Momsafregning**: Tilføj kolonner for "Budget salgsmoms" og "Budget købsmoms" beregnet fra `pl`-data (omsætning × 25% for salg, udgifter × 25% for køb) for måneder uden realiserede data (≥ nReal)
+- **Estimeret skat pr. måned**: Brug budgettal for fremtidige måneder i stedet for gennemsnit. For `i < nReal`: brug `resRow.r[i]`. For `i >= nReal`: brug `resRow.b[i]`. Beregn skat korrekt (kun på positiv akkumuleret resultat) så tallene vises i stedet for "–"
+- Estimeret skat vises nu korrekt: akkumuleret resultat × skatpct, og kun skat på positiv del
 
-### 1. `src/data/budget-constants.ts`
-Tilføj `customer_id?: string | null` til `Transaction`-interfacet.
+### 3. Index.tsx: Send budgetMode/setBudgetMode til SkatTab
+**`src/pages/Index.tsx`**
+- Tilføj `budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode}` til SkatTab props
 
-### 2. `src/hooks/use-db-state.ts`
-I `setTxns`-funktionen: inkludér `customer_id` i mappingen, så det bevares ved delete+reinsert:
-```typescript
-const rows = newTxns.map((t: Transaction) => ({
-  ...existing fields...,
-  customer_id: t.customer_id ?? null,
-}));
-```
+## Filer
 
-Og i fetch-mappingen (queryFn for `db_transactions`): inkludér `customer_id` fra databasen:
-```typescript
-customer_id: r.customer_id ?? null,
-```
-
-### 3. `src/hooks/use-pipeline.ts`
-I `useAssignCustomerToTxn` — efter succesfuld opdatering, invalidér også `db_transactions` querien så det lokale cache opdateres:
-```typescript
-onSuccess: () => {
-  qc.invalidateQueries({ queryKey: ['revenue_transactions'] });
-  qc.invalidateQueries({ queryKey: ['db_transactions'] });
-},
-```
-
-## Omfang
-3 filer ændres. Kundetildelinger overlever nu transaktions-reimport.
+| Fil | Ændring |
+|---|---|
+| `src/components/budget/OverblikTab.tsx` | Erstat ToggleGroup med Switch+Badge |
+| `src/components/budget/SkatTab.tsx` | Tilføj budget toggle, brug budget-resultat for fremtidige måneder, vis estimeret skat korrekt |
+| `src/pages/Index.tsx` | Send budgetMode/setBudgetMode til SkatTab |
 
