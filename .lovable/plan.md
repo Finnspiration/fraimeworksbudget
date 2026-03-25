@@ -1,14 +1,18 @@
 
 
-# Tilføj logo i AppLayout header
+# Fjern Budget-knap fra navigation, logo linker til overblik
 
-## Ændring
+## Ændringer
 
-I `src/components/AppLayout.tsx` — tilføj logoet fra `src/assets/logo.png` i headeren, til venstre for navigationsknapperne, præcis som det allerede gøres i `Index.tsx`.
+### `src/components/AppLayout.tsx`
+- Fjern Budget-posten (`{ to: '/', label: 'Budget', icon: BarChart3 }`) fra `navItems` arrayet
+- Logoet linker allerede til `/` — ingen ændring nødvendig der
+- Fjern `BarChart3` fra imports
 
-## Fil
+### `src/pages/Index.tsx`
+- Logoet er allerede vist i Index-headeren — sikr det linker til `/` (det er allerede på Index, så det er fine som det er)
+- Ingen ændring nødvendig — logoet er allerede på plads
 
-| Fil | Ændring |
-|---|---|
-| `src/components/AppLayout.tsx` | Importér logo, tilføj `<img src={logo} alt="FraimeWorks" className="h-8" />` før nav-elementerne i headeren |
+## Omfang
+Kun én fil ændres: `src/components/AppLayout.tsx` — fjern Budget fra nav-listen.
 
