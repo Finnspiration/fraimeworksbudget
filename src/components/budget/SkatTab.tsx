@@ -59,7 +59,7 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
   const totalBskatSkyldigt = bskat.reduce((s, r) => s + Number(r.belob || 0), 0);
   const totalBskatBetalt = bskat.reduce((s, r) => s + Number(r.betalt || 0), 0);
   const resRow = pl['res'] as PLValues | undefined;
-  const projRes = resRow && nReal > 0 ? sumArr(resRow.r, 0, nReal - 1) * 12 / nReal : 0;
+  const projRes = resRow ? MONTHS.reduce((s, _, i) => s + (i < nReal ? resRow.r[i] : resRow.b[i]), 0) : 0;
   const estimSkat = Math.max(0, projRes * (skatPct / 100));
   const restskat = estimSkat - totalBskatBetalt;
 
