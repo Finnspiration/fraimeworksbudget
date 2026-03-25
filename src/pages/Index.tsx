@@ -16,9 +16,12 @@ import { BarChart3, Table, Receipt, FileSpreadsheet, Target, CalendarClock, Load
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useUnreadCounts } from '@/hooks/use-unread-counts';
 
 export default function Index() {
   const { profile, isAdmin, signOut } = useAuth();
+  const { unreadChat, unreadTasks } = useUnreadCounts();
   const state = useDbState();
   const [tab, setTab] = useState('overblik');
   const { data: pipelineJobs = [] } = usePipelineJobs();
@@ -97,8 +100,8 @@ export default function Index() {
             <p className="text-xs text-muted-foreground">Budget & regnskab {YEAR}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/chat"><Button variant="ghost" size="sm" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" />Chat</Button></Link>
-            <Link to="/todo"><Button variant="ghost" size="sm" className="gap-1.5"><CheckSquare className="h-3.5 w-3.5" />Opgaver</Button></Link>
+            <Link to="/chat"><Button variant="ghost" size="sm" className="gap-1.5 relative"><MessageCircle className="h-3.5 w-3.5" />Chat{unreadChat > 0 && <Badge variant="destructive" className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center">{unreadChat > 99 ? '99+' : unreadChat}</Badge>}</Button></Link>
+            <Link to="/todo"><Button variant="ghost" size="sm" className="gap-1.5 relative"><CheckSquare className="h-3.5 w-3.5" />Opgaver{unreadTasks > 0 && <Badge variant="destructive" className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center">{unreadTasks > 99 ? '99+' : unreadTasks}</Badge>}</Button></Link>
             {isAdmin && <Link to="/admin"><Button variant="ghost" size="sm" className="gap-1.5"><Shield className="h-3.5 w-3.5" />Admin</Button></Link>}
             <span className="text-xs text-muted-foreground hidden sm:inline">{profile?.name}</span>
             <span className="text-xs text-muted-foreground hidden sm:inline">·</span>
