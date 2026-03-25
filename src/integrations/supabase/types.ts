@@ -157,6 +157,24 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_last_read: {
+        Row: {
+          channel_id: string
+          last_read_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          last_read_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          last_read_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           channel_id: string
