@@ -38,7 +38,8 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
   const updateBskat = (i: number, field: keyof BskatRate, val: string | number) =>
     setBskat(prev => prev.map((r, j) => j === i ? { ...r, [field]: val } : r));
 
-  const computeKobsmoms = (months: number[]) =>
+  // Realiseret moms fra transaktioner for specifikke måneder
+  const computeRealKobsmoms = (months: number[]) =>
     txns.filter(tx => {
       if (!tx.dato) return false;
       const d = new Date(tx.dato);
@@ -46,13 +47,61 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
       return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'I25';
     }).reduce((s, tx) => s + tx.belob / 5, 0);
 
-  const computeSalgsmoms = (months: number[]) =>
+  const computeRealSalgsmoms = (months: number[]) =>
     txns.filter(tx => {
       if (!tx.dato) return false;
       const d = new Date(tx.dato);
       const effectiveMoms = resolveEffectiveMoms(tx.moms, tx.konto, activePL);
       return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'U25';
     }).reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
+
+  // Budget-moms pr. måned fra PL-data
+  const budgetSalgsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => {
+      let total = 0;
+      activePL.forEach(r => {
+        if (r.t === 'acct' && r.nr != null) {
+          const effMoms = resolveEffectiveMoms(null, r.nr, activePL);
+          if (effMoms === 'U25') {
+            const plRow = pl[r.nr] as PLValues | undefined;
+            if (plRow) total += Math.abs(plRow.b[i]) * 0.25;
+          }
+        }
+      });
+      return total;
+    });
+  }, [pl, activePL]);
+
+  const budgetKobsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => {
+      let total = 0;
+      activePL.forEach(r => {
+        if (r.t === 'acct' && r.nr != null) {
+          const effMoms = resolveEffectiveMoms(null, r.nr, activePL);
+          if (effMoms === 'I25') {
+            const plRow = pl[r.nr] as PLValues | undefined;
+            if (plRow) total += Math.abs(plRow.b[i]) * 0.25;
+          }
+        }
+      });
+      return total;
+    });
+  }, [pl, activePL]);
+
+  // Realiseret moms pr. måned (for den månedlige tabel)
+  const realSalgsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => computeRealSalgsmoms([i]));
+  }, [txns, activePL]);
+
+  const realKobsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => computeRealKobsmoms([i]));
+  }, [txns, activePL]);
+
+  // Kombineret moms: realiseret for i < nReal, budget for i >= nReal
+  const combinedSalgsMoms = (months: number[]) =>
+    months.reduce((s, m) => s + (m < nReal ? realSalgsMomsPerMonth[m] : budgetSalgsMomsPerMonth[m]), 0);
+  const combinedKobsMoms = (months: number[]) =>
+    months.reduce((s, m) => s + (m < nReal ? realKobsMomsPerMonth[m] : budgetKobsMomsPerMonth[m]), 0);
 
   const omsRow = pl['oms'] as PLValues | undefined;
 
