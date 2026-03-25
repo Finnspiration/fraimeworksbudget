@@ -38,7 +38,8 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
   const updateBskat = (i: number, field: keyof BskatRate, val: string | number) =>
     setBskat(prev => prev.map((r, j) => j === i ? { ...r, [field]: val } : r));
 
-  const computeKobsmoms = (months: number[]) =>
+  // Realiseret moms fra transaktioner for specifikke måneder
+  const computeRealKobsmoms = (months: number[]) =>
     txns.filter(tx => {
       if (!tx.dato) return false;
       const d = new Date(tx.dato);
@@ -46,13 +47,61 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
       return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'I25';
     }).reduce((s, tx) => s + tx.belob / 5, 0);
 
-  const computeSalgsmoms = (months: number[]) =>
+  const computeRealSalgsmoms = (months: number[]) =>
     txns.filter(tx => {
       if (!tx.dato) return false;
       const d = new Date(tx.dato);
       const effectiveMoms = resolveEffectiveMoms(tx.moms, tx.konto, activePL);
       return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'U25';
     }).reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
+
+  // Budget-moms pr. måned fra PL-data
+  const budgetSalgsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => {
+      let total = 0;
+      activePL.forEach(r => {
+        if (r.t === 'acct' && r.nr != null) {
+          const effMoms = resolveEffectiveMoms(null, r.nr, activePL);
+          if (effMoms === 'U25') {
+            const plRow = pl[r.nr] as PLValues | undefined;
+            if (plRow) total += Math.abs(plRow.b[i]) * 0.25;
+          }
+        }
+      });
+      return total;
+    });
+  }, [pl, activePL]);
+
+  const budgetKobsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => {
+      let total = 0;
+      activePL.forEach(r => {
+        if (r.t === 'acct' && r.nr != null) {
+          const effMoms = resolveEffectiveMoms(null, r.nr, activePL);
+          if (effMoms === 'I25') {
+            const plRow = pl[r.nr] as PLValues | undefined;
+            if (plRow) total += Math.abs(plRow.b[i]) * 0.25;
+          }
+        }
+      });
+      return total;
+    });
+  }, [pl, activePL]);
+
+  // Realiseret moms pr. måned
+  const realSalgsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => computeRealSalgsmoms([i]));
+  }, [txns, activePL]);
+
+  const realKobsMomsPerMonth = useMemo(() => {
+    return MONTHS.map((_, i) => computeRealKobsmoms([i]));
+  }, [txns, activePL]);
+
+  // Kombineret moms: realiseret for i < nReal, budget for i >= nReal
+  const combinedSalgsMoms = (months: number[]) =>
+    months.reduce((s, m) => s + (m < nReal ? realSalgsMomsPerMonth[m] : budgetSalgsMomsPerMonth[m]), 0);
+  const combinedKobsMoms = (months: number[]) =>
+    months.reduce((s, m) => s + (m < nReal ? realKobsMomsPerMonth[m] : budgetKobsMomsPerMonth[m]), 0);
 
   const omsRow = pl['oms'] as PLValues | undefined;
 
@@ -108,14 +157,15 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
               </thead>
               <tbody>
                 {quarters.map((q, qi) => {
-                  const salgsmoms = computeSalgsmoms(q.months);
-                  const kobsmoms = computeKobsmoms(q.months);
+                  const salgsmoms = combinedSalgsMoms(q.months);
+                  const kobsmoms = combinedKobsMoms(q.months);
+                  const hasEstimate = q.months.some(m => m >= nReal);
                   const netto = salgsmoms - kobsmoms;
                   const betalt = Number(momsBetalt[qi] || 0);
                   const udest = netto - betalt;
                   return (
-                    <tr key={q.id} className="border-b border-border/30">
-                      <td className="px-3 py-2 font-medium">{q.label}</td>
+                    <tr key={q.id} className={`border-b border-border/30 ${hasEstimate ? 'italic' : ''}`}>
+                      <td className="px-3 py-2 font-medium">{q.label} {hasEstimate && <span className="text-xs text-muted-foreground not-italic">(est.)</span>}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{fmt(salgsmoms)}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{fmt(kobsmoms)}</td>
                       <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(netto)}</td>
@@ -132,17 +182,72 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
                 })}
                 <tr className="font-semibold bg-secondary/50">
                   <td className="px-3 py-2">Moms i alt</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q) => s + computeSalgsmoms(q.months), 0))}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q) => s + computeKobsmoms(q.months), 0))}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q) => s + computeSalgsmoms(q.months) - computeKobsmoms(q.months), 0))}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q) => s + combinedSalgsMoms(q.months), 0))}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q) => s + combinedKobsMoms(q.months), 0))}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q) => s + combinedSalgsMoms(q.months) - combinedKobsMoms(q.months), 0))}</td>
                   <td />
                   <td />
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q, i) => s + computeSalgsmoms(q.months) - computeKobsmoms(q.months) - Number(momsBetalt[i] || 0), 0))}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(quarters.reduce((s, q, i) => s + combinedSalgsMoms(q.months) - combinedKobsMoms(q.months) - Number(momsBetalt[i] || 0), 0))}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          {!txns.some(tx => resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'U25') && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 — tilføj momskode U25 på salgsfakturaer i kassekladden.</p>}
+          {!txns.some(tx => resolveEffectiveMoms(tx.moms, tx.konto, activePL) === 'U25') && nReal > 0 && <p className="text-xs text-primary mt-3">⚠ Salgsmoms vises som 0 for realiserede måneder — tilføj momskode U25 på salgsfakturaer i kassekladden.</p>}
+        </CardContent>
+      </Card>
+
+      {/* Estimeret moms pr. måned */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">📅 Estimeret moms pr. måned</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="text-left px-3 py-2">Måned</th>
+                  <th className="text-right px-3 py-2">Salgsmoms</th>
+                  <th className="text-right px-3 py-2">Købsmoms</th>
+                  <th className="text-right px-3 py-2">Netto moms</th>
+                  <th className="text-right px-3 py-2">Akkumuleret</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  let accMoms = 0;
+                  return MONTHS.map((m, i) => {
+                    const isReal = i < nReal;
+                    const salg = isReal ? realSalgsMomsPerMonth[i] : budgetSalgsMomsPerMonth[i];
+                    const kob = isReal ? realKobsMomsPerMonth[i] : budgetKobsMomsPerMonth[i];
+                    const netto = salg - kob;
+                    accMoms += netto;
+                    return (
+                      <tr key={m} className={`border-b border-border/30 ${!isReal ? 'text-muted-foreground italic' : ''}`}>
+                        <td className={`px-3 py-2 ${isReal ? 'font-medium' : ''}`}>{m}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(salg)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(kob)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{fmt(netto)}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(accMoms)}</td>
+                      </tr>
+                    );
+                  });
+                })()}
+                <tr className="font-semibold bg-secondary/50">
+                  <td className="px-3 py-2">Årsestimat</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(MONTHS.reduce((s, _, i) => s + (i < nReal ? realSalgsMomsPerMonth[i] : budgetSalgsMomsPerMonth[i]), 0))}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(MONTHS.reduce((s, _, i) => s + (i < nReal ? realKobsMomsPerMonth[i] : budgetKobsMomsPerMonth[i]), 0))}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(MONTHS.reduce((s, _, i) => {
+                    const salg = i < nReal ? realSalgsMomsPerMonth[i] : budgetSalgsMomsPerMonth[i];
+                    const kob = i < nReal ? realKobsMomsPerMonth[i] : budgetKobsMomsPerMonth[i];
+                    return s + salg - kob;
+                  }, 0))}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          {nReal === 0 && <p className="text-xs text-muted-foreground mt-2">Ingen realiserede data endnu — alle måneder er estimater.</p>}
         </CardContent>
       </Card>
 
@@ -278,7 +383,7 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
           </CardHeader>
           <CardContent className="space-y-2">
             {quarters.map((q, i) => {
-              const netto = computeSalgsmoms(q.months) - computeKobsmoms(q.months);
+              const netto = combinedSalgsMoms(q.months) - combinedKobsMoms(q.months);
               const udest = netto - Number(momsBetalt[i] || 0);
               return (
                 <p key={q.id} className="flex justify-between text-sm">
@@ -301,7 +406,7 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
                 <span>Samlet udestående:</span>
                 <span className="tabular-nums">
                   {fmt(
-                    quarters.reduce((s, q, i) => s + Math.max(0, computeSalgsmoms(q.months) - computeKobsmoms(q.months) - Number(momsBetalt[i] || 0)), 0) +
+                    quarters.reduce((s, q, i) => s + Math.max(0, combinedSalgsMoms(q.months) - combinedKobsMoms(q.months) - Number(momsBetalt[i] || 0)), 0) +
                     Math.max(0, totalBskatSkyldigt - totalBskatBetalt) + Number(andenGeld || 0)
                   )} kr
                 </span>
