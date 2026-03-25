@@ -81,6 +81,21 @@ function EditableBudgetCell({ value, dimmed, onSave, isExpense }: { value: numbe
     </td>
   );
 }
+function FixedBudgetCell({ budgetValue, futureValue, dimmed, isExpense, onSave }: {
+  budgetValue: number; futureValue: number; dimmed?: boolean; isExpense?: boolean; onSave: (v: number) => void;
+}) {
+  if (futureValue !== 0) {
+    const color = futureValue > 0 ? 'text-[hsl(142,40%,35%)]' : futureValue < 0 ? 'text-destructive' : 'text-muted-foreground';
+    return (
+      <td className={`px-1.5 py-0.5 ${dimmed ? 'opacity-30' : ''}`} title="Fra Fremtidige Udgifter">
+        <div className={`border border-dashed border-amber-500/60 rounded bg-amber-50/30 px-1 py-0.5 text-right text-xs tabular-nums ${color}`}>
+          {fmt(Math.abs(futureValue))}
+        </div>
+      </td>
+    );
+  }
+  return <EditableBudgetCell value={budgetValue} dimmed={dimmed} isExpense={isExpense} onSave={onSave} />;
+}
 
 export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, budgetMode, setBudgetMode, activePL, txns = [], pipelineJobs = [], futureExpenses = [], futureExpensesBudget = {} }: Props) {
   const isDynamic = budgetMode === 'dynamic';
