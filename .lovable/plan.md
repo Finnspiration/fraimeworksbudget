@@ -1,33 +1,40 @@
 
 
-# Fix: Største udgiftsposter viser indtægtskonti
+# Fix: Robust kundeallokering for importerede transaktioner
 
 ## Problem
-`expenseAcctRows` filtrerer konti med `!omsGroups.includes(r.grp!)`. `omsGroups` udtrækkes fra den første `total`-rækkes `sum`-formel (fx `grp:oms`). Men når brugeren har importeret en custom kontoplan, kan grupperne hedde noget andet eller mangle — så konto 1010 (omsætning) ikke filtreres fra.
+Når en kunde tildeles en importeret transaktion, gemmes `customer_id` korrekt i databasen. Men `setTxns` i `use-db-state.ts` sletter **alle** transaktioner og genindsætter dem — uden at inkludere `customer_id`. Så ved næste import/redigering mistes alle kundetildelinger.
+
+Derudover mangler `customer_id` i `Transaction`-interfacet.
 
 ## Løsning
 
-### `src/components/budget/OverblikTab.tsx`
-Erstat den nuværende `expenseAcctRows`-logik med en mere robust tilgang: saml **alle** grupper der hører til omsætning ved at traversere kontoplanen og finde alle `acct`-rækker der ligger **før** den første `total`- eller `res`-række. Disse er per definition indtægtskonti.
+### 1. `src/data/budget-constants.ts`
+Tilføj `customer_id?: string | null` til `Transaction`-interfacet.
 
+### 2. `src/hooks/use-db-state.ts`
+I `setTxns`-funktionen: inkludér `customer_id` i mappingen, så det bevares ved delete+reinsert:
 ```typescript
-// Ny logik: find alle konto-numre der ligger før første total/res-række
-const revenueNrs = useMemo(() => {
-  const nrs = new Set<number>();
-  for (const r of activePL) {
-    if (r.t === 'total' || r.t === 'res') break; // stop ved første summering
-    if (r.t === 'acct' && r.nr != null) nrs.add(r.nr);
-  }
-  return nrs;
-}, [activePL]);
-
-const expenseAcctRows = useMemo(() =>
-  activePL.filter(r => r.t === 'acct' && r.nr != null && !revenueNrs.has(r.nr!))
-, [activePL, revenueNrs]);
+const rows = newTxns.map((t: Transaction) => ({
+  ...existing fields...,
+  customer_id: t.customer_id ?? null,
+}));
 ```
 
-Dette virker uanset gruppenavne og custom kontoplaner, fordi det bruger kontoplanens struktur (rækkefølge) til at identificere omsætningskonti.
+Og i fetch-mappingen (queryFn for `db_transactions`): inkludér `customer_id` fra databasen:
+```typescript
+customer_id: r.customer_id ?? null,
+```
+
+### 3. `src/hooks/use-pipeline.ts`
+I `useAssignCustomerToTxn` — efter succesfuld opdatering, invalidér også `db_transactions` querien så det lokale cache opdateres:
+```typescript
+onSuccess: () => {
+  qc.invalidateQueries({ queryKey: ['revenue_transactions'] });
+  qc.invalidateQueries({ queryKey: ['db_transactions'] });
+},
+```
 
 ## Omfang
-Én fil ændres: `src/components/budget/OverblikTab.tsx` — ny `revenueNrs` memo + opdateret `expenseAcctRows` filter.
+3 filer ændres. Kundetildelinger overlever nu transaktions-reimport.
 
