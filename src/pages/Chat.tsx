@@ -14,6 +14,9 @@ interface Channel {
   id: string;
   name: string | null;
   is_direct: boolean;
+  is_thread?: boolean;
+  closed?: boolean;
+  context_label?: string | null;
 }
 
 interface Message {
