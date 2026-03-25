@@ -5,6 +5,7 @@ import { useUnreadCounts } from '@/hooks/use-unread-counts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart3, MessageCircle, CheckSquare, Shield, LogOut } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const navItems = [
   { to: '/', label: 'Budget', icon: BarChart3 },
@@ -25,7 +26,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card px-4 sm:px-6 py-3">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <nav className="flex items-center gap-1">
+          <div className="flex items-center gap-4">
+            <Link to="/"><img src={logo} alt="FraimeWorks" className="h-8" /></Link>
+            <nav className="flex items-center gap-1">
             {navItems.map(item => {
               const count = item.countKey ? counts[item.countKey] : 0;
               return (
@@ -48,7 +51,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </Button>
               </Link>
             )}
-          </nav>
+           </nav>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{profile?.name}</span>
             <Button variant="ghost" size="sm" onClick={signOut} className="gap-1.5">
