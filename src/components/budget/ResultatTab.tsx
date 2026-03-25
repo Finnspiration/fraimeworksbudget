@@ -76,7 +76,7 @@ function EditableBudgetCell({ value, dimmed, onSave, isExpense }: { value: numbe
     <td
       className={`px-2 py-1 text-right text-xs tabular-nums cursor-pointer hover:bg-primary/10 rounded transition-colors ${dimmed ? 'opacity-30' : ''} ${color}`}
       onClick={() => { setDraft(String(Math.abs(value) || '')); setEditing(true); }}
-      title={isExpense ? 'Udgiftskonto – gemmes som negativt' : 'Klik for at redigere budget'}
+      title={isExpense ? 'Udgiftskonto – gemmes som negativt' : 'Indtægtskonto – klik for at redigere budget'}
     >
       {display}
     </td>
@@ -105,7 +105,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
   const revenueAccounts = useMemo(() => {
     const revSet = new Set<number>();
     for (const row of activePL) {
-      if (row.t === 'acct' && row.grp === 'oms' && row.nr) revSet.add(row.nr);
+      if (row.t === 'total') break;
+      if (row.t === 'acct' && row.nr) revSet.add(row.nr);
     }
     return revSet;
   }, [activePL]);
