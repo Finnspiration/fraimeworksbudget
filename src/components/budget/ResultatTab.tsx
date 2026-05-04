@@ -67,16 +67,15 @@ function EditableBudgetCell({ value, dimmed, onSave, isExpense }: { value: numbe
     );
   }
 
-  // Show absolute value for expense accounts so users see "25000" not "-25000"
-  const displayValue = isExpense ? -value : value;
-  const display = displayValue === 0 || isNaN(displayValue) ? '–' : fmt(displayValue);
-  const color = displayValue < 0 ? 'text-foreground/50' : displayValue > 0 ? 'text-[hsl(142,40%,35%)]' : 'text-muted-foreground';
+  // Show actual stored value with correct sign (expenses are negative)
+  const display = value === 0 || isNaN(value) ? '–' : fmt(value);
+  const color = value < 0 ? 'text-destructive/70' : value > 0 ? 'text-[hsl(142,40%,35%)]' : 'text-muted-foreground';
 
   return (
     <td
       className={`px-2 py-1 text-right text-xs tabular-nums cursor-pointer hover:bg-primary/10 rounded transition-colors ${dimmed ? 'opacity-30' : ''} ${color}`}
       onClick={() => { setDraft(String(Math.abs(value) || '')); setEditing(true); }}
-      title={isExpense ? 'Udgiftskonto – gemmes som negativt' : 'Indtægtskonto – klik for at redigere budget'}
+      title={isExpense ? 'Udgiftskonto – indtast positivt tal, gemmes som negativt' : 'Indtægtskonto – klik for at redigere budget'}
     >
       {display}
     </td>
@@ -90,7 +89,7 @@ function FixedBudgetCell({ budgetValue, futureValue, dimmed, isExpense, onSave }
     return (
       <td className={`px-1.5 py-0.5 ${dimmed ? 'opacity-30' : ''}`} title="Fra Fremtidige Udgifter">
         <div className={`border border-dashed border-amber-500/60 rounded bg-amber-50/30 px-1 py-0.5 text-right text-xs tabular-nums ${color}`}>
-          {fmt(Math.abs(futureValue))}
+          {fmt(futureValue)}
         </div>
       </td>
     );
