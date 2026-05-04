@@ -68,7 +68,7 @@ export default function Index() {
         if (!base[k]) base[k] = new Array(12).fill(0);
         months.forEach((val, i) => {
           if (val !== 0) {
-            base[k][i] = -val; // expenses stored as negative in budget
+            base[k][i] = val; // already correctly signed
           }
         });
       }
