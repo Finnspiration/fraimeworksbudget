@@ -1,46 +1,47 @@
-# Fix: Budgetterede udgifter (lønninger m.fl.) vises som positive beløb
+# Fix: Fremtidige udgifter vises som positive beløb i budget
 
 ## Problem
-I "Fast budget"-mode viser budget-cellerne udgiftsbeløb som **positive** tal (fx Lønninger - Charlotte: `25.000` i grønt), selvom de er gemt korrekt som negative (`-25000`) og er udgifter. Det er inkonsistent med:
-- Realiserede tal i samme række, der vises som negative i rødt (`-50.000`)
-- Subtotaler ("Lønninger i alt"), der vises som `-30.000` i rødt
-- Forventning: udgifter er negative
+I screenshot ses fx parkering (konto 3150) i april med fremtidig udgift `600` (positiv, grøn) i den stiplede ramme — burde være `-600` (negativ, rød), ligesom de manuelt indtastede budgetter (`-750`).
 
 ## Årsag
-I `src/components/budget/ResultatTab.tsx`:
+`futureExpensesBudget` i `src/pages/Index.tsx` (linje 31-41) gemmer `exp.belob` direkte fra databasen, som er positivt (brugere indtaster fremtidige udgifter som positive tal i `FutureExpensesTab`).
 
-1. **`EditableBudgetCell`** (linje 70-73) flipper bevidst fortegn for visning:
-   ```ts
-   const displayValue = isExpense ? -value : value;
-   ```
-   → en gemt værdi `-25000` vises som `25000` i grøn (positiv-farve).
+`mergedBudget` (linje 64-72) negerer korrekt værdien for selve PL-beregningen (`base[k][i] = -val`), men det map der sendes til `FixedBudgetCell` til visning er stadig positivt. Cellen viser derfor det rå positive beløb.
 
-2. **`FixedBudgetCell`** (linje 88-96) viser future-expense-værdier med `Math.abs(futureValue)`, hvilket strip'er minustegn fra udgifter.
+## Fix
+I `src/pages/Index.tsx`, lad `futureExpensesBudget` indeholde værdien med korrekt fortegn (negativ for udgiftskonti, ≥1300), så cellen viser `-600` direkte og forbliver konsistent med `mergedBudget`-beregningen.
 
-Dette blev oprindeligt indført for at gøre indtastning "intuitiv" (jf. memory `logic/budget-entry-signs`), men gør at visningen modsiger virkeligheden og er inkonsistent med både realiserede celler og subtotaler.
+```ts
+const futureExpensesBudget = useMemo(() => {
+  const map: Record<number, number[]> = {};
+  activeExpenses.forEach(exp => {
+    const d = new Date(exp.dato);
+    if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+    const month = d.getMonth();
+    if (!map[exp.konto]) map[exp.konto] = new Array(12).fill(0);
+    // Udgiftskonti gemmes som negative (samme konvention som manuelt budget)
+    const signed = exp.konto >= 1300 ? -Math.abs(exp.belob) : exp.belob;
+    map[exp.konto][month] += signed;
+  });
+  return map;
+}, [activeExpenses]);
+```
 
-## Løsning
-Vis altid den faktisk gemte værdi (med korrekt fortegn) — men behold **input-flow** så brugere kan indtaste positive tal, der automatisk gemmes som negative for udgiftskonti.
-
-### Ændringer i `src/components/budget/ResultatTab.tsx`
-
-**`EditableBudgetCell` (visningsdelen, linje 70-83):**
-- Fjern fortegns-flip: brug `value` direkte i stedet for `displayValue = isExpense ? -value : value`
-- Farvelogik følger faktisk værdi: negative → rød/dæmpet, positive → grøn
-- Behold input-konverteringen i `handleSave` (linje 42-49) uændret, så brugere stadig kan skrive `25000` og få det gemt som `-25000`
-- Behold `Math.abs(value)` i `setDraft` (linje 78) så input-feltet starter med positivt tal ved redigering
-- Opdatér tooltip-tekst til fx: `"Udgiftskonto – indtast positivt tal, gemmes som negativt"`
-
-**`FixedBudgetCell` (linje 88-96):**
-- Fjern `Math.abs(futureValue)` — vis `fmt(futureValue)` direkte så `-3000` vises som `-3.000`
-- Farvelogikken er allerede korrekt baseret på fortegn
+Og opdatér `mergedBudget` (linje 67-70) så den ikke negerer igen — brug `val` direkte:
+```ts
+months.forEach((val, i) => {
+  if (val !== 0) {
+    base[k][i] = val;
+  }
+});
+```
 
 ## Resultat
-- Lønninger - Charlotte Bud: `-25.000` (rød/dæmpet) i stedet for `25.000` (grøn)
-- Konsistens mellem real-, budget- og total-celler
-- Indtastning forbliver intuitiv: bruger skriver `25000`, systemet gemmer `-25000` for udgiftskonti
+- Parkering april viser `-600` (rød/dimmed) i stedet for `600` (grøn)
+- Konsistent med manuelt indtastede budgetposter (`-750`)
+- PL-totaler uændrede (samme negative værdier ender i beregningen)
 
 ## Fil
 | Fil | Ændring |
 |---|---|
-| `src/components/budget/ResultatTab.tsx` | Fjern visningsflip i `EditableBudgetCell` + `FixedBudgetCell`; behold input-konvertering |
+| `src/pages/Index.tsx` | Sign-konvertér `futureExpensesBudget`; fjern dobbelt-negering i `mergedBudget` |

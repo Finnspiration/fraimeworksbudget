@@ -35,7 +35,9 @@ export default function Index() {
       if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
       const month = d.getMonth();
       if (!map[exp.konto]) map[exp.konto] = new Array(12).fill(0);
-      map[exp.konto][month] += exp.belob;
+      // Expense accounts (>= 1300) stored as negative, same convention as manual budget
+      const signed = exp.konto >= 1300 ? -Math.abs(exp.belob) : exp.belob;
+      map[exp.konto][month] += signed;
     });
     return map;
   }, [activeExpenses]);
