@@ -144,7 +144,8 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
   const u25Accounts = useMemo(() => {
     const set = new Set<number>();
     for (const r of activePL) {
-      if ((r.t === 'acct' || r.t === 'bal') && r.nr != null && r.moms === 'U25') set.add(r.nr);
+      if ((r.t === 'acct' || r.t === 'bal') && r.nr != null &&
+          resolveEffectiveMoms(null, r.nr, activePL) === 'U25') set.add(r.nr);
     }
     return set;
   }, [activePL]);
@@ -152,7 +153,8 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
   const i25Accounts = useMemo(() => {
     const set = new Set<number>();
     for (const r of activePL) {
-      if ((r.t === 'acct' || r.t === 'bal') && r.nr != null && r.moms === 'I25') set.add(r.nr);
+      if ((r.t === 'acct' || r.t === 'bal') && r.nr != null &&
+          resolveEffectiveMoms(null, r.nr, activePL) === 'I25') set.add(r.nr);
     }
     return set;
   }, [activePL]);
