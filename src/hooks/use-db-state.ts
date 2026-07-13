@@ -462,6 +462,7 @@ export function useDbState() {
     budgetMode, setBudgetMode,
     customPL, setCustomPL, activePL,
     virksomhedstype, setVirksomhedstype: handleVirksomhedstypeChange,
+    liquidityConfig, setLiquidityConfig,
     pl, realized,
     resetAll,
     isLoading: !seeded,
