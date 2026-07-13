@@ -101,16 +101,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
   const isDynamic = budgetMode === 'dynamic';
 
   // Determine which accounts are revenue (positive convention) vs expense (negative convention)
-  const revenueAccounts = useMemo(() => {
-    const revSet = new Set<number>();
-    for (const row of activePL) {
-      if (row.t === 'total') break;
-      if (row.t === 'acct' && row.nr) revSet.add(row.nr);
-    }
-    // Ekstra indtægtskonti uden for Omsætning-sektionen
-    [4310, 4360, 4610].forEach(nr => revSet.add(nr));
-    return revSet;
-  }, [activePL]);
+  const revenueAccounts = useMemo(() => getRevenueAccounts(activePL), [activePL]);
   const isExpenseAccount = (nr: number) => !revenueAccounts.has(nr);
   const [showZero, setShowZero] = useState(false);
   const [collapsedSecs, setCollapsedSecs] = useState<Record<string, boolean>>({});
