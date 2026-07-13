@@ -107,6 +107,8 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
       if (row.t === 'total') break;
       if (row.t === 'acct' && row.nr) revSet.add(row.nr);
     }
+    // Ekstra indtægtskonti uden for Omsætning-sektionen
+    [4310, 4360, 4610].forEach(nr => revSet.add(nr));
     return revSet;
   }, [activePL]);
   const isExpenseAccount = (nr: number) => !revenueAccounts.has(nr);
