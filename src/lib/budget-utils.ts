@@ -276,6 +276,9 @@ export interface LiquidityRow {
   label: string;
   r: number[];
   b: number[];
+  /** Hybrid projected series (only set for saldo rows like liq_drift):
+   *  realized cashflows for i < nReal, budget cashflows for i >= nReal, accumulated. */
+  proj?: number[];
   /** true = high value is bad (debt/outflow); false = balance/asset */
   invertColor?: boolean;
 }
@@ -393,8 +396,10 @@ export function computeLiquiditySection(params: {
   const resRow = pl['res'] as PLValues | undefined;
   const driftR = new Array(12).fill(0);
   const driftB = new Array(12).fill(0);
+  const driftProj = new Array(12).fill(0);
   let accR = Number(config.primoSaldo || 0);
   let accB = Number(config.primoSaldo || 0);
+  let accP = Number(config.primoSaldo || 0);
   for (let i = 0; i < 12; i++) {
     const cfR = (resRow?.r[i] || 0) + realMoms.salgs[i] - realMoms.kob[i]
       - momsBetaltReal[i] - bskatReal[i] - andenGeldReal[i];
@@ -402,8 +407,10 @@ export function computeLiquiditySection(params: {
       - momsBetaltBudget[i] - bskatBudget[i] - andenGeldBudget[i];
     accR += cfR;
     accB += cfB;
+    accP += i < nReal ? cfR : cfB;
     driftR[i] = accR;
     driftB[i] = accB;
+    driftProj[i] = accP;
   }
 
   return [
@@ -413,6 +420,6 @@ export function computeLiquiditySection(params: {
     { id: 'liq_moms_betalt', label: 'Moms betalt til Skat', r: momsBetaltReal, b: momsBetaltBudget, invertColor: true },
     { id: 'liq_bskat', label: 'B-skat / Aconto skat', r: bskatReal, b: bskatBudget, invertColor: true },
     { id: 'liq_andengeld', label: 'Øvrig gæld', r: andenGeldReal, b: andenGeldBudget, invertColor: true },
-    { id: 'liq_drift', label: 'Driftskonto (saldo ultimo)', r: driftR, b: driftB, invertColor: false },
+    { id: 'liq_drift', label: 'Driftskonto (saldo ultimo)', r: driftR, b: driftB, proj: driftProj, invertColor: false },
   ];
 }
