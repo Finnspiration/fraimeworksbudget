@@ -256,10 +256,38 @@ export function useDbState() {
     const newBudget = typeof action === 'function' ? action(prev) : action;
     qc.setQueryData(['db_budget'], newBudget);
     (async () => {
-      await supabase.from('budget_entries').delete().gte('month_index', 0);
-      const entries = budgetToEntries(newBudget);
-      for (let i = 0; i < entries.length; i += 50) {
-        await supabase.from('budget_entries').insert(entries.slice(i, i + 50));
+      const prevMap = new Map<string, number>();
+      for (const [k, arr] of Object.entries(prev)) {
+        arr.forEach((v, i) => { if (v !== 0) prevMap.set(`${k}:${i}`, v); });
+      }
+      const nextMap = new Map<string, number>();
+      for (const [k, arr] of Object.entries(newBudget)) {
+        arr.forEach((v, i) => { if (v !== 0) nextMap.set(`${k}:${i}`, v); });
+      }
+      const toUpsert: { konto: number; month_index: number; amount: number }[] = [];
+      for (const [key, v] of nextMap) {
+        if (prevMap.get(key) !== v) {
+          const [k, i] = key.split(':').map(Number);
+          toUpsert.push({ konto: k, month_index: i, amount: v });
+        }
+      }
+      const toDelete: { konto: number; month_index: number }[] = [];
+      for (const key of prevMap.keys()) {
+        if (!nextMap.has(key)) {
+          const [k, i] = key.split(':').map(Number);
+          toDelete.push({ konto: k, month_index: i });
+        }
+      }
+      try {
+        for (const d of toDelete) {
+          await supabase.from('budget_entries').delete().eq('konto', d.konto).eq('month_index', d.month_index);
+        }
+        for (let i = 0; i < toUpsert.length; i += 50) {
+          const batch = toUpsert.slice(i, i + 50);
+          await supabase.from('budget_entries').upsert(batch, { onConflict: 'konto,month_index' });
+        }
+      } finally {
+        qc.invalidateQueries({ queryKey: ['db_budget'] });
       }
     })();
   }, [qc]);
