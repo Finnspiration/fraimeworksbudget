@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
   INIT_TXN, INIT_BUDGET, INIT_BSKAT, INIT_BSKAT_SELSKAB, PL,
-  type Transaction, type BskatRate, type PLRow, YEAR,
+  INIT_LIQUIDITY_CONFIG,
+  type Transaction, type BskatRate, type PLRow, type LiquidityConfig, YEAR,
 } from '@/data/budget-constants';
 import { computeRealized, computePL, computeDynamicBudget } from '@/lib/budget-utils';
 
