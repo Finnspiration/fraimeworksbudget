@@ -152,18 +152,6 @@ export default function Index() {
               budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode}
               liquidityConfig={state.liquidityConfig} setLiquidityConfig={state.setLiquidityConfig} />
           </TabsContent>
-          <TabsContent value="pipeline">
-            <PipelineTab activePL={state.activePL} />
-          </TabsContent>
-          <TabsContent value="skat">
-            <SkatTab pl={mergedPL} txns={state.txns} nReal={state.nReal} activePL={state.activePL}
-              momsBetalt={state.momsBetalt} setMomsBetalt={state.setMomsBetalt}
-              bskat={state.bskat} setBskat={state.setBskat}
-              andenGeld={state.andenGeld} setAndenGeld={state.setAndenGeld}
-              skatPct={state.skatPct} setSkatPct={state.setSkatPct}
-              virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype}
-              budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} />
-          </TabsContent>
           <TabsContent value="udgifter">
             <FutureExpensesTab activePL={state.activePL} txns={state.txns} matchAgainstTransactions={matchAgainstTransactions} />
           </TabsContent>
