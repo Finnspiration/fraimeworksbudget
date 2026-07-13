@@ -92,9 +92,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
         const belob = cBelob >= 0 ? parseDanishNumber(r[cBelob]) : 0;
         if (belob === 0) continue;
         const dato = cDato >= 0 ? parseDanishDate(r[cDato]) : '';
-        const kontoFromFile = Number(r[cKonto]);
-        // Negative amounts = income → default to 1010 unless file konto is already in 1xxx range
-        const konto = belob < 0 && kontoFromFile >= 2000 ? 1010 : kontoFromFile;
+        const konto = Number(r[cKonto]);
         const modkonto = cModkonto >= 0 && r[cModkonto] ? Number(r[cModkonto]) : undefined;
         const faktura = cFaktura >= 0 && r[cFaktura] ? String(r[cFaktura]) : undefined;
         // Auto-resolve moms from chart of accounts if not in file
