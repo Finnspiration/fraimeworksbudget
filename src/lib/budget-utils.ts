@@ -10,6 +10,20 @@ function netBelob(belob: number, moms: string | null): number {
 }
 
 /**
+ * Build the set of revenue accounts from the PL structure:
+ * all 'acct' rows appearing before the first 'total' row (the Omsætning section)
+ * plus explicit "other income" accounts (renteindtægter, ekstraordinære indtægter).
+ */
+function getRevenueAccounts(plRows: PLRow[]): Set<number> {
+  const set = new Set<number>([4310, 4360, 4610]);
+  for (const row of plRows) {
+    if (row.t === 'total') break;
+    if (row.t === 'acct' && typeof row.nr === 'number') set.add(row.nr);
+  }
+  return set;
+}
+
+/**
  * Resolve effective moms code for a transaction.
  * Priority: 1) tx.moms  2) account PLRow.moms  3) infer from account label
  */
@@ -23,12 +37,13 @@ export function resolveEffectiveMoms(
   if (acct?.moms) return acct.moms;
   if (acct?.lbl) {
     const lbl = acct.lbl.toLowerCase();
-    if (lbl.includes('m/moms') || lbl.includes('m. moms')) {
-      // Revenue accounts (1xxx) use U25 (udgående moms), expense accounts use I25 (indgående moms)
-      return konto < 2000 ? 'U25' : 'I25';
-    }
     if (lbl.includes('u/moms') || lbl.includes('u.moms') || lbl.includes('uden moms')) {
       return null;
+    }
+    if (lbl.includes('m/moms') || lbl.includes('m. moms')) {
+      // Revenue accounts use U25 (salgsmoms), all other accounts use I25 (købsmoms).
+      // Revenue is identified positionally from the PL structure, not by account number range.
+      return getRevenueAccounts(plRows).has(konto) ? 'U25' : 'I25';
     }
   }
   return null;
