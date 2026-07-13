@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { MONTHS, MONTHS_FULL, type PLRow, type Transaction } from '@/data/budget-constants';
-import { fmt, sumArr, getRevenueAccounts, type PLValues } from '@/lib/budget-utils';
+import { MONTHS, MONTHS_FULL, type PLRow, type Transaction, type BskatRate, type LiquidityConfig } from '@/data/budget-constants';
+import { fmt, sumArr, getRevenueAccounts, computeLiquiditySection, type PLValues } from '@/lib/budget-utils';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { CellWithTooltip } from '@/components/budget/CellWithTooltip';
@@ -20,6 +20,10 @@ interface Props {
   pipelineJobs?: { konto: number; amount: number; probability: number; expected_payment_date: string; description: string; status: string }[];
   futureExpenses?: FutureExpense[];
   futureExpensesBudget?: Record<number, number[]>;
+  momsBetalt?: number[];
+  bskat?: BskatRate[];
+  andenGeld?: number;
+  liquidityConfig?: LiquidityConfig;
 }
 
 function Cell({ v, realized, dimmed }: { v: number; realized?: boolean; dimmed?: boolean }) {
