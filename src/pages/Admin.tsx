@@ -52,13 +52,16 @@ export default function Admin() {
   const [generatingLink, setGeneratingLink] = useState<string | null>(null);
 
   const load = async () => {
-    const { data: profiles } = await supabase.from('profiles').select('*').order('created_at');
+    const { data: profiles } = await supabase.rpc('admin_list_profiles');
     const { data: roles } = await supabase.from('user_roles').select('*');
     if (!profiles) return;
-    setUsers(profiles.map(p => ({
-      ...p,
-      email: (p as any).email ?? null,
-      magic_link: (p as any).magic_link ?? null,
+    setUsers(profiles.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      approved: p.approved,
+      created_at: p.created_at,
+      email: p.email ?? null,
+      magic_link: p.magic_link ?? null,
       roles: (roles ?? []).filter(r => r.user_id === p.id).map(r => r.role),
     })));
   };
