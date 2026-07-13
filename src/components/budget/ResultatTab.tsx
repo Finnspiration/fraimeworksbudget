@@ -276,10 +276,10 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
     );
     if (liqCollapsed) return nodes;
     liquidityRows.forEach(row => {
-      const ytdR = sumArr(row.r, 0, nReal - 1);
+      const ytdR = sumArr(row.r);
       const ytdB = sumArr(row.b, 0, nReal - 1);
       const yrB = sumArr(row.b);
-      const proj = nReal > 0 ? ytdR * 12 / nReal : yrB;
+      const proj = sumArr(row.r) + sumArr(row.b, nReal, 11);
       const isSaldo = row.id === 'liq_drift';
       const isNet = row.id === 'liq_nettomoms';
       const bgClass = isSaldo ? 'bg-primary/5 font-semibold' : isNet ? 'bg-secondary/40 font-medium' : '';
@@ -289,10 +289,9 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
           <td className="px-2 py-1 text-xs truncate max-w-[220px] sticky left-[48px] z-20 bg-card border-r border-border/30">{row.label}</td>
           {Array.from({ length: 12 }, (_, i) => {
             const vr = row.r[i], vb = row.b[i];
-            const dimmed = i >= nReal;
             return [
-              <Cell key={`r-${i}`} v={vr} realized dimmed={dimmed} />,
-              <Cell key={`b-${i}`} v={vb} dimmed={dimmed} />,
+              <Cell key={`r-${i}`} v={vr} realized />,
+              <Cell key={`b-${i}`} v={vb} dimmed={i < nReal} />,
             ];
           })}
           <Cell v={ytdR} realized />

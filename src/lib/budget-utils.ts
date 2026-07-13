@@ -362,7 +362,9 @@ export function computeLiquiditySection(params: {
   const nettoMomsR = realMoms.salgs.map((s, i) => s - realMoms.kob[i]);
   const nettoMomsB = budgetMoms.salgs.map((s, i) => s - budgetMoms.kob[i]);
 
-  // Driftskonto saldo (ultimo) — cashflow formula for both r and b
+  // Driftskonto saldo (ultimo) — cashflow formula for both r and b.
+  // Realized saldo runs over all months with any realized activity (not gated by nReal),
+  // so real transactions after nReal still count.
   const resRow = pl['res'] as PLValues | undefined;
   const driftR = new Array(12).fill(0);
   const driftB = new Array(12).fill(0);
@@ -375,8 +377,7 @@ export function computeLiquiditySection(params: {
       - momsBetaltBudget[i] - bskatBudget[i] - andenGeldBudget[i];
     accR += cfR;
     accB += cfB;
-    // Only show realized saldo for months with realized data; use budget beyond
-    driftR[i] = i < nReal ? accR : 0;
+    driftR[i] = accR;
     driftB[i] = accB;
   }
 
