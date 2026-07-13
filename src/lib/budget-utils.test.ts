@@ -4,8 +4,10 @@ import {
   resolveEffectiveMoms,
   computeRealized,
   computePL,
+  computeLiquiditySection,
 } from './budget-utils';
-import { PL, YEAR, type PLRow } from '@/data/budget-constants';
+import { PL, YEAR, INIT_LIQUIDITY_CONFIG, type PLRow, type BskatRate } from '@/data/budget-constants';
+
 
 describe('getRevenueAccounts', () => {
   it('collects acct rows before the first total plus 4310/4360/4610 on the default PL', () => {
@@ -207,5 +209,67 @@ describe('computePL', () => {
 
   it('handles empty PL without throwing', () => {
     expect(() => computePL({}, {}, [])).not.toThrow();
+  });
+});
+
+describe('computeLiquiditySection', () => {
+  const emptyPL = {} as Record<string | number, { r: number[]; b: number[] }>;
+
+  const baseParams = (overrides: Partial<Parameters<typeof computeLiquiditySection>[0]>) => ({
+    pl: emptyPL,
+    plRows: PL,
+    txns: [],
+    momsBetalt: [0, 0],
+    bskat: [] as BskatRate[],
+    andenGeld: 0,
+    config: { ...INIT_LIQUIDITY_CONFIG },
+    nReal: 0,
+    ...overrides,
+  });
+
+  it('(a) shows a paid B-skat rate via betaltDato even when bskatKonti is set and no txn matches', () => {
+    const bskat: BskatRate[] = [
+      { id: 1, belob: 15000, forfald: `20-07-${YEAR}`, betalt: 15000, betaltDato: `${YEAR}-07-20` },
+    ];
+    const rows = computeLiquiditySection(baseParams({
+      bskat,
+      config: { ...INIT_LIQUIDITY_CONFIG, bskatKonti: [6138] },
+      txns: [],
+    }));
+    const bskatRow = rows.find(r => r.id === 'liq_bskat')!;
+    expect(bskatRow.r[6]).toBe(15000);
+  });
+
+  it('(b) counts a payment only once when present as both rate and transaction', () => {
+    const bskat: BskatRate[] = [
+      { id: 1, belob: 15000, forfald: `20-07-${YEAR}`, betalt: 15000, betaltDato: `${YEAR}-07-20` },
+    ];
+    const rows = computeLiquiditySection(baseParams({
+      bskat,
+      config: { ...INIT_LIQUIDITY_CONFIG, bskatKonti: [6138] },
+      txns: [{ dato: `${YEAR}-07-20`, konto: 6138, belob: -15000, moms: null }],
+    }));
+    const bskatRow = rows.find(r => r.id === 'liq_bskat')!;
+    expect(bskatRow.r[6]).toBe(15000);
+  });
+
+  it('(c) uses momsBetalt Q1 fallback in July when no momsAfregningKonti transactions exist', () => {
+    const rows = computeLiquiditySection(baseParams({
+      momsBetalt: [8000, 0],
+      config: { ...INIT_LIQUIDITY_CONFIG, momsAfregningKonti: [6900] },
+      txns: [],
+    }));
+    const momsRow = rows.find(r => r.id === 'liq_moms_betalt')!;
+    expect(momsRow.r[6]).toBe(8000);
+  });
+
+  it('prefers transactions over momsBetalt fallback in the same month', () => {
+    const rows = computeLiquiditySection(baseParams({
+      momsBetalt: [8000, 0],
+      config: { ...INIT_LIQUIDITY_CONFIG, momsAfregningKonti: [6900] },
+      txns: [{ dato: `${YEAR}-07-15`, konto: 6900, belob: -8500, moms: null }],
+    }));
+    const momsRow = rows.find(r => r.id === 'liq_moms_betalt')!;
+    expect(momsRow.r[6]).toBe(8500);
   });
 });

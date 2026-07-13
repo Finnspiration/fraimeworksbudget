@@ -300,17 +300,30 @@ export function computeLiquiditySection(params: {
   momsBetaltBudget[6] = Number(momsBetalt[0] || 0);
   momsBetaltBudget[9] = Number(momsBetalt[1] || 0);
 
-  // Moms betalt — realized: transactions on momsAfregningKonti
+  // Moms betalt — realized: transactions on momsAfregningKonti, with fallback to
+  // momsBetalt-array (Q1→jul, Q2→okt). Fallback is only used in months without transactions
+  // on momsAfregningKonti, to avoid double-counting the same payment.
   const momsBetaltReal = new Array(12).fill(0);
+  const momsHasTx = new Array(12).fill(false);
   const momsSet = new Set(config.momsAfregningKonti || []);
   if (momsSet.size) {
     txns.forEach(tx => {
       if (!tx.dato || !momsSet.has(tx.konto)) return;
       const d = new Date(tx.dato);
       if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
-      momsBetaltReal[d.getMonth()] += Math.abs(Number(tx.belob));
+      const m = d.getMonth();
+      momsBetaltReal[m] += Math.abs(Number(tx.belob));
+      momsHasTx[m] = true;
     });
   }
+  // Fallback pr. kvartal: Q1→jul(6), Q2→okt(9). Q3/Q4 forfalder næste år og udelades.
+  const momsBetaltFallback: Array<[number, number]> = [
+    [6, Number(momsBetalt[0] || 0)],
+    [9, Number(momsBetalt[1] || 0)],
+  ];
+  momsBetaltFallback.forEach(([m, val]) => {
+    if (val > 0 && !momsHasTx[m]) momsBetaltReal[m] += val;
+  });
 
   // B-skat — budget: place belob at forfald month (parse DD-MM-YYYY, only current YEAR)
   const bskatBudget = new Array(12).fill(0);
@@ -322,25 +335,37 @@ export function computeLiquiditySection(params: {
     bskatBudget[mm - 1] += Number(r.belob || 0);
   });
 
-  // B-skat — realized: transactions on bskatKonti (fallback to bskat.betalt by betaltDato)
+  // B-skat — realized: combine transactions on bskatKonti AND rates marked as betalt
+  // (via betaltDato/betalt). Skip a rate in a month if a transaction in the same month
+  // already matches the rate's betalt-beløb within 1 kr (avoids double-counting).
   const bskatReal = new Array(12).fill(0);
   const bskatSet = new Set(config.bskatKonti || []);
+  const bskatTxByMonth: number[][] = Array.from({ length: 12 }, () => []);
   if (bskatSet.size) {
     txns.forEach(tx => {
       if (!tx.dato || !bskatSet.has(tx.konto)) return;
       const d = new Date(tx.dato);
       if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
-      bskatReal[d.getMonth()] += Math.abs(Number(tx.belob));
-    });
-  } else {
-    // Fallback: use betaltDato
-    bskat.forEach(r => {
-      if (!r.betaltDato) return;
-      const d = new Date(r.betaltDato);
-      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
-      bskatReal[d.getMonth()] += Number(r.betalt || 0);
+      const m = d.getMonth();
+      const val = Math.abs(Number(tx.belob));
+      bskatReal[m] += val;
+      bskatTxByMonth[m].push(val);
     });
   }
+  bskat.forEach(r => {
+    if (!r.betaltDato) return;
+    const d = new Date(r.betaltDato);
+    if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+    const val = Number(r.betalt || 0);
+    if (!val) return;
+    const m = d.getMonth();
+    const matchIdx = bskatTxByMonth[m].findIndex(t => Math.abs(t - val) <= 1);
+    if (matchIdx >= 0) {
+      bskatTxByMonth[m].splice(matchIdx, 1);
+      return;
+    }
+    bskatReal[m] += val;
+  });
 
   // Anden gæld — budget: place total in December (single lump-sum surrogate)
   const andenGeldBudget = new Array(12).fill(0);
