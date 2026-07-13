@@ -350,6 +350,7 @@ export function useDbState() {
   const setSkatPct = useCallback((v: number) => updateSetting('skat_pct', v), [updateSetting]);
   const setBudgetMode = useCallback((v: 'fixed' | 'dynamic') => updateSetting('budget_mode', v), [updateSetting]);
   const setAndenGeld = useCallback((v: number) => updateSetting('anden_geld', v), [updateSetting]);
+  const setLiquidityConfig = useCallback((v: LiquidityConfig) => updateSetting('liquidity_config', v), [updateSetting]);
 
   // ── B-skat ──
   const { data: bskat = INIT_BSKAT } = useQuery({
