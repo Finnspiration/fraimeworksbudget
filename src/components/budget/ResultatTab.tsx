@@ -252,9 +252,64 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
     });
   }, [pl, nReal, showZero, collapsedSecs, budget, plForDisplay, visibleSections]);
 
+  const liquidityRows = useMemo(() => {
+    if (!liquidityConfig) return [];
+    return computeLiquiditySection({
+      pl, plRows: activePL, txns, momsBetalt, bskat, andenGeld,
+      config: liquidityConfig, nReal,
+    });
+  }, [pl, activePL, txns, momsBetalt, bskat, andenGeld, liquidityConfig, nReal]);
+
+  const liqCollapsed = collapsedSecs['__liq__'];
+  const liqSection = useMemo(() => {
+    if (liquidityRows.length === 0) return null;
+    const nodes: React.ReactNode[] = [];
+    nodes.push(
+      <tr key="liq-sp" className="h-3" />,
+      <tr key="liq-sec" className="cursor-pointer hover:bg-secondary/50" onClick={() => toggleSec('__liq__')}>
+        <td className="sticky left-0 z-20 bg-card px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground" />
+        <td className="sticky left-[48px] z-20 bg-card px-2 py-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground border-r border-border/30">
+          {liqCollapsed ? '▶' : '▼'} 💧 Likviditet & gæld
+        </td>
+        <td colSpan={29} />
+      </tr>
+    );
+    if (liqCollapsed) return nodes;
+    liquidityRows.forEach(row => {
+      const ytdR = sumArr(row.r, 0, nReal - 1);
+      const ytdB = sumArr(row.b, 0, nReal - 1);
+      const yrB = sumArr(row.b);
+      const proj = nReal > 0 ? ytdR * 12 / nReal : yrB;
+      const isSaldo = row.id === 'liq_drift';
+      const isNet = row.id === 'liq_nettomoms';
+      const bgClass = isSaldo ? 'bg-primary/5 font-semibold' : isNet ? 'bg-secondary/40 font-medium' : '';
+      nodes.push(
+        <tr key={row.id} className={`hover:bg-secondary/30 border-b border-border/30 ${bgClass}`}>
+          <td className="px-2 py-1 text-xs text-muted-foreground tabular-nums w-12 sticky left-0 z-20 bg-card" />
+          <td className="px-2 py-1 text-xs truncate max-w-[220px] sticky left-[48px] z-20 bg-card border-r border-border/30">{row.label}</td>
+          {Array.from({ length: 12 }, (_, i) => {
+            const vr = row.r[i], vb = row.b[i];
+            const dimmed = i >= nReal;
+            return [
+              <Cell key={`r-${i}`} v={vr} realized dimmed={dimmed} />,
+              <Cell key={`b-${i}`} v={vb} dimmed={dimmed} />,
+            ];
+          })}
+          <Cell v={ytdR} realized />
+          <Cell v={ytdB} />
+          <td className="px-2 py-1 text-right text-xs tabular-nums text-muted-foreground">–</td>
+          <Cell v={proj} realized />
+          <Cell v={yrB} />
+        </tr>
+      );
+    });
+    return nodes;
+  }, [liquidityRows, liqCollapsed, nReal]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Realiserede måneder:</span>
           <select value={nReal} onChange={e => setNReal(Number(e.target.value))} className="text-sm font-semibold text-primary bg-transparent border border-border rounded px-2 py-1 cursor-pointer">
