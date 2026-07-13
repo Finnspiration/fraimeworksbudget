@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { fmtDec, resolveEffectiveMoms } from '@/lib/budget-utils';
+import { fmtDec } from '@/lib/budget-utils';
+import { parseTransactionsFromSheet } from '@/lib/import-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,24 +46,6 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
   const acctMap = useMemo(() => new Map(acctList.map(r => [r.nr!, r.lbl || ''])), [acctList]);
   const [kontoPopoverOpen, setKontoPopoverOpen] = useState<number | null>(null);
 
-  const parseDanishNumber = (val: unknown): number => {
-    if (val == null) return 0;
-    if (typeof val === 'number') return val;
-    const s = String(val).trim();
-    if (!s) return 0;
-    const cleaned = s.replace(/\./g, '').replace(',', '.');
-    return Number(cleaned) || 0;
-  };
-
-  const parseDanishDate = (val: unknown): string => {
-    if (val == null) return '';
-    if (typeof val === 'object' && 'toISOString' in (val as object)) return (val as Date).toISOString().slice(0, 10);
-    const s = String(val).trim();
-    const match = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (match) return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
-    return s;
-  };
-
   const parseFile = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -70,54 +53,14 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
       const wb = XLSX.read(data, { type: 'array', cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: (string | number | null)[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-      let headerIdx = -1;
-      for (let i = 0; i < Math.min(rows.length, 20); i++) {
-        const r = rows[i].map(c => String(c || '').toLowerCase());
-        if (r.some(c => c.includes('konto')) && (r.some(c => c.includes('beløb') || c.includes('belob')) || r.some(c => c.includes('type')))) { headerIdx = i; break; }
-      }
-      if (headerIdx === -1) { setStatus({ type: 'error', msg: 'Kunne ikke finde header-række (skal indeholde Konto og Beløb/Type)' }); return; }
-      const headers = rows[headerIdx].map(h => String(h || '').toLowerCase().trim());
-      const col = (name: string) => headers.findIndex(h => h.includes(name));
-      const cDato = col('dato'), cBelob = col('beløb') !== -1 ? col('beløb') : col('belob');
-      const cKonto = headers.findIndex(h => h === 'konto' || (h.includes('konto') && !h.includes('mod')));
-      const cMoms = col('moms'), cBilag = col('bilag'), cTekst = col('tekst');
-      const cType = col('type');
-      const cFaktura = headers.findIndex(h => h.includes('faktura') || h.includes('fak'));
-      const cModkonto = headers.findIndex(h => h.includes('modkonto') || h.includes('mod.konto') || h === 'modkto');
-      console.log('[Import] Header-kolonner:', { headers, cDato, cBelob, cKonto, cMoms, cBilag, cTekst, cType, cFaktura, cModkonto });
-      const parsed: Transaction[] = [];
-      for (let i = headerIdx + 1; i < rows.length; i++) {
-        const r = rows[i];
-        if (!r || !r[cKonto]) continue;
-        const belob = cBelob >= 0 ? parseDanishNumber(r[cBelob]) : 0;
-        if (belob === 0) continue;
-        const dato = cDato >= 0 ? parseDanishDate(r[cDato]) : '';
-        const kontoFromFile = Number(r[cKonto]);
-        // Negative amounts = income → default to 1010 unless file konto is already in 1xxx range
-        const konto = belob < 0 && kontoFromFile >= 2000 ? 1010 : kontoFromFile;
-        const modkonto = cModkonto >= 0 && r[cModkonto] ? Number(r[cModkonto]) : undefined;
-        const faktura = cFaktura >= 0 && r[cFaktura] ? String(r[cFaktura]) : undefined;
-        // Auto-resolve moms from chart of accounts if not in file
-        let momsFromFile = cMoms >= 0 && r[cMoms] ? String(r[cMoms]) : null;
-        if (!momsFromFile) {
-          momsFromFile = resolveEffectiveMoms(null, konto, activePL);
-        }
-        parsed.push({
-          id: 0, dato,
-          type: cType >= 0 && r[cType] ? String(r[cType]) : 'Import',
-          bilag: cBilag >= 0 ? String(r[cBilag] || '') : '',
-          tekst: cTekst >= 0 ? String(r[cTekst] || '') : '',
-          belob, konto,
-          moms: momsFromFile,
-          modkonto, faktura,
-        });
-      }
+      const { parsed, error } = parseTransactionsFromSheet(rows, activePL);
+      if (error) { setStatus({ type: 'error', msg: error }); return; }
       if (parsed.length === 0) { setStatus({ type: 'error', msg: 'Ingen gyldige rækker fundet' }); return; }
       setPreview(parsed);
       setStatus(null);
     };
     reader.readAsArrayBuffer(file);
-  }, []);
+  }, [activePL]);
 
   const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) parseFile(f); }, [parseFile]);
 
