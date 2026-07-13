@@ -276,6 +276,9 @@ export interface LiquidityRow {
   label: string;
   r: number[];
   b: number[];
+  /** Hybrid projected series (only set for saldo rows like liq_drift):
+   *  realized cashflows for i < nReal, budget cashflows for i >= nReal, accumulated. */
+  proj?: number[];
   /** true = high value is bad (debt/outflow); false = balance/asset */
   invertColor?: boolean;
 }
