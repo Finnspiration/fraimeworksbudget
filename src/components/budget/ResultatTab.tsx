@@ -276,13 +276,17 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
     );
     if (liqCollapsed) return nodes;
     liquidityRows.forEach(row => {
-      const ytdR = sumArr(row.r);
-      const ytdB = sumArr(row.b, 0, nReal - 1);
-      const yrB = sumArr(row.b);
-      const proj = sumArr(row.r) + sumArr(row.b, nReal, 11);
       const isSaldo = row.id === 'liq_drift';
       const isNet = row.id === 'liq_nettomoms';
       const bgClass = isSaldo ? 'bg-primary/5 font-semibold' : isNet ? 'bg-secondary/40 font-medium' : '';
+      const lastRealIdx = Math.max(0, nReal - 1);
+      const ytdR = isSaldo ? row.r[lastRealIdx] : sumArr(row.r);
+      const ytdB = isSaldo ? row.b[lastRealIdx] : sumArr(row.b, 0, nReal - 1);
+      const yrB = isSaldo ? row.b[11] : sumArr(row.b);
+      const proj = isSaldo
+        ? (row.proj ? row.proj[11] : row.b[11])
+        : sumArr(row.r) + sumArr(row.b, nReal, 11);
+      const afvig = isSaldo ? ytdR - ytdB : null;
       nodes.push(
         <tr key={row.id} className={`hover:bg-secondary/30 border-b border-border/30 ${bgClass}`}>
           <td className="px-2 py-1 text-xs text-muted-foreground tabular-nums w-12 sticky left-0 z-20 bg-card" />
@@ -296,7 +300,9 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
           })}
           <Cell v={ytdR} realized />
           <Cell v={ytdB} />
-          <td className="px-2 py-1 text-right text-xs tabular-nums text-muted-foreground">–</td>
+          {afvig !== null
+            ? <Cell v={afvig} />
+            : <td className="px-2 py-1 text-right text-xs tabular-nums text-muted-foreground">–</td>}
           <Cell v={proj} realized />
           <Cell v={yrB} />
         </tr>
