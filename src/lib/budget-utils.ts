@@ -1,4 +1,4 @@
-import { PL, type PLRow, YEAR } from '@/data/budget-constants';
+import { PL, type PLRow, YEAR, type BskatRate, type LiquidityConfig } from '@/data/budget-constants';
 
 export interface PLValues {
   r: number[];
