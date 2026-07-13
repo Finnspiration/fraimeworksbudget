@@ -154,7 +154,7 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
     setPreview(null);
 
     // Trigger future-expense matching against the fresh list (real ids)
-    if (onImportComplete && freshTxns) {
+    if (onImportComplete) {
       onImportComplete(freshTxns);
     }
   };
