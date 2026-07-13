@@ -532,6 +532,30 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_profiles: {
+        Args: never
+        Returns: {
+          approved: boolean
+          created_at: string
+          email: string
+          id: string
+          magic_link: string
+          magic_token: string
+          name: string
+        }[]
+      }
+      get_profile_full: {
+        Args: { _user_id: string }
+        Returns: {
+          approved: boolean
+          created_at: string
+          email: string
+          id: string
+          magic_link: string
+          magic_token: string
+          name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
