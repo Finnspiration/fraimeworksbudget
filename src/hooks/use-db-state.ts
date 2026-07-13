@@ -339,6 +339,7 @@ export function useDbState() {
   const budgetMode = (settings?.budget_mode ?? 'fixed') as 'fixed' | 'dynamic';
   const virksomhedstype = (settings?.virksomhedstype ?? 'personlig') as 'personlig' | 'selskab';
   const andenGeld = (settings?.anden_geld ?? 0) as number;
+  const liquidityConfig = (settings?.liquidity_config ?? INIT_LIQUIDITY_CONFIG) as LiquidityConfig;
 
   const updateSetting = useCallback((key: string, value: any) => {
     qc.setQueryData(['db_settings'], (prev: Record<string, any> | undefined) => ({ ...(prev || {}), [key]: value }));
