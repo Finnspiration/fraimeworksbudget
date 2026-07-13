@@ -7,7 +7,7 @@ import {
   computeLiquiditySection,
 } from './budget-utils';
 import { PL, YEAR, INIT_LIQUIDITY_CONFIG, type PLRow, type BskatRate } from '@/data/budget-constants';
-import { PL, YEAR, type PLRow } from '@/data/budget-constants';
+
 
 describe('getRevenueAccounts', () => {
   it('collects acct rows before the first total plus 4310/4360/4610 on the default PL', () => {
