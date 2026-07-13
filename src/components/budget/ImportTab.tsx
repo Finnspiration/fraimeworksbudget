@@ -135,8 +135,8 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
     }
 
     // Refetch transactions so we have the real DB-assigned ids
-    await queryClient.invalidateQueries({ queryKey: ['db_transactions'] });
-    const freshTxns = await queryClient.fetchQuery<Transaction[]>({ queryKey: ['db_transactions'] });
+    await queryClient.refetchQueries({ queryKey: ['db_transactions'] });
+    const freshTxns = (queryClient.getQueryData(['db_transactions']) as Transaction[] | undefined) ?? [];
 
     // Check for account numbers not in the active chart of accounts
     const acctNrs = new Set(activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr).map(r => r.nr!));
