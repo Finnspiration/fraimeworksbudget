@@ -12,6 +12,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import type { Transaction, PLRow } from '@/data/budget-constants';
 import { PL } from '@/data/budget-constants';
 import { Upload, Trash2, FileSpreadsheet, Check, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Search, BookOpen, RotateCcw, ChevronsUpDown, ChevronDown, ChevronRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Props {
   txns: Transaction[];
@@ -25,6 +27,7 @@ type SortKey = 'dato' | 'belob' | 'konto' | 'type' | 'bilag';
 type SortDir = 'asc' | 'desc';
 
 export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImportComplete }: Props) {
+  const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Transaction[] | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -87,33 +90,61 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
     return { newRows: n, dupRows: d, updatedRows: u };
   }, [preview, existingMap]);
 
-  const doImport = () => {
+  const doImport = async () => {
     if (!newRows.length && !updatedRows.length) return;
-    const maxId = Math.max(0, ...txns.map(t => t.id || 0));
-    const withIds = newRows.map((t, i) => ({ ...t, id: maxId + i + 1 }));
-    
-    // Build updated txns: replace matching rows, then add new
-    setTxns(prev => {
-      let result = [...prev];
-      // Overwrite updated rows
+
+    const toDbRow = (t: Transaction) => ({
+      dato: t.dato || null,
+      type: t.type,
+      bilag: String(t.bilag),
+      tekst: t.tekst,
+      belob: t.belob,
+      konto: t.konto,
+      moms: t.moms,
+      modkonto: t.modkonto ?? null,
+      faktura: t.faktura ?? null,
+      customer_id: t.customer_id ?? null,
+    });
+
+    try {
+      // Apply updates by matching on natural key (bilag+dato+konto+belob)
       for (const u of updatedRows) {
-        const key = txnKey(u);
-        const idx = result.findIndex(t => txnKey(t) === key);
-        if (idx >= 0) {
-          result[idx] = { ...result[idx], tekst: u.tekst, faktura: u.faktura, moms: u.moms, modkonto: u.modkonto };
+        const existing = existingMap.get(txnKey(u));
+        if (existing?.id != null) {
+          await supabase.from('transactions').update({
+            tekst: u.tekst,
+            faktura: u.faktura ?? null,
+            moms: u.moms,
+            modkonto: u.modkonto ?? null,
+          }).eq('id', existing.id);
         }
       }
-      // Add new rows
-      return [...result, ...withIds];
-    });
+
+      // Insert new rows in batches, letting the DB assign real ids
+      if (newRows.length) {
+        const rows = newRows.map(toDbRow);
+        for (let i = 0; i < rows.length; i += 50) {
+          const { error } = await supabase.from('transactions').insert(rows.slice(i, i + 50));
+          if (error) throw error;
+        }
+      }
+    } catch (err) {
+      console.error('Import failed:', err);
+      setStatus({ type: 'error', msg: `Import fejlede: ${(err as Error).message}` });
+      return;
+    }
+
+    // Refetch transactions so we have the real DB-assigned ids
+    await queryClient.refetchQueries({ queryKey: ['db_transactions'] });
+    const freshTxns = (queryClient.getQueryData(['db_transactions']) as Transaction[] | undefined) ?? [];
 
     // Check for account numbers not in the active chart of accounts
     const acctNrs = new Set(activePL.filter(r => (r.t === 'acct' || r.t === 'bal') && r.nr).map(r => r.nr!));
-    const allImportedKonti = new Set([...withIds, ...updatedRows].map(t => t.konto));
+    const allImportedKonti = new Set([...newRows, ...updatedRows].map(t => t.konto));
     const missingKonti = [...allImportedKonti].filter(k => !acctNrs.has(k)).sort((a, b) => a - b);
-    
+
     const parts: string[] = [];
-    if (withIds.length) parts.push(`${withIds.length} nye`);
+    if (newRows.length) parts.push(`${newRows.length} nye`);
     if (updatedRows.length) parts.push(`${updatedRows.length} opdaterede`);
     let msg = `✓ Importerede ${parts.join(' og ')} posteringer${dupRows.length ? ` (${dupRows.length} uændrede sprunget over)` : ''}`;
     if (missingKonti.length > 0) {
@@ -121,13 +152,10 @@ export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImpo
     }
     setStatus({ type: missingKonti.length > 0 ? 'error' : 'success', msg });
     setPreview(null);
-    // Trigger future expenses matching
+
+    // Trigger future-expense matching against the fresh list (real ids)
     if (onImportComplete) {
-      // Use timeout to ensure txns state is updated first
-      setTimeout(() => {
-        const allTxns = [...txns, ...withIds];
-        onImportComplete(allTxns);
-      }, 500);
+      onImportComplete(freshTxns);
     }
   };
 
