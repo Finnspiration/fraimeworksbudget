@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import logo from '@/assets/logo.png';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useDbState } from '@/hooks/use-db-state';
-import { computePL } from '@/lib/budget-utils';
+import { computePL, getRevenueAccounts } from '@/lib/budget-utils';
 import { COMPANY, YEAR } from '@/data/budget-constants';
 import OverblikTab from '@/components/budget/OverblikTab';
 import ResultatTab from '@/components/budget/ResultatTab';
@@ -30,17 +30,18 @@ export default function Index() {
   // Build future expenses budget map (konto → 12-month array of sums)
   const futureExpensesBudget = useMemo(() => {
     const map: Record<number, number[]> = {};
+    const revenueAccounts = getRevenueAccounts(state.activePL);
     activeExpenses.forEach(exp => {
       const d = new Date(exp.dato);
       if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
       const month = d.getMonth();
       if (!map[exp.konto]) map[exp.konto] = new Array(12).fill(0);
-      // Expense accounts (>= 1300) stored as negative, same convention as manual budget
-      const signed = exp.konto >= 1300 ? -Math.abs(exp.belob) : exp.belob;
+      // Revenue accounts keep positive sign; all others stored as negative (expense convention)
+      const signed = revenueAccounts.has(exp.konto) ? Math.abs(exp.belob) : -Math.abs(exp.belob);
       map[exp.konto][month] += signed;
     });
     return map;
-  }, [activeExpenses]);
+  }, [activeExpenses, state.activePL]);
 
   // Merge weighted pipeline into budget for PL calculation
   const mergedBudget = useMemo(() => {

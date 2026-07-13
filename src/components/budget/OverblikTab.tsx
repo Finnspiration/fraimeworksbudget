@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
 import { MONTHS, YEAR, type PLRow, type BskatRate } from '@/data/budget-constants';
-import { fmt, sumArr, getTxnAmounts, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
+import { fmt, sumArr, getTxnAmounts, resolveEffectiveMoms, getRevenueAccounts, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -44,16 +44,7 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
   const omsId = firstTotal?.id;
   const omsRow = omsId ? (pl[omsId] as PLValues | undefined) : undefined;
 
-  const revenueNrs = useMemo(() => {
-    const nrs = new Set<number>();
-    for (const r of activePL) {
-      if (r.t === 'total' || r.t === 'res') break;
-      if (r.t === 'acct' && r.nr != null) nrs.add(r.nr);
-    }
-    // Ekstra indtægtskonti uden for Omsætning-sektionen
-    [4310, 4360, 4610].forEach(nr => nrs.add(nr));
-    return nrs;
-  }, [activePL]);
+  const revenueNrs = useMemo(() => getRevenueAccounts(activePL), [activePL]);
 
   const expenseAcctRows = useMemo(() =>
     activePL.filter(r => r.t === 'acct' && r.nr != null && !revenueNrs.has(r.nr!))

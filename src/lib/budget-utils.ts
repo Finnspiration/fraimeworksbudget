@@ -14,7 +14,7 @@ function netBelob(belob: number, moms: string | null): number {
  * all 'acct' rows appearing before the first 'total' row (the Omsætning section)
  * plus explicit "other income" accounts (renteindtægter, ekstraordinære indtægter).
  */
-function getRevenueAccounts(plRows: PLRow[]): Set<number> {
+export function getRevenueAccounts(plRows: PLRow[]): Set<number> {
   const set = new Set<number>([4310, 4360, 4610]);
   for (const row of plRows) {
     if (row.t === 'total') break;
