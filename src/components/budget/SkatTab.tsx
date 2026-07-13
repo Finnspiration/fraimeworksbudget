@@ -370,6 +370,84 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">⚙️ Konti & saldi (til likviditets-oversigt)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Vælg hvilke konti i kassekladden der bruges til moms-, B-skat- og gældsbetalinger. Bruges i "Likviditet & gæld"-sektionen nederst i Resultatopgørelsen.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm text-muted-foreground">Primo saldo driftskonto (1/1):</label>
+              <input type="number" value={liquidityConfig.primoSaldo || ''}
+                onChange={e => setLiquidityConfig({ ...liquidityConfig, primoSaldo: Number(e.target.value) })}
+                className="w-32 text-right border border-border rounded px-2 py-1 text-primary bg-secondary text-xs tabular-nums" placeholder="0" />
+            </div>
+            <MultiKontoSelect
+              label="Moms-afregningskonti"
+              acctList={activePL.filter(r => r.t === 'acct' || r.t === 'bal') as { nr: number; lbl: string }[]}
+              value={liquidityConfig.momsAfregningKonti}
+              onChange={v => setLiquidityConfig({ ...liquidityConfig, momsAfregningKonti: v })}
+            />
+            <MultiKontoSelect
+              label="B-skat / Aconto-skat konti"
+              acctList={activePL.filter(r => r.t === 'acct' || r.t === 'bal') as { nr: number; lbl: string }[]}
+              value={liquidityConfig.bskatKonti}
+              onChange={v => setLiquidityConfig({ ...liquidityConfig, bskatKonti: v })}
+            />
+            <MultiKontoSelect
+              label="Øvrig gæld konti"
+              acctList={activePL.filter(r => r.t === 'acct' || r.t === 'bal') as { nr: number; lbl: string }[]}
+              value={liquidityConfig.andenGeldKonti}
+              onChange={v => setLiquidityConfig({ ...liquidityConfig, andenGeldKonti: v })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MultiKontoSelect({ label, acctList, value, onChange }: {
+  label: string;
+  acctList: { nr: number; lbl: string }[];
+  value: number[];
+  onChange: (v: number[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = new Set(value);
+  const toggle = (nr: number) => {
+    const next = new Set(selected);
+    next.has(nr) ? next.delete(nr) : next.add(nr);
+    onChange(Array.from(next).sort((a, b) => a - b));
+  };
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <label className="text-sm text-muted-foreground shrink-0">{label}:</label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 min-w-0 max-w-[220px] justify-between px-2 text-xs font-normal">
+            <span className="truncate">
+              {value.length === 0 ? 'Vælg konti' : value.length === 1 ? `${value[0]}` : `${value.length} valgt`}
+            </span>
+            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[320px] p-0 max-h-[320px] overflow-auto" align="end">
+          <div className="p-1">
+            {acctList.map(a => (
+              <label key={a.nr} className="flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-secondary rounded cursor-pointer">
+                <Checkbox checked={selected.has(a.nr)} onCheckedChange={() => toggle(a.nr)} />
+                <span className="font-mono w-12">{a.nr}</span>
+                <span className="truncate">{a.lbl}</span>
+              </label>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
