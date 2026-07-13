@@ -512,7 +512,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_directory: {
+        Row: {
+          approved: boolean | null
+          id: string | null
+          name: string | null
+        }
+        Insert: {
+          approved?: boolean | null
+          id?: string | null
+          name?: string | null
+        }
+        Update: {
+          approved?: boolean | null
+          id?: string | null
+          name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
