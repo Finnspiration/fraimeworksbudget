@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
   INIT_TXN, INIT_BUDGET, INIT_BSKAT, INIT_BSKAT_SELSKAB, PL,
-  type Transaction, type BskatRate, type PLRow, YEAR,
+  INIT_LIQUIDITY_CONFIG,
+  type Transaction, type BskatRate, type PLRow, type LiquidityConfig, YEAR,
 } from '@/data/budget-constants';
 import { computeRealized, computePL, computeDynamicBudget } from '@/lib/budget-utils';
 
@@ -338,6 +339,7 @@ export function useDbState() {
   const budgetMode = (settings?.budget_mode ?? 'fixed') as 'fixed' | 'dynamic';
   const virksomhedstype = (settings?.virksomhedstype ?? 'personlig') as 'personlig' | 'selskab';
   const andenGeld = (settings?.anden_geld ?? 0) as number;
+  const liquidityConfig = (settings?.liquidity_config ?? INIT_LIQUIDITY_CONFIG) as LiquidityConfig;
 
   const updateSetting = useCallback((key: string, value: any) => {
     qc.setQueryData(['db_settings'], (prev: Record<string, any> | undefined) => ({ ...(prev || {}), [key]: value }));
@@ -348,6 +350,7 @@ export function useDbState() {
   const setSkatPct = useCallback((v: number) => updateSetting('skat_pct', v), [updateSetting]);
   const setBudgetMode = useCallback((v: 'fixed' | 'dynamic') => updateSetting('budget_mode', v), [updateSetting]);
   const setAndenGeld = useCallback((v: number) => updateSetting('anden_geld', v), [updateSetting]);
+  const setLiquidityConfig = useCallback((v: LiquidityConfig) => updateSetting('liquidity_config', v), [updateSetting]);
 
   // ── B-skat ──
   const { data: bskat = INIT_BSKAT } = useQuery({
@@ -459,6 +462,7 @@ export function useDbState() {
     budgetMode, setBudgetMode,
     customPL, setCustomPL, activePL,
     virksomhedstype, setVirksomhedstype: handleVirksomhedstypeChange,
+    liquidityConfig, setLiquidityConfig,
     pl, realized,
     resetAll,
     isLoading: !seeded,

@@ -1,10 +1,14 @@
-import { YEAR, MONTHS } from '@/data/budget-constants';
-import { fmt, sumArr, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
-import { useMemo } from 'react';
+import { YEAR, MONTHS, type LiquidityConfig } from '@/data/budget-constants';
+import { fmt, sumArr, resolveEffectiveMoms, computeBudgetMomsPerMonth, computeRealMomsPerMonth, type PLValues } from '@/lib/budget-utils';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronsUpDown } from 'lucide-react';
 import type { Transaction, BskatRate, PLRow } from '@/data/budget-constants';
 
 interface Props {
@@ -24,6 +28,8 @@ interface Props {
   setVirksomhedstype: (v: 'personlig' | 'selskab') => void;
   budgetMode: 'fixed' | 'dynamic';
   setBudgetMode: (v: 'fixed' | 'dynamic') => void;
+  liquidityConfig: LiquidityConfig;
+  setLiquidityConfig: (v: LiquidityConfig) => void;
 }
 
 const quarters = [
@@ -33,69 +39,18 @@ const quarters = [
   { id: 4, label: 'Q4 Okt-Dec', months: [9, 10, 11], forfald: '01-04-2027' },
 ];
 
-export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype, budgetMode, setBudgetMode }: Props) {
+export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMomsBetalt, bskat, setBskat, andenGeld, setAndenGeld, skatPct, setSkatPct, virksomhedstype, setVirksomhedstype, budgetMode, setBudgetMode, liquidityConfig, setLiquidityConfig }: Props) {
   const isDynamic = budgetMode === 'dynamic';
   const updateBskat = (i: number, field: keyof BskatRate, val: string | number) =>
     setBskat(prev => prev.map((r, j) => j === i ? { ...r, [field]: val } : r));
 
-  // Realiseret moms fra transaktioner for specifikke måneder
-  const computeRealKobsmoms = (months: number[]) =>
-    txns.filter(tx => {
-      if (!tx.dato) return false;
-      const d = new Date(tx.dato);
-      const effectiveMoms = resolveEffectiveMoms(tx.moms, tx.konto, activePL);
-      return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'I25';
-    }).reduce((s, tx) => s + tx.belob / 5, 0);
-
-  const computeRealSalgsmoms = (months: number[]) =>
-    txns.filter(tx => {
-      if (!tx.dato) return false;
-      const d = new Date(tx.dato);
-      const effectiveMoms = resolveEffectiveMoms(tx.moms, tx.konto, activePL);
-      return d.getFullYear() === YEAR && months.includes(d.getMonth()) && effectiveMoms === 'U25';
-    }).reduce((s, tx) => s + Math.abs(tx.belob) / 5, 0);
-
-  // Budget-moms pr. måned fra PL-data
-  const budgetSalgsMomsPerMonth = useMemo(() => {
-    return MONTHS.map((_, i) => {
-      let total = 0;
-      activePL.forEach(r => {
-        if (r.t === 'acct' && r.nr != null) {
-          const effMoms = resolveEffectiveMoms(null, r.nr, activePL);
-          if (effMoms === 'U25') {
-            const plRow = pl[r.nr] as PLValues | undefined;
-            if (plRow) total += Math.abs(plRow.b[i]) * 0.25;
-          }
-        }
-      });
-      return total;
-    });
-  }, [pl, activePL]);
-
-  const budgetKobsMomsPerMonth = useMemo(() => {
-    return MONTHS.map((_, i) => {
-      let total = 0;
-      activePL.forEach(r => {
-        if (r.t === 'acct' && r.nr != null) {
-          const effMoms = resolveEffectiveMoms(null, r.nr, activePL);
-          if (effMoms === 'I25') {
-            const plRow = pl[r.nr] as PLValues | undefined;
-            if (plRow) total += Math.abs(plRow.b[i]) * 0.25;
-          }
-        }
-      });
-      return total;
-    });
-  }, [pl, activePL]);
-
-  // Realiseret moms pr. måned
-  const realSalgsMomsPerMonth = useMemo(() => {
-    return MONTHS.map((_, i) => computeRealSalgsmoms([i]));
-  }, [txns, activePL]);
-
-  const realKobsMomsPerMonth = useMemo(() => {
-    return MONTHS.map((_, i) => computeRealKobsmoms([i]));
-  }, [txns, activePL]);
+  // Budget-moms + realiseret moms via shared helpers (samme kilde som ResultatTab)
+  const { salgs: budgetSalgsMomsPerMonth, kob: budgetKobsMomsPerMonth } = useMemo(
+    () => computeBudgetMomsPerMonth(pl, activePL), [pl, activePL]
+  );
+  const { salgs: realSalgsMomsPerMonth, kob: realKobsMomsPerMonth } = useMemo(
+    () => computeRealMomsPerMonth(txns, activePL), [txns, activePL]
+  );
 
   // Kombineret moms: realiseret for i < nReal, budget for i >= nReal
   const combinedSalgsMoms = (months: number[]) =>
@@ -415,6 +370,84 @@ export default function SkatTab({ pl, txns, nReal, activePL, momsBetalt, setMoms
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">⚙️ Konti & saldi (til likviditets-oversigt)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Vælg hvilke konti i kassekladden der bruges til moms-, B-skat- og gældsbetalinger. Bruges i "Likviditet & gæld"-sektionen nederst i Resultatopgørelsen.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm text-muted-foreground">Primo saldo driftskonto (1/1):</label>
+              <input type="number" value={liquidityConfig.primoSaldo || ''}
+                onChange={e => setLiquidityConfig({ ...liquidityConfig, primoSaldo: Number(e.target.value) })}
+                className="w-32 text-right border border-border rounded px-2 py-1 text-primary bg-secondary text-xs tabular-nums" placeholder="0" />
+            </div>
+            <MultiKontoSelect
+              label="Moms-afregningskonti"
+              acctList={activePL.filter(r => r.t === 'acct' || r.t === 'bal') as { nr: number; lbl: string }[]}
+              value={liquidityConfig.momsAfregningKonti}
+              onChange={v => setLiquidityConfig({ ...liquidityConfig, momsAfregningKonti: v })}
+            />
+            <MultiKontoSelect
+              label="B-skat / Aconto-skat konti"
+              acctList={activePL.filter(r => r.t === 'acct' || r.t === 'bal') as { nr: number; lbl: string }[]}
+              value={liquidityConfig.bskatKonti}
+              onChange={v => setLiquidityConfig({ ...liquidityConfig, bskatKonti: v })}
+            />
+            <MultiKontoSelect
+              label="Øvrig gæld konti"
+              acctList={activePL.filter(r => r.t === 'acct' || r.t === 'bal') as { nr: number; lbl: string }[]}
+              value={liquidityConfig.andenGeldKonti}
+              onChange={v => setLiquidityConfig({ ...liquidityConfig, andenGeldKonti: v })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function MultiKontoSelect({ label, acctList, value, onChange }: {
+  label: string;
+  acctList: { nr: number; lbl: string }[];
+  value: number[];
+  onChange: (v: number[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = new Set(value);
+  const toggle = (nr: number) => {
+    const next = new Set(selected);
+    next.has(nr) ? next.delete(nr) : next.add(nr);
+    onChange(Array.from(next).sort((a, b) => a - b));
+  };
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <label className="text-sm text-muted-foreground shrink-0">{label}:</label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 min-w-0 max-w-[220px] justify-between px-2 text-xs font-normal">
+            <span className="truncate">
+              {value.length === 0 ? 'Vælg konti' : value.length === 1 ? `${value[0]}` : `${value.length} valgt`}
+            </span>
+            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[320px] p-0 max-h-[320px] overflow-auto" align="end">
+          <div className="p-1">
+            {acctList.map(a => (
+              <label key={a.nr} className="flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-secondary rounded cursor-pointer">
+                <Checkbox checked={selected.has(a.nr)} onCheckedChange={() => toggle(a.nr)} />
+                <span className="font-mono w-12">{a.nr}</span>
+                <span className="truncate">{a.lbl}</span>
+              </label>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

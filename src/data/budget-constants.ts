@@ -200,3 +200,17 @@ export const INIT_BSKAT_SELSKAB: BskatRate[] = [
   { id: 1, belob: 0, forfald: `20-03-${YEAR}`, betalt: 0, betaltDato: '' },
   { id: 2, belob: 0, forfald: `20-11-${YEAR}`, betalt: 0, betaltDato: '' },
 ];
+
+export interface LiquidityConfig {
+  primoSaldo: number;
+  momsAfregningKonti: number[];
+  bskatKonti: number[];
+  andenGeldKonti: number[];
+}
+
+export const INIT_LIQUIDITY_CONFIG: LiquidityConfig = {
+  primoSaldo: 0,
+  momsAfregningKonti: [],
+  bskatKonti: [],
+  andenGeldKonti: [],
+};

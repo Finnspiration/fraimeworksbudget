@@ -1,4 +1,4 @@
-import { PL, type PLRow, YEAR } from '@/data/budget-constants';
+import { PL, type PLRow, YEAR, type BskatRate, type LiquidityConfig } from '@/data/budget-constants';
 
 export interface PLValues {
   r: number[];
@@ -222,4 +222,171 @@ export function computeMatchScore(
   score += Math.round(overlap * 20);
 
   return score;
+}
+
+// ─── Moms per month helpers (shared by SkatTab + ResultatTab) ──────
+
+export function computeBudgetMomsPerMonth(
+  pl: Record<string | number, PLValues>,
+  plRows: PLRow[]
+): { salgs: number[]; kob: number[] } {
+  const salgs = new Array(12).fill(0);
+  const kob = new Array(12).fill(0);
+  plRows.forEach(r => {
+    if (r.t !== 'acct' || r.nr == null) return;
+    const eff = resolveEffectiveMoms(null, r.nr, plRows);
+    if (eff !== 'U25' && eff !== 'I25') return;
+    const row = pl[r.nr] as PLValues | undefined;
+    if (!row) return;
+    for (let i = 0; i < 12; i++) {
+      const m = Math.abs(row.b[i]) * 0.25;
+      if (eff === 'U25') salgs[i] += m;
+      else kob[i] += m;
+    }
+  });
+  return { salgs, kob };
+}
+
+export function computeRealMomsPerMonth(
+  txns: { dato: string; konto: number; belob: number; moms: string | null }[],
+  plRows: PLRow[]
+): { salgs: number[]; kob: number[] } {
+  const salgs = new Array(12).fill(0);
+  const kob = new Array(12).fill(0);
+  txns.forEach(tx => {
+    if (!tx.dato) return;
+    const d = new Date(tx.dato);
+    if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+    const eff = resolveEffectiveMoms(tx.moms, tx.konto, plRows);
+    if (eff !== 'U25' && eff !== 'I25') return;
+    const m = d.getMonth();
+    const val = Math.abs(Number(tx.belob)) / 5;
+    if (eff === 'U25') salgs[m] += val;
+    else kob[m] += val;
+  });
+  return { salgs, kob };
+}
+
+/**
+ * Compute the liquidity & debt section rows (moms, B-skat, øvrig gæld, driftskonto).
+ * Returns rows with the same shape as PLValues rows.
+ */
+export interface LiquidityRow {
+  id: string;
+  label: string;
+  r: number[];
+  b: number[];
+  /** true = high value is bad (debt/outflow); false = balance/asset */
+  invertColor?: boolean;
+}
+
+export function computeLiquiditySection(params: {
+  pl: Record<string | number, PLValues>;
+  plRows: PLRow[];
+  txns: { dato: string; konto: number; belob: number; moms: string | null }[];
+  momsBetalt: number[];
+  bskat: BskatRate[];
+  andenGeld: number;
+  config: LiquidityConfig;
+  nReal: number;
+}): LiquidityRow[] {
+  const { pl, plRows, txns, momsBetalt, bskat, andenGeld, config, nReal } = params;
+
+  const budgetMoms = computeBudgetMomsPerMonth(pl, plRows);
+  const realMoms = computeRealMomsPerMonth(txns, plRows);
+
+  // Moms betalt — budget: distribute per quarter to forfaldsmåned (Q1→jul(6), Q2→okt(9), Q3+Q4 = next year, dropped)
+  const momsBetaltBudget = new Array(12).fill(0);
+  momsBetaltBudget[6] = Number(momsBetalt[0] || 0);
+  momsBetaltBudget[9] = Number(momsBetalt[1] || 0);
+
+  // Moms betalt — realized: transactions on momsAfregningKonti
+  const momsBetaltReal = new Array(12).fill(0);
+  const momsSet = new Set(config.momsAfregningKonti || []);
+  if (momsSet.size) {
+    txns.forEach(tx => {
+      if (!tx.dato || !momsSet.has(tx.konto)) return;
+      const d = new Date(tx.dato);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      momsBetaltReal[d.getMonth()] += Math.abs(Number(tx.belob));
+    });
+  }
+
+  // B-skat — budget: place belob at forfald month (parse DD-MM-YYYY, only current YEAR)
+  const bskatBudget = new Array(12).fill(0);
+  bskat.forEach(r => {
+    const parts = (r.forfald || '').split('-');
+    if (parts.length !== 3) return;
+    const [dd, mm, yy] = parts.map(Number);
+    if (yy !== YEAR || !mm) return;
+    bskatBudget[mm - 1] += Number(r.belob || 0);
+  });
+
+  // B-skat — realized: transactions on bskatKonti (fallback to bskat.betalt by betaltDato)
+  const bskatReal = new Array(12).fill(0);
+  const bskatSet = new Set(config.bskatKonti || []);
+  if (bskatSet.size) {
+    txns.forEach(tx => {
+      if (!tx.dato || !bskatSet.has(tx.konto)) return;
+      const d = new Date(tx.dato);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      bskatReal[d.getMonth()] += Math.abs(Number(tx.belob));
+    });
+  } else {
+    // Fallback: use betaltDato
+    bskat.forEach(r => {
+      if (!r.betaltDato) return;
+      const d = new Date(r.betaltDato);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      bskatReal[d.getMonth()] += Number(r.betalt || 0);
+    });
+  }
+
+  // Anden gæld — budget: place total in December (single lump-sum surrogate)
+  const andenGeldBudget = new Array(12).fill(0);
+  andenGeldBudget[11] = Number(andenGeld || 0);
+
+  // Anden gæld — realized: transactions on andenGeldKonti
+  const andenGeldReal = new Array(12).fill(0);
+  const andenGeldSet = new Set(config.andenGeldKonti || []);
+  if (andenGeldSet.size) {
+    txns.forEach(tx => {
+      if (!tx.dato || !andenGeldSet.has(tx.konto)) return;
+      const d = new Date(tx.dato);
+      if (isNaN(d.getTime()) || d.getFullYear() !== YEAR) return;
+      andenGeldReal[d.getMonth()] += Math.abs(Number(tx.belob));
+    });
+  }
+
+  // Netto moms (skyldig)
+  const nettoMomsR = realMoms.salgs.map((s, i) => s - realMoms.kob[i]);
+  const nettoMomsB = budgetMoms.salgs.map((s, i) => s - budgetMoms.kob[i]);
+
+  // Driftskonto saldo (ultimo) — cashflow formula for both r and b
+  const resRow = pl['res'] as PLValues | undefined;
+  const driftR = new Array(12).fill(0);
+  const driftB = new Array(12).fill(0);
+  let accR = Number(config.primoSaldo || 0);
+  let accB = Number(config.primoSaldo || 0);
+  for (let i = 0; i < 12; i++) {
+    const cfR = (resRow?.r[i] || 0) + realMoms.salgs[i] - realMoms.kob[i]
+      - momsBetaltReal[i] - bskatReal[i] - andenGeldReal[i];
+    const cfB = (resRow?.b[i] || 0) + budgetMoms.salgs[i] - budgetMoms.kob[i]
+      - momsBetaltBudget[i] - bskatBudget[i] - andenGeldBudget[i];
+    accR += cfR;
+    accB += cfB;
+    // Only show realized saldo for months with realized data; use budget beyond
+    driftR[i] = i < nReal ? accR : 0;
+    driftB[i] = accB;
+  }
+
+  return [
+    { id: 'liq_salgsmoms', label: 'Salgsmoms', r: realMoms.salgs, b: budgetMoms.salgs, invertColor: true },
+    { id: 'liq_kobsmoms', label: 'Købsmoms', r: realMoms.kob, b: budgetMoms.kob, invertColor: true },
+    { id: 'liq_nettomoms', label: 'Netto moms (skyldig)', r: nettoMomsR, b: nettoMomsB, invertColor: true },
+    { id: 'liq_moms_betalt', label: 'Moms betalt til Skat', r: momsBetaltReal, b: momsBetaltBudget, invertColor: true },
+    { id: 'liq_bskat', label: 'B-skat / Aconto skat', r: bskatReal, b: bskatBudget, invertColor: true },
+    { id: 'liq_andengeld', label: 'Øvrig gæld', r: andenGeldReal, b: andenGeldBudget, invertColor: true },
+    { id: 'liq_drift', label: 'Driftskonto (saldo ultimo)', r: driftR, b: driftB, invertColor: false },
+  ];
 }

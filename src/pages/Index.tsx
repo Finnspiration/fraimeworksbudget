@@ -136,7 +136,8 @@ export default function Index() {
           </TabsContent>
           <TabsContent value="resultat">
             <ResultatTab pl={mergedPL} nReal={state.nReal} setNReal={state.setNReal} budget={mergedBudget} setBudget={state.setBudget} budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} activePL={state.activePL}
-              txns={state.txns} pipelineJobs={pipelineJobs} futureExpenses={activeExpenses} futureExpensesBudget={futureExpensesBudget} />
+              txns={state.txns} pipelineJobs={pipelineJobs} futureExpenses={activeExpenses} futureExpensesBudget={futureExpensesBudget}
+              momsBetalt={state.momsBetalt} bskat={state.bskat} andenGeld={state.andenGeld} liquidityConfig={state.liquidityConfig} />
           </TabsContent>
           <TabsContent value="pipeline">
             <PipelineTab activePL={state.activePL} />
@@ -148,7 +149,8 @@ export default function Index() {
               andenGeld={state.andenGeld} setAndenGeld={state.setAndenGeld}
               skatPct={state.skatPct} setSkatPct={state.setSkatPct}
               virksomhedstype={state.virksomhedstype} setVirksomhedstype={state.setVirksomhedstype}
-              budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode} />
+              budgetMode={state.budgetMode} setBudgetMode={state.setBudgetMode}
+              liquidityConfig={state.liquidityConfig} setLiquidityConfig={state.setLiquidityConfig} />
           </TabsContent>
           <TabsContent value="udgifter">
             <FutureExpensesTab activePL={state.activePL} txns={state.txns} matchAgainstTransactions={matchAgainstTransactions} />
