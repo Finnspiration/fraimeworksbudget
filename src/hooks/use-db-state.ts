@@ -178,12 +178,11 @@ export function useDbState() {
   });
 
   const setTxns: React.Dispatch<React.SetStateAction<Transaction[]>> = useCallback((action) => {
-    const newTxns = typeof action === 'function' ? action(qc.getQueryData(['db_transactions']) as Transaction[] || []) : action;
-    // Full replace: delete all, insert new
+    const prev = (qc.getQueryData(['db_transactions']) as Transaction[]) || [];
+    const newTxns = typeof action === 'function' ? action(prev) : action;
     qc.setQueryData(['db_transactions'], newTxns);
     (async () => {
-      await supabase.from('transactions').delete().gte('id', 0);
-      const rows = newTxns.map((t: Transaction) => ({
+      const toDbRow = (t: Transaction) => ({
         dato: t.dato || null,
         type: t.type,
         bilag: String(t.bilag),
@@ -194,11 +193,50 @@ export function useDbState() {
         modkonto: t.modkonto ?? null,
         faktura: t.faktura ?? null,
         customer_id: t.customer_id ?? null,
-      }));
-      for (let i = 0; i < rows.length; i += 50) {
-        await supabase.from('transactions').insert(rows.slice(i, i + 50));
+      });
+      const prevById = new Map<any, Transaction>();
+      for (const t of prev) if (t.id != null) prevById.set(t.id, t);
+      const newIds = new Set<any>();
+      const toInsert: Transaction[] = [];
+      const toUpdate: Transaction[] = [];
+      for (const t of newTxns) {
+        if (t.id == null) { toInsert.push(t); continue; }
+        newIds.add(t.id);
+        const p = prevById.get(t.id);
+        if (!p) { toInsert.push(t); continue; }
+        // shallow compare relevant fields
+        if (
+          p.dato !== t.dato || p.type !== t.type || String(p.bilag) !== String(t.bilag) ||
+          p.tekst !== t.tekst || Number(p.belob) !== Number(t.belob) || p.konto !== t.konto ||
+          p.moms !== t.moms || (p.modkonto ?? null) !== (t.modkonto ?? null) ||
+          (p.faktura ?? null) !== (t.faktura ?? null) ||
+          ((p as any).customer_id ?? null) !== ((t as any).customer_id ?? null)
+        ) {
+          toUpdate.push(t);
+        }
       }
-      qc.invalidateQueries({ queryKey: ['db_transactions'] });
+      const toDeleteIds: any[] = [];
+      for (const t of prev) if (t.id != null && !newIds.has(t.id)) toDeleteIds.push(t.id);
+
+      try {
+        // Deletes
+        if (toDeleteIds.length) {
+          await supabase.from('transactions').delete().in('id', toDeleteIds);
+        }
+        // Updates
+        for (const t of toUpdate) {
+          await supabase.from('transactions').update(toDbRow(t)).eq('id', t.id);
+        }
+        // Inserts (batched, capture generated ids)
+        if (toInsert.length) {
+          const rows = toInsert.map(toDbRow);
+          for (let i = 0; i < rows.length; i += 50) {
+            await supabase.from('transactions').insert(rows.slice(i, i + 50));
+          }
+        }
+      } finally {
+        qc.invalidateQueries({ queryKey: ['db_transactions'] });
+      }
     })();
   }, [qc]);
 
