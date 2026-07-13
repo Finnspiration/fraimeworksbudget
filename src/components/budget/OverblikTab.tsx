@@ -192,7 +192,7 @@ export default function OverblikTab({ pl, nReal, txns, activePL, pipelineJobs = 
         }
       }
 
-      const netto = salgsmoms + kobsmoms + budSalg - budKob;
+      const netto = salgsmoms - kobsmoms + budSalg - budKob;
       const betalt = momsBetalt[qi] || 0;
       totalMomsOwed += netto - betalt;
     });
