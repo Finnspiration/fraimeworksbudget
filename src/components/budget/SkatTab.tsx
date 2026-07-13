@@ -28,6 +28,8 @@ interface Props {
   setVirksomhedstype: (v: 'personlig' | 'selskab') => void;
   budgetMode: 'fixed' | 'dynamic';
   setBudgetMode: (v: 'fixed' | 'dynamic') => void;
+  liquidityConfig: LiquidityConfig;
+  setLiquidityConfig: (v: LiquidityConfig) => void;
 }
 
 const quarters = [
