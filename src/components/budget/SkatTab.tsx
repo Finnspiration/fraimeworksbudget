@@ -1,10 +1,14 @@
-import { YEAR, MONTHS } from '@/data/budget-constants';
-import { fmt, sumArr, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
-import { useMemo } from 'react';
+import { YEAR, MONTHS, type LiquidityConfig } from '@/data/budget-constants';
+import { fmt, sumArr, resolveEffectiveMoms, computeBudgetMomsPerMonth, computeRealMomsPerMonth, type PLValues } from '@/lib/budget-utils';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronsUpDown } from 'lucide-react';
 import type { Transaction, BskatRate, PLRow } from '@/data/budget-constants';
 
 interface Props {
