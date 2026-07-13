@@ -408,13 +408,25 @@ export function useDbState() {
   // ── Virksomhedstype change handler ──
   const handleVirksomhedstypeChange = useCallback((type: 'personlig' | 'selskab') => {
     updateSetting('virksomhedstype', type);
+    const prev = (qc.getQueryData(['db_bskat']) as BskatRate[]) || [];
     const newBskat = type === 'selskab' ? INIT_BSKAT_SELSKAB : INIT_BSKAT;
     qc.setQueryData(['db_bskat'], newBskat);
     (async () => {
-      await supabase.from('bskat_rates').delete().gte('id', 0);
-      await supabase.from('bskat_rates').insert(
-        newBskat.map(r => ({ id: r.id, belob: r.belob, forfald: r.forfald, betalt: r.betalt, betalt_dato: r.betaltDato }))
-      );
+      const newIds = new Set(newBskat.map(r => r.id));
+      const toDeleteIds = prev.map(r => r.id).filter(id => !newIds.has(id));
+      try {
+        if (toDeleteIds.length) {
+          await supabase.from('bskat_rates').delete().in('id', toDeleteIds);
+        }
+        for (const r of newBskat) {
+          await supabase.from('bskat_rates').upsert(
+            { id: r.id, belob: r.belob, forfald: r.forfald, betalt: r.betalt, betalt_dato: r.betaltDato },
+            { onConflict: 'id' }
+          );
+        }
+      } finally {
+        qc.invalidateQueries({ queryKey: ['db_bskat'] });
+      }
     })();
     if (type === 'selskab') updateSetting('skat_pct', 22);
   }, [qc, updateSetting]);
