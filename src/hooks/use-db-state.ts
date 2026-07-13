@@ -178,12 +178,11 @@ export function useDbState() {
   });
 
   const setTxns: React.Dispatch<React.SetStateAction<Transaction[]>> = useCallback((action) => {
-    const newTxns = typeof action === 'function' ? action(qc.getQueryData(['db_transactions']) as Transaction[] || []) : action;
-    // Full replace: delete all, insert new
+    const prev = (qc.getQueryData(['db_transactions']) as Transaction[]) || [];
+    const newTxns = typeof action === 'function' ? action(prev) : action;
     qc.setQueryData(['db_transactions'], newTxns);
     (async () => {
-      await supabase.from('transactions').delete().gte('id', 0);
-      const rows = newTxns.map((t: Transaction) => ({
+      const toDbRow = (t: Transaction) => ({
         dato: t.dato || null,
         type: t.type,
         bilag: String(t.bilag),
@@ -194,11 +193,50 @@ export function useDbState() {
         modkonto: t.modkonto ?? null,
         faktura: t.faktura ?? null,
         customer_id: t.customer_id ?? null,
-      }));
-      for (let i = 0; i < rows.length; i += 50) {
-        await supabase.from('transactions').insert(rows.slice(i, i + 50));
+      });
+      const prevById = new Map<any, Transaction>();
+      for (const t of prev) if (t.id != null) prevById.set(t.id, t);
+      const newIds = new Set<any>();
+      const toInsert: Transaction[] = [];
+      const toUpdate: Transaction[] = [];
+      for (const t of newTxns) {
+        if (t.id == null) { toInsert.push(t); continue; }
+        newIds.add(t.id);
+        const p = prevById.get(t.id);
+        if (!p) { toInsert.push(t); continue; }
+        // shallow compare relevant fields
+        if (
+          p.dato !== t.dato || p.type !== t.type || String(p.bilag) !== String(t.bilag) ||
+          p.tekst !== t.tekst || Number(p.belob) !== Number(t.belob) || p.konto !== t.konto ||
+          p.moms !== t.moms || (p.modkonto ?? null) !== (t.modkonto ?? null) ||
+          (p.faktura ?? null) !== (t.faktura ?? null) ||
+          ((p as any).customer_id ?? null) !== ((t as any).customer_id ?? null)
+        ) {
+          toUpdate.push(t);
+        }
       }
-      qc.invalidateQueries({ queryKey: ['db_transactions'] });
+      const toDeleteIds: any[] = [];
+      for (const t of prev) if (t.id != null && !newIds.has(t.id)) toDeleteIds.push(t.id);
+
+      try {
+        // Deletes
+        if (toDeleteIds.length) {
+          await supabase.from('transactions').delete().in('id', toDeleteIds);
+        }
+        // Updates
+        for (const t of toUpdate) {
+          await supabase.from('transactions').update(toDbRow(t)).eq('id', t.id);
+        }
+        // Inserts (batched, capture generated ids)
+        if (toInsert.length) {
+          const rows = toInsert.map(toDbRow);
+          for (let i = 0; i < rows.length; i += 50) {
+            await supabase.from('transactions').insert(rows.slice(i, i + 50));
+          }
+        }
+      } finally {
+        qc.invalidateQueries({ queryKey: ['db_transactions'] });
+      }
     })();
   }, [qc]);
 
@@ -218,10 +256,38 @@ export function useDbState() {
     const newBudget = typeof action === 'function' ? action(prev) : action;
     qc.setQueryData(['db_budget'], newBudget);
     (async () => {
-      await supabase.from('budget_entries').delete().gte('month_index', 0);
-      const entries = budgetToEntries(newBudget);
-      for (let i = 0; i < entries.length; i += 50) {
-        await supabase.from('budget_entries').insert(entries.slice(i, i + 50));
+      const prevMap = new Map<string, number>();
+      for (const [k, arr] of Object.entries(prev)) {
+        arr.forEach((v, i) => { if (v !== 0) prevMap.set(`${k}:${i}`, v); });
+      }
+      const nextMap = new Map<string, number>();
+      for (const [k, arr] of Object.entries(newBudget)) {
+        arr.forEach((v, i) => { if (v !== 0) nextMap.set(`${k}:${i}`, v); });
+      }
+      const toUpsert: { konto: number; month_index: number; amount: number }[] = [];
+      for (const [key, v] of nextMap) {
+        if (prevMap.get(key) !== v) {
+          const [k, i] = key.split(':').map(Number);
+          toUpsert.push({ konto: k, month_index: i, amount: v });
+        }
+      }
+      const toDelete: { konto: number; month_index: number }[] = [];
+      for (const key of prevMap.keys()) {
+        if (!nextMap.has(key)) {
+          const [k, i] = key.split(':').map(Number);
+          toDelete.push({ konto: k, month_index: i });
+        }
+      }
+      try {
+        for (const d of toDelete) {
+          await supabase.from('budget_entries').delete().eq('konto', d.konto).eq('month_index', d.month_index);
+        }
+        for (let i = 0; i < toUpsert.length; i += 50) {
+          const batch = toUpsert.slice(i, i + 50);
+          await supabase.from('budget_entries').upsert(batch, { onConflict: 'konto,month_index' });
+        }
+      } finally {
+        qc.invalidateQueries({ queryKey: ['db_budget'] });
       }
     })();
   }, [qc]);
@@ -342,13 +408,25 @@ export function useDbState() {
   // ── Virksomhedstype change handler ──
   const handleVirksomhedstypeChange = useCallback((type: 'personlig' | 'selskab') => {
     updateSetting('virksomhedstype', type);
+    const prev = (qc.getQueryData(['db_bskat']) as BskatRate[]) || [];
     const newBskat = type === 'selskab' ? INIT_BSKAT_SELSKAB : INIT_BSKAT;
     qc.setQueryData(['db_bskat'], newBskat);
     (async () => {
-      await supabase.from('bskat_rates').delete().gte('id', 0);
-      await supabase.from('bskat_rates').insert(
-        newBskat.map(r => ({ id: r.id, belob: r.belob, forfald: r.forfald, betalt: r.betalt, betalt_dato: r.betaltDato }))
-      );
+      const newIds = new Set(newBskat.map(r => r.id));
+      const toDeleteIds = prev.map(r => r.id).filter(id => !newIds.has(id));
+      try {
+        if (toDeleteIds.length) {
+          await supabase.from('bskat_rates').delete().in('id', toDeleteIds);
+        }
+        for (const r of newBskat) {
+          await supabase.from('bskat_rates').upsert(
+            { id: r.id, belob: r.belob, forfald: r.forfald, betalt: r.betalt, betalt_dato: r.betaltDato },
+            { onConflict: 'id' }
+          );
+        }
+      } finally {
+        qc.invalidateQueries({ queryKey: ['db_bskat'] });
+      }
     })();
     if (type === 'selskab') updateSetting('skat_pct', 22);
   }, [qc, updateSetting]);
