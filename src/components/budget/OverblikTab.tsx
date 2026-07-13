@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ReferenceLine } from 'recharts';
 import { MONTHS, YEAR, type PLRow, type BskatRate } from '@/data/budget-constants';
-import { fmt, sumArr, getTxnAmounts, resolveEffectiveMoms, type PLValues } from '@/lib/budget-utils';
+import { fmt, sumArr, getTxnAmounts, resolveEffectiveMoms, getRevenueAccounts, type PLValues } from '@/lib/budget-utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
