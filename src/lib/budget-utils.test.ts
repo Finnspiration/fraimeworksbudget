@@ -273,3 +273,36 @@ describe('computeLiquiditySection', () => {
     expect(momsRow.r[6]).toBe(8500);
   });
 });
+
+describe('computeLiquiditySection - liq_drift.proj', () => {
+  it('switches from realized to budget cashflows at nReal', () => {
+    // Build a pl with a res row so cashflows are well-defined
+    const pl: Record<string | number, { r: number[]; b: number[] }> = {
+      res: {
+        r: [100, 100, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0], // realized profit jan-mar
+        b: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50], // flat budget
+      },
+    };
+    const nReal = 3;
+    const rows = computeLiquiditySection({
+      pl,
+      plRows: PL,
+      txns: [],
+      momsBetalt: [0, 0],
+      bskat: [],
+      andenGeld: 0,
+      config: { primoSaldo: 1000, momsAfregningKonti: [], bskatKonti: [], andenGeldKonti: [] },
+      nReal,
+    });
+    const drift = rows.find(r => r.id === 'liq_drift')!;
+    expect(drift.proj).toBeDefined();
+    // Months 0..2 use realized cf (100 each) -> 1000 + 100*3 = 1300 at index 2
+    expect(drift.proj![2]).toBe(1300);
+    // Months 3..11 use budget cf (50 each) -> 1300 + 50*9 = 1750 at index 11
+    expect(drift.proj![11]).toBe(1750);
+    // Realized-only saldo diverges (stays at 1300 from month 3 onward)
+    expect(drift.r[11]).toBe(1300);
+    // Budget-only saldo uses budget throughout: 1000 + 50*12 = 1600
+    expect(drift.b[11]).toBe(1600);
+  });
+});
