@@ -364,7 +364,7 @@ export default function ResultatTab({ pl, nReal, setNReal, budget, setBudget, bu
               <th className="px-1 py-0.5 text-center">Budget</th>
             </tr>
           </thead>
-          <tbody>{rows}</tbody>
+          <tbody>{rows}{liqSection}</tbody>
         </table>
       </div>
     </div>
