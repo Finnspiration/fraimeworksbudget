@@ -27,6 +27,7 @@ type SortKey = 'dato' | 'belob' | 'konto' | 'type' | 'bilag';
 type SortDir = 'asc' | 'desc';
 
 export default function ImportTab({ txns, setTxns, customPL, setCustomPL, onImportComplete }: Props) {
+  const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<Transaction[] | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
